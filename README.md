@@ -50,6 +50,7 @@ Fluxo de trabalho, pelas skills em `.github/skills/`:
 
 | Skill | Etapa |
 |---|---|
+| `onboarding` | situar uma sessão nova |
 | `triage` | priorizar |
 | `issue` | registrar |
 | `implement` | implementar e revisar |

@@ -100,6 +100,7 @@ Regras:
 
 ## Ciclo de vida (skills)
 
+- `onboarding`: início de sessão; faz um briefing do ambiente, do repositório e do backlog e carrega o resto sob demanda.
 0. `commit`: regras de commit, usadas por todas as outras skills.
 1. `triage`: lista as issues abertas por prioridade (valor × complexidade). Não altera nada.
 2. `issue`: investiga e abre uma issue completa, pronta para outro agente implementar.

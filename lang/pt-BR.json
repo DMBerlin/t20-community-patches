@@ -4,7 +4,15 @@
       "armor-penalty-reduction": {
         "Name": "Correção: melhorias que reduzem a penalidade de armadura",
         "Hint": "Faz Ajustada, Sob Medida e Mitral reduzirem a penalidade de armadura do item (até 0), em vez de aumentá-la. Afeta perícias e rolagens; a ficha do item continua exibindo a penalidade base."
+      },
+      "item-effects-on-actor-sheet": {
+        "Name": "Correção: efeitos de itens na ficha do ator",
+        "Hint": "Mostra na aba de efeitos da ficha do ator os efeitos transferidos pelos itens (passivos, de uso e suprimidos), com o item como fonte. Alternar, Editar, Excluir (com confirmação) e Arrastar agem no efeito dentro do item."
       }
+    },
+    "ItemEffects": {
+      "DeleteTitle": "Excluir efeito do item",
+      "DeleteContent": "Excluir o efeito <strong>{effect}</strong> do item <strong>{item}</strong>? Isso altera o item."
     },
     "Notifications": {
       "error": "Tormenta20 Community Patches: falha ao aplicar \"{name}\" ({reason}). Veja o console (F12).",

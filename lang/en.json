@@ -4,7 +4,15 @@
       "armor-penalty-reduction": {
         "Name": "Fix: upgrades that reduce armor penalty",
         "Hint": "Makes Ajustada (Adjusted), Sob Medida (Under Measure) and Mitral (Mithril) reduce the item's armor penalty (down to 0) instead of increasing it. Affects skills and rolls; the item sheet keeps showing the base penalty."
+      },
+      "item-effects-on-actor-sheet": {
+        "Name": "Fix: item effects on the actor sheet",
+        "Hint": "Shows the effects transferred by items (passive, usage and suppressed) on the actor sheet effects tab, with the item as source. Toggle, Edit, Delete (with confirmation) and Drag act on the effect inside the item."
       }
+    },
+    "ItemEffects": {
+      "DeleteTitle": "Delete item effect",
+      "DeleteContent": "Delete the effect <strong>{effect}</strong> from the item <strong>{item}</strong>? This changes the item."
     },
     "Notifications": {
       "error": "Tormenta20 Community Patches: failed to apply \"{name}\" ({reason}). Check the console (F12).",

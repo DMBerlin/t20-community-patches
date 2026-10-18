@@ -1,4 +1,5 @@
 import armorPenaltyReduction from "./armor-penalty-reduction.mjs";
+import itemEffectsOnActorSheet from "./item-effects-on-actor-sheet.mjs";
 
 /**
  * Display groups, in the order they appear in the patch manager. i18n: T20CP.Groups.<id>.
@@ -19,4 +20,4 @@ export const GROUPS = ["conditions", "sheet-effects", "usage-effects", "items", 
  */
 
 /** @type {Patch[]} */
-export const PATCHES = [armorPenaltyReduction];
+export const PATCHES = [itemEffectsOnActorSheet, armorPenaltyReduction];

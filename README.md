@@ -22,6 +22,7 @@ https://github.com/DMBerlin/t20-community-patches/releases/latest/download/modul
 
 | Correção | Grupo | Versões verificadas | O que faz |
 |---|---|---|---|
+| `item-effects-on-actor-sheet` ([#2](https://github.com/DMBerlin/t20-community-patches/issues/2)) | Efeitos na ficha | 1.6.5 | Lista na ficha do ator os efeitos transferidos pelos itens (passivos, de uso e suprimidos), com o item como fonte, como no Foundry v10. Nas linhas de efeitos de uso, que não têm coluna de fonte, o item aparece num tooltip. Alternar, Editar, Excluir (com confirmação) e Arrastar agem no efeito dentro do item. A mecânica não muda, porque esses efeitos já eram aplicados. Cópias legadas antigas no ator passam a aparecer ao lado do efeito do item; o módulo não as apaga. |
 | `armor-penalty-reduction` ([#19](https://github.com/DMBerlin/t20-community-patches/issues/19)) | Itens e equipamento | 1.6.5 | Faz Ajustada (−1), Sob Medida (−2) e Mitral (−2) reduzirem a penalidade de armadura do item até 0, em vez de aumentá-la. Antes, uma Armadura Completa (−5) com Ajustada mostrava −6; agora mostra −4. A correção afeta perícias e rolagens, mas a ficha do item continua mostrando a penalidade-base. Reforçada e Sobrecarregado continuam aumentando a penalidade. A penalidade do item inclui a Reforçada dele, então uma redução maior que a penalidade-base também anula a Reforçada (base −1, Reforçada −1 e Sob Medida resultam em 0). |
 
 ## Desenvolvimento

@@ -1,14 +1,19 @@
 # Changelog
 
+Mudanças relevantes do módulo. O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e as versões seguem o [SemVer](https://semver.org/lang/pt-BR/). Cada entrada ocupa uma linha, em português, e cita a issue `(#n)`.
+
+<!--
+Não edite as seções de versão à mão.
+- Novas entradas: `node tools/changelog.mjs add <Added|Changed|Fixed|Security|Removed> "<entrada>"` (feito pela skill land).
+- Nova versão: `node tools/changelog.mjs release <x.y.z>` (feito pela skill release).
+-->
+
 ## Unreleased
 
-- Gerenciador de correções (#20): janela "Gerenciar correções", com as correções agrupadas por área, selo de status e link da issue. As configurações soltas foram substituídas pela configuração única `patches`. Cada correção testa em tempo de execução se o bug ainda existe (`isNeeded`): ela é desativada automaticamente quando o sistema já corrige o bug e continua ativa em versões novas, ainda não verificadas, se o bug persistir. O GM é avisado quando o status de uma correção muda. / Patch manager (#20): "Manage patches" window with patches grouped by area, status badges and issue links; runtime bug checks; GM notifications on status changes.
-- A configuração `patch.<id>` da 0.1.0 é migrada para a nova configuração `patches`. / The 0.1.0 `patch.<id>` setting is migrated.
-- Cada GM recebe o aviso de mudança de status uma vez (controle por usuário). A janela mostra quando há alterações salvas aguardando recarregamento e grava só os campos alterados pelo usuário, sem desfazer a alteração de outro GM. / Per-user status notifications; pending-reload notice; the manager only writes the toggles the user changed.
-- `armor-penalty-reduction`:
-  - **Segurança:** valores de efeito não numéricos passam a ser avaliados pelo parser de rolagens do Foundry, como no core, e não mais como JavaScript. Referências `@` são resolvidas recursivamente e uma referência não resolvida invalida o valor, como no core. / **Security:** non-numeric effect values are evaluated with Foundry's roll parser, as core does (recursive `@` references; unresolved references reject the value), instead of as JavaScript.
-  - Uma redução maior que a penalidade-base também anula os aumentos do próprio item (Reforçada). Reduções em fases diferentes de `initial` mantêm o comportamento do sistema e geram um aviso no console. / Reductions beyond the base penalty also cancel the item's own increases (Reinforced); non-initial phases keep system behavior, with a console warning.
+### Added
 
-## 0.1.0
+- Gerenciador de correções (#20): janela "Gerenciar correções" com as correções agrupadas por área, selo de status, link da issue e aviso de recarregamento pendente. Cada correção testa, ao carregar, se o bug ainda existe: é desligada quando o sistema já corrigiu e continua ativa em versões não verificadas se o bug persistir. Cada GM é avisado uma vez quando uma correção pede atenção.
 
-- Patch `armor-penalty-reduction`: Ajustada, Sob Medida e Mitral passam a reduzir a penalidade de armadura do item (até 0) em vez de aumentá-la. Afeta Tormenta20 1.6.5. / Adjusted, Under Measure and Mithril now reduce the item's armor penalty (down to 0) instead of increasing it.
+### Fixed
+
+- `armor-penalty-reduction` (#19): Ajustada, Sob Medida e Mitral reduzem a penalidade de armadura do item até 0, em vez de aumentá-la; o excedente anula a Reforçada do próprio item. Afeta Tormenta20 1.6.5.

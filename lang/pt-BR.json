@@ -16,6 +16,10 @@
       "item-effects-on-actor-sheet": {
         "Name": "Correção: efeitos de itens na ficha do ator",
         "Hint": "Mostra na aba de efeitos da ficha do ator os efeitos transferidos pelos itens (passivos, de uso e suprimidos), com o item como fonte. Alternar, Editar, Excluir (com confirmação) e Arrastar agem no efeito dentro do item."
+      },
+      "usage-effect-toggle": {
+        "Name": "Correção: botão \"Aplicar Sempre\" dos efeitos de uso",
+        "Hint": "O botão de alternar dos efeitos de uso na ficha passa a ligar e desligar \"Aplicar Sempre\" (pré-seleção no diálogo e aplicação automática), e o ícone mostra esse estado. Efeitos de uso temporários de itens continuam alternando entre aplicado por padrão e opcional."
       }
     },
     "ItemEffects": {

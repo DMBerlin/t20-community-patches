@@ -26,3 +26,32 @@ export function isSystemVersionAffected(version, { minimum, maximum } = {}) {
   if (maximum && compareVersions(version, maximum) > 0) return false;
   return true;
 }
+
+const WRAPPED = Symbol.for(`${MODULE_ID}.wrapped`);
+
+/**
+ * Tags a wrapper with the function it replaced, so runtime probes can inspect the system's original code even
+ * after another patch of this module wrapped it.
+ * @template {Function} T
+ * @param {T} wrapper
+ * @param {Function} original
+ * @returns {T}
+ */
+export function markWrapper(wrapper, original) {
+  Object.defineProperty(wrapper, WRAPPED, { value: original });
+  return wrapper;
+}
+
+/**
+ * Follows markWrapper tags down to the innermost function.
+ * @param {Function} fn
+ * @returns {Function}
+ */
+export function unwrap(fn) {
+  const seen = new Set();
+  while (typeof fn?.[WRAPPED] === "function" && !seen.has(fn)) {
+    seen.add(fn);
+    fn = fn[WRAPPED];
+  }
+  return fn;
+}

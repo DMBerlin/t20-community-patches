@@ -9,7 +9,7 @@
  * same set Foundry v10 showed). Rows of item effects show the item as source; Toggle/Edit/Delete (with
  * confirmation) and drag act on the effect inside the item.
  */
-import { MODULE_ID } from "../utils.mjs";
+import { MODULE_ID, markWrapper } from "../utils.mjs";
 import { resolveEffectFromRow } from "../effect-rows.mjs";
 
 /**
@@ -133,7 +133,7 @@ function apply() {
 
   // 3) Controls: act on the effect's real parent.
   const manage = Legacy.onManageActiveEffect;
-  Legacy.onManageActiveEffect = async function (event, owner) {
+  Legacy.onManageActiveEffect = markWrapper(async function (event, owner) {
     const anchor = event?.currentTarget;
     const li = anchor?.closest?.("li");
     const action = anchor?.dataset?.action;
@@ -148,7 +148,7 @@ function apply() {
       }
     }
     return manage.call(this, event, owner);
-  };
+  }, manage);
 
   // 4) Drag: core ActorSheet#_onDragStart only looks at actor.effects.
   const onDragStart = ActorSheetBase.prototype._onDragStart;

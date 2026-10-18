@@ -16,6 +16,10 @@
       "item-effects-on-actor-sheet": {
         "Name": "Fix: item effects on the actor sheet",
         "Hint": "Shows the effects transferred by items (passive, usage and suppressed) on the actor sheet effects tab, with the item as source. Toggle, Edit, Delete (with confirmation) and Drag act on the effect inside the item."
+      },
+      "usage-effect-toggle": {
+        "Name": "Fix: usage effects \"Always Apply\" toggle",
+        "Hint": "The toggle of usage effects on sheets now switches \"Always Apply\" (dialog pre-selection and automatic application), and the icon shows that state. Temporary usage effects held by items still switch between applied by default and optional."
       }
     },
     "ItemEffects": {

@@ -5,6 +5,10 @@
         "Name": "Fix: empty condition list",
         "Hint": "Fills the Conditions compendium (world.statuses) with the system conditions when it is empty, restoring the token HUD conditions, Dead/Blind/Invisible and Overloaded. Players connected during the repair get the conditions without reloading. A compendium with content is never changed."
       },
+      "encumbered-status-sync": {
+        "Name": "Fix: Overloaded when adding or removing items",
+        "Hint": "Applies or removes the Overloaded (Sobrecarregado) condition as soon as items are added to or deleted from the sheet, without editing another item, and prevents duplicate copies of the condition."
+      },
       "armor-penalty-reduction": {
         "Name": "Fix: upgrades that reduce armor penalty",
         "Hint": "Makes Ajustada (Adjusted), Sob Medida (Under Measure) and Mitral (Mithril) reduce the item's armor penalty (down to 0) instead of increasing it. Affects skills and rolls; the item sheet keeps showing the base penalty."

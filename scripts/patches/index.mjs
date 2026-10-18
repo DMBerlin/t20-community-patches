@@ -1,4 +1,5 @@
 import armorPenaltyReduction from "./armor-penalty-reduction.mjs";
+import encumberedStatusSync from "./encumbered-status-sync.mjs";
 import itemEffectsOnActorSheet from "./item-effects-on-actor-sheet.mjs";
 import statusEffectsCompendium from "./status-effects-compendium.mjs";
 
@@ -21,4 +22,4 @@ export const GROUPS = ["conditions", "sheet-effects", "usage-effects", "items", 
  */
 
 /** @type {Patch[]} */
-export const PATCHES = [statusEffectsCompendium, itemEffectsOnActorSheet, armorPenaltyReduction];
+export const PATCHES = [statusEffectsCompendium, encumberedStatusSync, itemEffectsOnActorSheet, armorPenaltyReduction];

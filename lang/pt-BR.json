@@ -5,6 +5,10 @@
         "Name": "Correção: lista de condições vazia",
         "Hint": "Preenche o compêndio Condições (world.statuses) com as condições do sistema quando ele está vazio, restaurando o HUD de condições, Morto/Cego/Invisível e Sobrecarregado. Jogadores conectados durante o reparo recebem as condições sem recarregar. Um compêndio com conteúdo nunca é alterado."
       },
+      "encumbered-status-sync": {
+        "Name": "Correção: Sobrecarregado ao adicionar ou remover itens",
+        "Hint": "Aplica ou remove a condição Sobrecarregado assim que itens são adicionados ou excluídos da ficha, sem precisar editar outro item, e evita cópias duplicadas da condição."
+      },
       "armor-penalty-reduction": {
         "Name": "Correção: melhorias que reduzem a penalidade de armadura",
         "Hint": "Faz Ajustada, Sob Medida e Mitral reduzirem a penalidade de armadura do item (até 0), em vez de aumentá-la. Afeta perícias e rolagens; a ficha do item continua exibindo a penalidade base."

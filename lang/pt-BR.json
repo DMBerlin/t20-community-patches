@@ -1,0 +1,14 @@
+{
+  "T20CP": {
+    "Patches": {
+      "armor-penalty-reduction": {
+        "Name": "Correção: melhorias que reduzem a penalidade de armadura",
+        "Hint": "Faz Ajustada, Sob Medida e Mitral reduzirem a penalidade de armadura do item (até 0), em vez de aumentá-la. Afeta perícias e rolagens; a ficha do item continua exibindo a penalidade base."
+      }
+    },
+    "Notifications": {
+      "incompatible": "Tormenta20 Community Patches: \"{name}\" não foi aplicado porque a versão instalada ({reason}) não é uma versão verificada com o bug. Ele pode já ter sido corrigido oficialmente.",
+      "error": "Tormenta20 Community Patches: falha ao aplicar \"{name}\" ({reason}). Veja o console (F12)."
+    }
+  }
+}

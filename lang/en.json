@@ -1,0 +1,14 @@
+{
+  "T20CP": {
+    "Patches": {
+      "armor-penalty-reduction": {
+        "Name": "Fix: upgrades that reduce armor penalty",
+        "Hint": "Makes Ajustada (Adjusted), Sob Medida (Under Measure) and Mitral (Mithril) reduce the item's armor penalty (down to 0) instead of increasing it. Affects skills and rolls; the item sheet keeps showing the base penalty."
+      }
+    },
+    "Notifications": {
+      "incompatible": "Tormenta20 Community Patches: \"{name}\" was not applied because the installed version ({reason}) is not a version verified to have the bug. It may already be officially fixed.",
+      "error": "Tormenta20 Community Patches: failed to apply \"{name}\" ({reason}). Check the console (F12)."
+    }
+  }
+}

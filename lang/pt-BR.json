@@ -20,7 +20,8 @@
       "Title": "Tormenta20 Community Patches",
       "Intro": "Cada correção é aplicada somente enquanto o bug existir no sistema. Quando uma versão nova do Tormenta20 corrigir o bug, a correção é desativada automaticamente e aparece como \"Corrigida no sistema\". Alterações exigem recarregar o mundo.",
       "Issue": "Abrir a issue no GitHub",
-      "Save": "Salvar"
+      "Save": "Salvar",
+      "PendingReload": "Há alterações salvas que só valem depois de recarregar o mundo (F5)."
     },
     "Groups": {
       "conditions": "Condições",

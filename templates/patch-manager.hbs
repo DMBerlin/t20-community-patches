@@ -1,5 +1,8 @@
 <div class="t20cp-manager">
   <p class="hint">{{localize "T20CP.Manager.Intro"}}</p>
+  {{#if pendingReload}}
+  <p class="notification warning t20cp-pending"><i class="fa-solid fa-rotate"></i> {{localize "T20CP.Manager.PendingReload"}}</p>
+  {{/if}}
   {{#each groups}}
   <fieldset>
     <legend>{{label}}</legend>

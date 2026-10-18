@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  computeReducedPenalties,
+  computePenaltyAdjustments,
   isArmorPenaltyReducer,
   parseReduction
 } from "../scripts/patches/armor-penalty-reduction.mjs";
@@ -26,18 +26,30 @@ test("uses the magnitude of values stored with either sign", () => {
   assert.equal(parseReduction("bad", () => { throw new Error(); }), 0);
 });
 
+const items = (result) => result.items;
+
 test("reduces only the carrying item, never above 0", () => {
   const penalties = new Map([["armor", -5], ["shield", -2]]);
-  assert.deepEqual(computeReducedPenalties(penalties, new Map([["armor", 1]]), "armor"), new Map([["armor", -4]]));
-  assert.deepEqual(computeReducedPenalties(penalties, new Map([["armor", 3]]), "armor"), new Map([["armor", -2]]));
-  assert.deepEqual(computeReducedPenalties(penalties, new Map([["shield", 3]]), "armor"), new Map([["shield", 0]]));
+  assert.deepEqual(items(computePenaltyAdjustments(penalties, new Map([["armor", 1]]), new Map(), "armor")), new Map([["armor", -4]]));
+  assert.deepEqual(items(computePenaltyAdjustments(penalties, new Map([["armor", 3]]), new Map(), "armor")), new Map([["armor", -2]]));
+  assert.deepEqual(computePenaltyAdjustments(penalties, new Map([["shield", 3]]), new Map(), "armor"), { items: new Map([["shield", 0]]), actorDelta: 0 });
 });
 
 test("ignores unequipped items and routes unassigned reductions to the fallback", () => {
   const penalties = new Map([["armor", -5]]);
-  assert.deepEqual(computeReducedPenalties(penalties, new Map([["other", 2]]), "armor"), new Map());
-  assert.deepEqual(computeReducedPenalties(penalties, new Map([["", 2]]), "armor"), new Map([["armor", -3]]));
-  assert.deepEqual(computeReducedPenalties(penalties, new Map([["", 2]]), null), new Map());
+  assert.deepEqual(items(computePenaltyAdjustments(penalties, new Map([["other", 2]]), new Map(), "armor")), new Map());
+  assert.deepEqual(items(computePenaltyAdjustments(penalties, new Map([["", 2]]), new Map(), "armor")), new Map([["armor", -3]]));
+  assert.deepEqual(items(computePenaltyAdjustments(penalties, new Map([["", 2]]), new Map(), null)), new Map());
+});
+
+test("reductions beyond the base penalty cancel the item's own increases, not other actor penalties", () => {
+  const penalties = new Map([["armor", -1]]);
+  // Base -1, Reforçada -1, Sob Medida 2: combined item penalty goes to 0.
+  assert.deepEqual(computePenaltyAdjustments(penalties, new Map([["armor", 2]]), new Map([["armor", 1]]), "armor"), { items: new Map([["armor", 0]]), actorDelta: 1 });
+  // Base -5, Reforçada -1, Ajustada 1: only the base is reduced (-4 + -1 = -5).
+  assert.deepEqual(computePenaltyAdjustments(new Map([["armor", -5]]), new Map([["armor", 1]]), new Map([["armor", 1]]), "armor"), { items: new Map([["armor", -4]]), actorDelta: 0 });
+  // Leftover never exceeds the item's own increases, and increases of other items are untouched.
+  assert.deepEqual(computePenaltyAdjustments(penalties, new Map([["armor", 4]]), new Map([["armor", 1], ["shield", 2]]), "armor"), { items: new Map([["armor", 0]]), actorDelta: 1 });
 });
 
 test("system version range check", () => {

@@ -20,7 +20,8 @@
       "Title": "Tormenta20 Community Patches",
       "Intro": "Each patch is only applied while the bug exists in the system. When a new Tormenta20 release fixes the bug, the patch is switched off automatically and shows as \"Fixed in the system\". Changes require reloading the world.",
       "Issue": "Open the issue on GitHub",
-      "Save": "Save"
+      "Save": "Save",
+      "PendingReload": "Some saved changes only take effect after reloading the world (F5)."
     },
     "Groups": {
       "conditions": "Conditions",

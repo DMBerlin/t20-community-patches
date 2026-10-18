@@ -1,4 +1,5 @@
 import { MODULE_ID } from "../utils.mjs";
+import { isPatchEnabled } from "../settings.mjs";
 import { GROUPS, PATCHES } from "../patches/index.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -29,10 +30,12 @@ export class PatchManager extends HandlebarsApplicationMixin(ApplicationV2) {
     footer: { template: "templates/generic/form-footer.hbs" }
   };
 
+  /** Toggle values shown when the form was rendered, so a submit only writes what this user changed. */
+  #snapshot = {};
+
   /** @override */
   async _prepareContext(options) {
     const context = await super._prepareContext(options);
-    const enabled = game.settings.get(MODULE_ID, "patches") ?? {};
     const status = new Map((game.modules.get(MODULE_ID).api?.status ?? []).map((s) => [s.id, s]));
     const bugs = game.modules.get(MODULE_ID).bugs;
 
@@ -43,7 +46,7 @@ export class PatchManager extends HandlebarsApplicationMixin(ApplicationV2) {
         group: patch.group,
         name: game.i18n.localize(`T20CP.Patches.${patch.id}.Name`),
         hint: game.i18n.localize(`T20CP.Patches.${patch.id}.Hint`),
-        enabled: enabled[patch.id] !== false,
+        enabled: isPatchEnabled(patch.id),
         state,
         stateLabel: game.i18n.localize(`T20CP.States.${state}.Label`),
         stateHint: game.i18n.format(`T20CP.States.${state}.Hint`, { reason: reason ?? "" }),
@@ -52,6 +55,10 @@ export class PatchManager extends HandlebarsApplicationMixin(ApplicationV2) {
         issue: patch.issue
       };
     });
+
+    this.#snapshot = Object.fromEntries(rows.map((r) => [r.id, r.enabled]));
+    // Saved toggles that differ from what was installed at load time only take effect after a reload.
+    context.pendingReload = rows.some((r) => status.has(r.id) && status.get(r.id).enabled !== r.enabled);
 
     const groupIds = [...GROUPS, ...new Set(rows.map((r) => r.group).filter((g) => !GROUPS.includes(g)))];
     context.groups = groupIds
@@ -69,10 +76,10 @@ export class PatchManager extends HandlebarsApplicationMixin(ApplicationV2) {
    */
   static async #onSubmit(event, form, formData) {
     const submitted = formData.object;
-    const current = game.settings.get(MODULE_ID, "patches") ?? {};
-    const next = Object.fromEntries(PATCHES.map((p) => [p.id, !!submitted[p.id]]));
-    const changed = PATCHES.some((p) => (current[p.id] !== false) !== next[p.id]);
-    if (!changed) return;
+    const changes = PATCHES.filter((p) => !!submitted[p.id] !== this.#snapshot[p.id]);
+    if (!changes.length) return;
+    const next = { ...(game.settings.get(MODULE_ID, "patches") ?? {}) };
+    for (const { id } of changes) next[id] = !!submitted[id];
     await game.settings.set(MODULE_ID, "patches", next);
     await foundry.applications.settings.SettingsConfig.reloadConfirm({ world: true });
   }

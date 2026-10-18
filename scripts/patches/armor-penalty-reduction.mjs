@@ -54,24 +54,34 @@ export function parseReduction(value, evaluate) {
 }
 
 /**
- * @param {Map<string, number>} penalties   Current penalty by item id.
- * @param {Map<string, number>} reductions  Reduction by item id (UNASSIGNED for effects without item).
+ * Computes the corrected penalties. Each reduction lowers the penalty of the item that carries it, down to 0.
+ * The item's combined penalty is its base penalty plus the increases from its own upgrades (e.g. Reforçada),
+ * which the system applies to the actor's `defesa.pda`. A reduction larger than the base penalty therefore
+ * also cancels those increases, through `actorDelta`. Increases without an item (e.g. Sobrecarregado) are never
+ * cancelled.
+ * @param {Map<string, number>} penalties   Base penalty (<= 0) by equipped item id.
+ * @param {Map<string, number>} reductions  Reduction magnitude by item id (UNASSIGNED for effects without item).
+ * @param {Map<string, number>} increases   Penalty increase magnitude applied to the actor, by item id.
  * @param {string|null} fallbackId          Item receiving unassigned reductions (equipped armor or shield).
- * @returns {Map<string, number>}           New penalty by item id, only for changed items.
+ * @returns {{items: Map<string, number>, actorDelta: number}}
+ *          New base penalty by item id (only changed items) and the amount to add to the actor's `defesa.pda`.
  */
-export function computeReducedPenalties(penalties, reductions, fallbackId) {
+export function computePenaltyAdjustments(penalties, reductions, increases = new Map(), fallbackId = null) {
   const byItem = new Map();
   for (const [id, amount] of reductions) {
     const target = id === UNASSIGNED ? fallbackId : id;
     if (!target || !penalties.has(target)) continue;
     byItem.set(target, (byItem.get(target) ?? 0) + amount);
   }
-  const result = new Map();
+  const items = new Map();
+  let actorDelta = 0;
   for (const [id, amount] of byItem) {
     const penalty = Number(penalties.get(id)) || 0;
-    result.set(id, Math.min(0, penalty + amount));
+    items.set(id, Math.min(0, penalty + amount));
+    const leftover = Math.max(0, amount + penalty);
+    actorDelta += Math.min(leftover, increases.get(id) ?? 0);
   }
-  return result;
+  return { items, actorDelta };
 }
 
 /* -------------------------------------------- */
@@ -80,6 +90,11 @@ export function computeReducedPenalties(penalties, reductions, fallbackId) {
 
 /** @type {WeakMap<Actor, Map<string, number>>} */
 const reductionsByActor = new WeakMap();
+/** @type {WeakMap<Actor, Map<string, number>>} */
+const increasesByActor = new WeakMap();
+/** Phase being applied by Actor#applyActiveEffects ("initial", "final", ...). */
+let currentPhase = null;
+let warnedPhase = false;
 const preparing = new WeakSet();
 
 function resolveItemId(actor, effect) {
@@ -97,14 +112,29 @@ function resolveItemId(actor, effect) {
 }
 
 function recordReduction(actor, change, options) {
-  const amount = parseReduction(change.value, (formula) =>
-    Roll.safeEval(Roll.replaceFormulaData(formula, options?.replacementData ?? actor.getRollData()))
-  );
+  const amount = parseReduction(change.value, (formula) => evaluateFormula(actor, formula, options));
   if (!amount) return;
-  const reductions = reductionsByActor.get(actor) ?? new Map();
+  addTo(reductionsByActor, actor, resolveItemId(actor, change.effect), amount);
+}
+
+/** Records an item's own penalty increase. The system still applies it; it is only tracked. */
+function recordIncrease(actor, change, options) {
   const itemId = resolveItemId(actor, change.effect);
-  reductions.set(itemId, (reductions.get(itemId) ?? 0) + amount);
-  reductionsByActor.set(actor, reductions);
+  if (itemId === UNASSIGNED) return;
+  const amount = parseReduction(change.value, (formula) => evaluateFormula(actor, formula, options));
+  if (amount) addTo(increasesByActor, actor, itemId, amount);
+}
+
+/** Evaluates like core's NumberField (Roll parser), never as raw JavaScript. */
+function evaluateFormula(actor, formula, options) {
+  const data = options?.replacementData ?? actor.getRollData();
+  return foundry.dice.Roll.create(Roll.replaceFormulaData(formula, data)).evaluateSync().total;
+}
+
+function addTo(store, actor, key, amount) {
+  const map = store.get(actor) ?? new Map();
+  map.set(key, (map.get(key) ?? 0) + amount);
+  store.set(actor, map);
 }
 
 function equippedDefenseItems(actor) {
@@ -112,13 +142,20 @@ function equippedDefenseItems(actor) {
   return (actor.itemTypes?.equipamento ?? []).filter((i) => (slots ? i.system.equipado2?.slot : i.system.equipado));
 }
 
-/** Temporarily applies the reductions to the item data. Returns a function that restores it. */
-function reduceItemPenalties(actor, reductions) {
+/**
+ * Temporarily applies the reductions to the item data and cancels covered item increases on the actor.
+ * Returns a function that restores the item data.
+ */
+function reduceItemPenalties(actor, system, reductions) {
   const items = equippedDefenseItems(actor).filter((i) => i.system.armadura);
   const fallback =
     items.find((i) => ["leve", "pesada"].includes(i.system.tipo)) ?? items.find((i) => i.system.tipo === "escudo");
   const penalties = new Map(items.map((i) => [i.id, i.system.armadura.penalidade]));
-  const reduced = computeReducedPenalties(penalties, reductions, fallback?.id ?? null);
+  const increases = increasesByActor.get(actor) ?? new Map();
+  const { items: reduced, actorDelta } = computePenaltyAdjustments(penalties, reductions, increases, fallback?.id ?? null);
+
+  const defesa = system.attributes?.defesa;
+  if (actorDelta && defesa) defesa.pda = Math.min(0, (Number(defesa.pda) || 0) + actorDelta);
 
   const restore = [];
   for (const [id, penalty] of reduced) {
@@ -137,21 +174,33 @@ function apply() {
 
   const applyChange = EffectClass.applyChange;
   EffectClass.applyChange = function (targetDoc, change, options) {
-    if (
-      change?.key === PDA_KEY &&
-      change.type === "add" &&
-      targetDoc instanceof foundry.documents.Actor &&
-      isArmorPenaltyReducer(change.effect)
-    ) {
-      return recordReduction(targetDoc, change, options);
+    if (change?.key === PDA_KEY && change.type === "add" && targetDoc instanceof foundry.documents.Actor) {
+      const reducer = isArmorPenaltyReducer(change.effect);
+      // Reductions are applied while derived data is prepared, so only initial-phase changes can be corrected.
+      // Later phases keep the system's behavior.
+      if (reducer && currentPhase === "initial") return recordReduction(targetDoc, change, options);
+      if (reducer && !warnedPhase) {
+        warnedPhase = true;
+        console.warn(`t20-community-patches | armor-penalty-reduction: "${change.effect?.name}" uses phase "${currentPhase}"; only "initial" is corrected.`);
+      }
+      if (!reducer && currentPhase === "initial") recordIncrease(targetDoc, change, options);
     }
     return applyChange.call(this, targetDoc, change, options);
   };
 
   const applyActiveEffects = ActorClass.prototype.applyActiveEffects;
   ActorClass.prototype.applyActiveEffects = function (phase, ...args) {
-    if (phase === "initial") reductionsByActor.delete(this);
-    return applyActiveEffects.call(this, phase, ...args);
+    if (phase === "initial") {
+      reductionsByActor.delete(this);
+      increasesByActor.delete(this);
+    }
+    const previous = currentPhase;
+    currentPhase = phase;
+    try {
+      return applyActiveEffects.call(this, phase, ...args);
+    } finally {
+      currentPhase = previous;
+    }
   };
 
   // prepareDefense runs inside each actor type's TypeDataModel#prepareDerivedData.
@@ -167,7 +216,7 @@ function apply() {
       const reductions = actor && reductionsByActor.get(actor);
       if (!reductions?.size || preparing.has(actor)) return prepareDerivedData.apply(this, args);
       preparing.add(actor);
-      const restore = reduceItemPenalties(actor, reductions);
+      const restore = reduceItemPenalties(actor, this, reductions);
       try {
         return prepareDerivedData.apply(this, args);
       } finally {

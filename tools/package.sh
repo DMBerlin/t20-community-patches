@@ -11,6 +11,6 @@ if [[ "$download" != *"/v${version}/module.zip" ]]; then
 fi
 
 rm -rf dist && mkdir dist
-zip -qr dist/module.zip module.json scripts lang LICENSE README.md CHANGELOG.md
+zip -qr dist/module.zip module.json scripts lang templates styles LICENSE README.md CHANGELOG.md
 cp module.json dist/module.json
 echo "dist/ ready for v${version}"

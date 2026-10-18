@@ -7,8 +7,57 @@
       }
     },
     "Notifications": {
-      "incompatible": "Tormenta20 Community Patches: \"{name}\" não foi aplicado porque a versão instalada ({reason}) não é uma versão verificada com o bug. Ele pode já ter sido corrigido oficialmente.",
-      "error": "Tormenta20 Community Patches: falha ao aplicar \"{name}\" ({reason}). Veja o console (F12)."
+      "error": "Tormenta20 Community Patches: falha ao aplicar \"{name}\" ({reason}). Veja o console (F12).",
+      "fixed": "Tormenta20 Community Patches: \"{name}\" não é mais necessária, porque {reason} já corrige o bug. A correção foi desativada automaticamente.",
+      "unverified": "Tormenta20 Community Patches: \"{name}\" não foi aplicada porque a versão {reason} ainda não foi verificada e o bug não pôde ser confirmado.",
+      "applied-unverified": "Tormenta20 Community Patches: \"{name}\" continua aplicada em {reason} (versão não verificada), porque o bug ainda foi detectado.",
+      "incompatible": "Tormenta20 Community Patches: \"{name}\" não se aplica a {reason}."
+    },
+    "Manager": {
+      "Name": "Correções",
+      "Label": "Gerenciar correções",
+      "Hint": "Liga ou desliga cada correção e mostra se ela está sendo aplicada nesta versão do Tormenta20.",
+      "Title": "Tormenta20 Community Patches",
+      "Intro": "Cada correção é aplicada somente enquanto o bug existir no sistema. Quando uma versão nova do Tormenta20 corrigir o bug, a correção é desativada automaticamente e aparece como \"Corrigida no sistema\". Alterações exigem recarregar o mundo.",
+      "Issue": "Abrir a issue no GitHub",
+      "Save": "Salvar"
+    },
+    "Groups": {
+      "conditions": "Condições",
+      "sheet-effects": "Efeitos na ficha",
+      "usage-effects": "Efeitos de uso",
+      "items": "Itens e equipamento",
+      "settings": "Configurações do sistema"
+    },
+    "States": {
+      "applied": {
+        "Label": "Aplicada",
+        "Hint": "O bug existe nesta versão do sistema e a correção está ativa."
+      },
+      "applied-unverified": {
+        "Label": "Aplicada (versão não verificada)",
+        "Hint": "A versão {reason} ainda não foi verificada, mas o teste do módulo detectou o bug, então a correção está ativa."
+      },
+      "disabled": {
+        "Label": "Desligada",
+        "Hint": "Correção desligada nesta tela."
+      },
+      "fixed": {
+        "Label": "Corrigida no sistema",
+        "Hint": "O teste do módulo indica que {reason} já corrige este bug. A correção não é aplicada."
+      },
+      "unverified": {
+        "Label": "Versão não verificada",
+        "Hint": "Não foi possível confirmar o bug em {reason}. A correção não é aplicada até uma nova versão do módulo."
+      },
+      "incompatible": {
+        "Label": "Incompatível",
+        "Hint": "Esta correção não se aplica a {reason}."
+      },
+      "error": {
+        "Label": "Erro",
+        "Hint": "Falha ao aplicar: {reason}. Veja o console (F12)."
+      }
     }
   }
 }

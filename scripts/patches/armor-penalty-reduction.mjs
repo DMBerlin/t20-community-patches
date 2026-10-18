@@ -178,8 +178,21 @@ function apply() {
   }
 }
 
+/**
+ * The bug exists while the actor's armor penalty field turns every value (including reductions) negative.
+ * @returns {boolean|undefined}
+ */
+function isNeeded() {
+  const field = CONFIG.Actor.dataModels?.character?.schema?.getField?.("attributes.defesa.pda");
+  if (!field) return undefined;
+  return field.clean(1) < 0;
+}
+
 export default {
   id: "armor-penalty-reduction",
+  group: "items",
+  issue: 19,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.5" } },
+  isNeeded,
   apply
 };

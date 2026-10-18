@@ -1,0 +1,21 @@
+<div class="t20cp-manager">
+  <p class="hint">{{localize "T20CP.Manager.Intro"}}</p>
+  {{#each groups}}
+  <fieldset>
+    <legend>{{label}}</legend>
+    {{#each patches}}
+    <div class="form-group t20cp-patch">
+      <label for="t20cp-{{id}}">{{name}}</label>
+      <div class="form-fields">
+        <span class="t20cp-badge t20cp-badge--{{badge}}" data-tooltip="{{stateHint}}">{{stateLabel}}</span>
+        {{#if issueUrl}}
+        <a class="t20cp-issue" href="{{issueUrl}}" target="_blank" rel="noopener" data-tooltip="{{localize "T20CP.Manager.Issue"}}">#{{issue}}</a>
+        {{/if}}
+        <input type="checkbox" id="t20cp-{{id}}" name="{{id}}" {{checked enabled}}>
+      </div>
+      <p class="hint">{{hint}}</p>
+    </div>
+    {{/each}}
+  </fieldset>
+  {{/each}}
+</div>

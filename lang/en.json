@@ -7,8 +7,57 @@
       }
     },
     "Notifications": {
-      "incompatible": "Tormenta20 Community Patches: \"{name}\" was not applied because the installed version ({reason}) is not a version verified to have the bug. It may already be officially fixed.",
-      "error": "Tormenta20 Community Patches: failed to apply \"{name}\" ({reason}). Check the console (F12)."
+      "error": "Tormenta20 Community Patches: failed to apply \"{name}\" ({reason}). Check the console (F12).",
+      "fixed": "Tormenta20 Community Patches: \"{name}\" is no longer needed, because {reason} already fixes the bug. The patch was switched off automatically.",
+      "unverified": "Tormenta20 Community Patches: \"{name}\" was not applied because version {reason} has not been verified yet and the bug could not be confirmed.",
+      "applied-unverified": "Tormenta20 Community Patches: \"{name}\" is still applied on {reason} (unverified version), because the bug was still detected.",
+      "incompatible": "Tormenta20 Community Patches: \"{name}\" does not apply to {reason}."
+    },
+    "Manager": {
+      "Name": "Patches",
+      "Label": "Manage patches",
+      "Hint": "Turns each patch on or off and shows whether it is applied on this Tormenta20 version.",
+      "Title": "Tormenta20 Community Patches",
+      "Intro": "Each patch is only applied while the bug exists in the system. When a new Tormenta20 release fixes the bug, the patch is switched off automatically and shows as \"Fixed in the system\". Changes require reloading the world.",
+      "Issue": "Open the issue on GitHub",
+      "Save": "Save"
+    },
+    "Groups": {
+      "conditions": "Conditions",
+      "sheet-effects": "Effects on sheets",
+      "usage-effects": "Usage effects",
+      "items": "Items and equipment",
+      "settings": "System settings"
+    },
+    "States": {
+      "applied": {
+        "Label": "Applied",
+        "Hint": "The bug exists in this system version and the patch is active."
+      },
+      "applied-unverified": {
+        "Label": "Applied (unverified version)",
+        "Hint": "Version {reason} has not been verified yet, but the module's check detected the bug, so the patch is active."
+      },
+      "disabled": {
+        "Label": "Off",
+        "Hint": "Patch turned off in this window."
+      },
+      "fixed": {
+        "Label": "Fixed in the system",
+        "Hint": "The module's check indicates that {reason} already fixes this bug. The patch is not applied."
+      },
+      "unverified": {
+        "Label": "Unverified version",
+        "Hint": "The bug could not be confirmed on {reason}. The patch is not applied until a new module release."
+      },
+      "incompatible": {
+        "Label": "Incompatible",
+        "Hint": "This patch does not apply to {reason}."
+      },
+      "error": {
+        "Label": "Error",
+        "Hint": "Failed to apply: {reason}. Check the console (F12)."
+      }
     }
   }
 }

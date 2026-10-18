@@ -1,0 +1,17 @@
+.t20cp-patch-manager .t20cp-patch .form-fields {
+  flex: 0 0 auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+.t20cp-patch-manager .t20cp-badge {
+  font-size: var(--font-size-11, 11px);
+  padding: 1px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+  border: 1px solid currentColor;
+}
+.t20cp-patch-manager .t20cp-badge--success { color: var(--color-level-success, #2a8a2a); }
+.t20cp-patch-manager .t20cp-badge--warning { color: var(--color-level-warning, #c08000); }
+.t20cp-patch-manager .t20cp-badge--error { color: var(--color-level-error, #b22222); }
+.t20cp-patch-manager .t20cp-badge--info { color: var(--color-level-info, #3a6ea5); }
+.t20cp-patch-manager .t20cp-badge--muted { opacity: 0.6; }

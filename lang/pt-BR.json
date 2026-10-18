@@ -1,6 +1,10 @@
 {
   "T20CP": {
     "Patches": {
+      "status-effects-compendium": {
+        "Name": "Correção: lista de condições vazia",
+        "Hint": "Preenche o compêndio Condições (world.statuses) com as condições do sistema quando ele está vazio, restaurando o HUD de condições, Morto/Cego/Invisível e Sobrecarregado. Jogadores conectados durante o reparo recebem as condições sem recarregar. Um compêndio com conteúdo nunca é alterado."
+      },
       "armor-penalty-reduction": {
         "Name": "Correção: melhorias que reduzem a penalidade de armadura",
         "Hint": "Faz Ajustada, Sob Medida e Mitral reduzirem a penalidade de armadura do item (até 0), em vez de aumentá-la. Afeta perícias e rolagens; a ficha do item continua exibindo a penalidade base."

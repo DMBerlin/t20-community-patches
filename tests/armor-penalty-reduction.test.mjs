@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import {
   computePenaltyAdjustments,
   isArmorPenaltyReducer,
-  parseReduction
+  parseReduction,
+  resolveDataRefs
 } from "../scripts/patches/armor-penalty-reduction.mjs";
 import { isSystemVersionAffected } from "../scripts/utils.mjs";
 
@@ -58,4 +59,17 @@ test("system version range check", () => {
   assert.ok(!isSystemVersionAffected("1.6.6", range));
   assert.ok(!isSystemVersionAffected("1.6.4", range));
   assert.ok(!isSystemVersionAffected("1.10.0", range));
+});
+
+test("formula data references resolve recursively and unresolved ones are rejected like core", () => {
+  const FakeRoll = {
+    replaceFormulaData(raw, data, { recursive }) {
+      let out = raw.replace(/@(\w+)/g, (m, k) => (k in data ? String(data[k]) : m));
+      return recursive && out !== raw ? this.replaceFormulaData(out, data, { recursive }) : out;
+    }
+  };
+  assert.equal(resolveDataRefs("@nested", { nested: "@amount", amount: 2 }, FakeRoll), "2");
+  assert.throws(() => resolveDataRefs("2+@missing", {}, FakeRoll));
+  const missing = () => resolveDataRefs("2+@missing", {}, FakeRoll);
+  assert.equal(parseReduction("2+@missing", missing), 0);
 });

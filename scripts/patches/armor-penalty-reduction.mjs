@@ -128,7 +128,16 @@ function recordIncrease(actor, change, options) {
 /** Evaluates like core's NumberField (Roll parser), never as raw JavaScript. */
 function evaluateFormula(actor, formula, options) {
   const data = options?.replacementData ?? actor.getRollData();
-  return foundry.dice.Roll.create(Roll.replaceFormulaData(formula, data)).evaluateSync().total;
+  return foundry.dice.Roll.create(resolveDataRefs(formula, data)).evaluateSync().total;
+}
+
+/** Mirrors core DataField#_replaceDataRefs: recursive, throws on unresolved references. */
+export function resolveDataRefs(raw, data, RollClass = foundry.dice.Roll.defaultImplementation) {
+  const resolved = RollClass.replaceFormulaData(raw, data, { recursive: true });
+  if (resolved.replace(/@\w+\[[^#\]]+]/g, "").includes("@")) {
+    throw new Error(`Unable to replace all data references in ${JSON.stringify(raw)}`);
+  }
+  return resolved;
 }
 
 function addTo(store, actor, key, amount) {

@@ -56,7 +56,35 @@ As linhas `T20:<n>` da issue podem ter mudado. Localize cada trecho citado **pel
 - Se o código mudou de forma que invalida a proposta, ou se o bug não existe mais, **pare**. Explique ao usuário e pergunte com `ask_user`.
 - Se a proposta da issue tiver uma falha (um caminho não coberto, uma API inexistente), corrija na implementação e registre o motivo em `.work/decisions.md`. Esse registro vai para o comentário de fechamento.
 
-## 4. Implementar
+## 4. Anunciar a intenção
+
+Antes de escrever código, anuncie ao usuário o que vai fazer. O anúncio é informativo: **não** espere confirmação, a menos que o passo 3 tenha levantado uma dúvida, e nesse caso use `ask_user`.
+
+Estilo telegráfico: frases curtas, sem artigos nem conectivos dispensáveis, setas no lugar de explicações. Sacrifique a gramática, nunca a precisão. O anúncio tem no máximo ~8 linhas:
+
+```
+**#<n> — <título curto>**
+**Problema:** <sintoma visto pelo usuário> → <causa raiz em 1 linha, com símbolo/T20:linha>.
+**Solução:** <o que o patch faz, ponto de interceptação> → <efeito para o usuário>.
+**Escopo:** <arquivos/áreas>. Fora: <o que não muda>.
+**Desvios da issue:** <o que mudou em relação à proposta e por quê | nenhum>.
+**Próximo:** implementar → testes → review QA (gpt-6.1-sol).
+```
+
+Exemplo:
+
+```
+**#4 — efeitos de uso de itens não equipados**
+**Problema:** Varinha Arcana na mochila ainda dá −1 PM ao lançar magia → listas de efeitos de uso (`_allApplicableOnUseEffects`, `rollPericia`/`rollAtributo`) ignoram supressão.
+**Solução:** filtrar efeitos de item suprimido nas 3 listas; efeitos do próprio item rolado mantidos → item guardado = sem bônus/custo.
+**Escopo:** novo `suppressed-usage-effects.mjs`, index, lang, README, testes. Fora: toggle Aplicar Sempre (#5), custo (#7).
+**Desvios da issue:** nenhum.
+**Próximo:** implementar → testes → review QA.
+```
+
+Se a solução mudar durante a implementação ou o review, por exemplo por um achado de QA que altere o comportamento, anuncie de novo **só a mudança**, no mesmo estilo e em 1–2 linhas.
+
+## 5. Implementar
 
 Siga o contrato e as regras de patch do `AGENTS.md`:
 - `scripts/patches/<id>.mjs`, com a lógica pura exportada;
@@ -94,7 +122,7 @@ git commit -m "fix(<id>): <o que corrige> (#<n>)"
 
 Não faça push da branch; o land faz squash localmente.
 
-## 5. Ciclo de review de QA
+## 6. Ciclo de review de QA
 
 Repita até o revisor responder `CLEAN`, com **no máximo 5 rodadas**:
 
@@ -124,7 +152,7 @@ Resultado: CLEAN | <x> achados
 
 A última linha de `.work/review.md` deve ser `Resultado final: CLEAN (rodada <k>)` ou `Resultado final: risco aceito pelo usuário — <resumo>`.
 
-## 6. Preview e teste manual
+## 7. Preview e teste manual
 
 ```bash
 make active        # o Foundry passa a carregar esta worktree; recarregue o mundo (F5)
@@ -134,7 +162,7 @@ Se o `module.json` mudou, reinicie o Foundry.
 
 Escreva `.work/manual-tests.md` a partir do plano de teste manual da issue, ajustado ao que foi implementado. Use passos numerados, dados concretos e o resultado esperado. O último passo é sempre: "desligar o patch em Gerenciar correções → o comportamento oficial volta".
 
-## 7. Relatório ao usuário
+## 8. Relatório ao usuário
 
 Seja extremamente conciso, em português:
 - worktree e branch;

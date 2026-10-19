@@ -1,3 +1,8 @@
+/* The window is capped at the viewport height; only the patch list scrolls, keeping the footer visible. */
+.t20cp-patch-manager .t20cp-manager {
+  flex: 1 1 auto;
+  min-height: 0;
+}
 .t20cp-patch-manager .t20cp-patch .form-fields {
   flex: 0 0 auto;
   gap: 0.5rem;

@@ -13,6 +13,10 @@
         "Name": "Upgrades that reduce armor penalty",
         "Hint": "Ajustada, Sob Medida and Mitral reduce the armor penalty (down to 0) instead of increasing it."
       },
+      "hide-legacy-upgrades": {
+        "Name": "Hide legacy upgrades (\"Deprecated\")",
+        "Hint": "Hides the \"Deprecated\" block from the item sheet Enhancements tab; its fields do not work. No data is changed."
+      },
       "item-effects-on-actor-sheet": {
         "Name": "Item effects on the actor sheet",
         "Hint": "Lists effects coming from items on the actor sheet, where they can be toggled, edited, deleted and dragged."

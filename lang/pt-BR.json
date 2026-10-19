@@ -13,6 +13,10 @@
         "Name": "Melhorias que reduzem a penalidade de armadura",
         "Hint": "Ajustada, Sob Medida e Mitral reduzem a penalidade de armadura (até 0), em vez de aumentá-la."
       },
+      "hide-legacy-upgrades": {
+        "Name": "Ocultar aprimoramentos antigos (\"Deprecated\")",
+        "Hint": "Oculta o bloco \"Deprecated\" da aba Aprimoramentos das fichas de item, cujos campos não funcionam. Nenhum dado é alterado."
+      },
       "item-effects-on-actor-sheet": {
         "Name": "Efeitos de itens na ficha do ator",
         "Hint": "Lista na ficha do ator os efeitos vindos dos itens, que podem ser alternados, editados, excluídos e arrastados."

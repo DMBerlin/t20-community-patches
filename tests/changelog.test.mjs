@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { addEntry, cutRelease, nextVersion, releaseNotes, updateManifest } from "../tools/changelog.mjs";
+import { addEntry, compatibilityLine, cutRelease, nextVersion, releaseNotes, updateManifest } from "../tools/changelog.mjs";
 
 const BASE = "# Changelog\n\nIntro.\n\n## Unreleased\n\n## v0.1.0 - 2026-01-01\n\n### Fixed\n\n- old / old\n";
 
@@ -40,4 +40,17 @@ test("points the manifest download at the release tag", () => {
   const manifest = updateManifest({ version: "0.1.0", url: "https://github.com/o/r", download: "x" }, "0.2.0");
   assert.equal(manifest.version, "0.2.0");
   assert.equal(manifest.download, "https://github.com/o/r/releases/download/v0.2.0/module.zip");
+});
+
+test("records the declared compatibility in the released version and its notes", () => {
+  const manifest = {
+    compatibility: { minimum: "14", verified: "14.369" },
+    relationships: { systems: [{ id: "tormenta20", compatibility: { minimum: "1.6.5", verified: "1.6.6" } }] }
+  };
+  const line = compatibilityLine(manifest);
+  assert.equal(line, "**Compatibilidade:** Foundry VTT (mínimo 14, verificado 14.369) · Tormenta20 (mínimo 1.6.5, verificado 1.6.6)");
+  const text = cutRelease(addEntry(BASE, "Fixed", "new"), "0.1.1", "2026-02-02", line);
+  assert.equal(releaseNotes(text, "0.1.1"), `${line}\n\n### Fixed\n\n- new\n`);
+  assert.match(addEntry(text, "Added", "next"), /## Unreleased\n\n### Added\n\n- next\n\n## v0\.1\.1/);
+  assert.throws(() => compatibilityLine({ compatibility: { verified: "14" }, relationships: { systems: [] } }), /verified/);
 });

@@ -1,6 +1,6 @@
 # Changelog
 
-Mudanças relevantes do módulo. O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e as versões seguem o [SemVer](https://semver.org/lang/pt-BR/). Cada entrada ocupa uma linha, em português, e cita a issue `(#n)`.
+Mudanças relevantes do módulo. O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e as versões seguem o [SemVer](https://semver.org/lang/pt-BR/). Cada entrada ocupa uma linha, em português, e cita a issue `(#n)`. Cada versão começa com a compatibilidade declarada no `module.json` (Foundry VTT e Tormenta20) no momento da release.
 
 <!--
 Não edite as seções de versão à mão.

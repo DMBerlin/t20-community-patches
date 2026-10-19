@@ -4,7 +4,9 @@
  *
  *   node tools/changelog.mjs add <Section> "<entry>"   Adds an entry to "## Unreleased".
  *   node tools/changelog.mjs next                      Prints the suggested next version.
- *   node tools/changelog.mjs release <x.y.z> [date]    Moves Unreleased into "## vx.y.z - date"; updates module.json.
+ *   node tools/changelog.mjs release <x.y.z> [date]    Moves Unreleased into "## vx.y.z - date" with the compatibility
+ *                                                      declared in module.json; updates module.json.
+ *   node tools/changelog.mjs compat                    Prints the compatibility line of module.json.
  *   node tools/changelog.mjs notes <x.y.z>             Prints the body of "## vx.y.z" (release notes).
  */
 import { execFileSync } from "node:child_process";
@@ -86,13 +88,30 @@ export function nextVersion(text, lastTag, currentVersion) {
   return `${major}.${minor}.${patch + 1}`;
 }
 
-export function cutRelease(text, version, date) {
+/** One-line summary of the compatibility declared in module.json, recorded in every released version. */
+export function compatibilityLine(manifest) {
+  const range = (c = {}) => {
+    const parts = [];
+    if (c.minimum) parts.push(`mínimo ${c.minimum}`);
+    if (c.verified) parts.push(`verificado ${c.verified}`);
+    if (c.maximum) parts.push(`máximo ${c.maximum}`);
+    return parts.length ? ` (${parts.join(", ")})` : "";
+  };
+  const system = manifest.relationships?.systems?.find((s) => s.id === "tormenta20");
+  if (!manifest.compatibility?.verified || !system?.compatibility?.verified) {
+    throw new Error("module.json: compatibility.verified and the tormenta20 compatibility.verified are required");
+  }
+  return `**Compatibilidade:** Foundry VTT${range(manifest.compatibility)} · Tormenta20${range(system.compatibility)}`;
+}
+
+export function cutRelease(text, version, date, compatibility) {
   if (!SEMVER.test(version)) throw new Error(`Invalid version "${version}"`);
   const parts = blocks(text);
   if (parts.some((b) => b.heading?.startsWith(`## v${version} `))) throw new Error(`v${version} already exists`);
   if (!Object.keys(unreleasedEntries(text)).length) throw new Error("Unreleased is empty: nothing to release");
   const index = parts.indexOf(unreleased(parts));
-  const released = { heading: `## v${version} - ${date}`, lines: parts[index].lines };
+  const lines = compatibility ? ["", compatibility, ...parts[index].lines] : parts[index].lines;
+  const released = { heading: `## v${version} - ${date}`, lines };
   parts.splice(index, 1, { heading: UNRELEASED, lines: [""] }, released);
   return join(parts);
 }
@@ -137,16 +156,19 @@ function main([command, ...args]) {
       break;
     case "release": {
       const [version, date = new Date().toISOString().slice(0, 10)] = args;
-      writeFileSync("CHANGELOG.md", cutRelease(changelog, version, date));
+      writeFileSync("CHANGELOG.md", cutRelease(changelog, version, date, compatibilityLine(manifest)));
       writeFileSync("module.json", `${JSON.stringify(updateManifest(manifest, version), null, 2)}\n`);
       console.log(`CHANGELOG.md and module.json updated for v${version}`);
       break;
     }
+    case "compat":
+      console.log(compatibilityLine(manifest));
+      break;
     case "notes":
       process.stdout.write(releaseNotes(changelog, args[0]));
       break;
     default:
-      console.error("Usage: changelog.mjs add <Section> <entry> | next | release <x.y.z> [date] | notes <x.y.z>");
+      console.error("Usage: changelog.mjs add <Section> <entry> | next | release <x.y.z> [date] | compat | notes <x.y.z>");
       process.exit(2);
   }
 }

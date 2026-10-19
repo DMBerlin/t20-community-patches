@@ -36,11 +36,32 @@
       "ability-dialog-cost": {
         "Name": "Total cost in the usage dialog",
         "Hint": "\"Total Mana Cost\" adds the base cost and the checked enhancements, without double counting. Display only."
+      },
+      "segmented-scene-setting": {
+        "Name": "Segmented Scene setting",
+        "Hint": "Removes the broken \"Segmented Scene\" row (console error) and adds a button in the Tormenta20 tab to configure the rule."
       }
     },
     "ItemEffects": {
       "DeleteTitle": "Delete item effect",
       "DeleteContent": "Delete the effect <strong>{effect}</strong> from the item <strong>{item}</strong>? This changes the item."
+    },
+    "SegmentedScene": {
+      "Title": "Segmented Scene",
+      "Name": "Segmented Scene",
+      "Button": "Configure",
+      "Hint": "Splits each scene into segments. While the rule is active, ending a combat does not end scene effects; the GM advances segments by clicking the circles in the players list (right click goes back). Ending the scene resets the counter.",
+      "Max": "Segments per scene",
+      "MaxHint": "0 or empty disables the rule. Maximum: {limit} (adjustable in Configure Settings → Tormenta20 Community Patches).",
+      "Value": "Current segment",
+      "ValueHint": "Between 0 and the number of segments.",
+      "Save": "Save",
+      "OverLimit": "Segmented Scene: {max} segments exceed the limit of {limit}. Nothing was saved. Use fewer segments or raise the limit in Configure Settings → Tormenta20 Community Patches.",
+      "StoredOverLimit": "Segmented Scene: the current configuration has {max} segments, above the limit of {limit}. The players list draws one circle per segment and may become slow. Reduce the segments (Configure Settings → Tormenta20 → Segmented Scene) or raise the limit in Configure Settings → Tormenta20 Community Patches.",
+      "Limit": {
+        "Name": "Segmented Scene segment limit",
+        "Hint": "Maximum number of segments per scene accepted by the Segmented Scene form. The players list draws one circle per segment on every client, so high values may slow down the interface."
+      }
     },
     "Notifications": {
       "error": "Tormenta20 Community Patches: failed to apply the patch \"{name}\" ({reason}). Check the console (F12).",

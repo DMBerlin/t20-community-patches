@@ -36,11 +36,32 @@
       "ability-dialog-cost": {
         "Name": "Custo total no diálogo de uso",
         "Hint": "O \"Custo de Mana Total\" soma o custo base e os aprimoramentos marcados, sem contagem dupla. Só afeta a exibição."
+      },
+      "segmented-scene-setting": {
+        "Name": "Configuração de Cena Segmentada",
+        "Hint": "Remove a linha quebrada \"Cena Segmentada\" (erro no console) e adiciona um botão na aba Tormenta20 para configurar a regra."
       }
     },
     "ItemEffects": {
       "DeleteTitle": "Excluir efeito do item",
       "DeleteContent": "Excluir o efeito <strong>{effect}</strong> do item <strong>{item}</strong>? Isso altera o item."
+    },
+    "SegmentedScene": {
+      "Title": "Cena Segmentada",
+      "Name": "Cena Segmentada",
+      "Button": "Configurar",
+      "Hint": "Divide cada cena em segmentos. Com a regra ativa, encerrar um combate não encerra os efeitos de cena; o mestre avança os segmentos clicando nos círculos da lista de jogadores (o botão direito volta). Encerrar a cena zera o contador.",
+      "Max": "Segmentos por cena",
+      "MaxHint": "0 ou vazio desativa a regra. Máximo: {limit} (ajustável em Configurar Ajustes → Tormenta20 Community Patches).",
+      "Value": "Segmento atual",
+      "ValueHint": "Entre 0 e o número de segmentos.",
+      "Save": "Salvar",
+      "OverLimit": "Cena Segmentada: {max} segmentos passam do limite de {limit}. Nada foi salvo. Use menos segmentos ou aumente o limite em Configurar Ajustes → Tormenta20 Community Patches.",
+      "StoredOverLimit": "Cena Segmentada: a configuração atual tem {max} segmentos, acima do limite de {limit}. A lista de jogadores desenha um círculo por segmento e pode ficar lenta. Reduza os segmentos (Configurar Ajustes → Tormenta20 → Cena Segmentada) ou aumente o limite em Configurar Ajustes → Tormenta20 Community Patches.",
+      "Limit": {
+        "Name": "Limite de segmentos da Cena Segmentada",
+        "Hint": "Número máximo de segmentos por cena aceito pelo formulário de Cena Segmentada. A lista de jogadores desenha um círculo por segmento em todos os clientes, então valores altos podem deixar a interface lenta."
+      }
     },
     "Notifications": {
       "error": "Tormenta20 Community Patches: falha ao aplicar a correção \"{name}\" ({reason}). Veja o console (F12).",

@@ -29,6 +29,10 @@
         "Name": "Usage effects of unequipped items",
         "Hint": "Usage effects of unequipped weapons and equipment are no longer offered or applied on rolls."
       },
+      "appended-usage-changes": {
+        "Name": "Changes appended by usage effects",
+        "Hint": "Usage effects that append a bonus to another effect (such as Inspiração Marcial) are added only once and no longer alter the original effect between uses."
+      },
       "temporary-usage-effect-expiry": {
         "Name": "Temporary usage effects expiry",
         "Hint": "Temporary usage effects expire at scene end, by rounds or by time advancement, like other effects."

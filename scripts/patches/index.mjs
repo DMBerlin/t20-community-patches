@@ -1,4 +1,5 @@
 import abilityDialogCost from "./ability-dialog-cost.mjs";
+import appendedUsageChanges from "./appended-usage-changes.mjs";
 import armorPenaltyReduction from "./armor-penalty-reduction.mjs";
 import encumberedStatusSync from "./encumbered-status-sync.mjs";
 import hideLegacyUpgrades from "./hide-legacy-upgrades.mjs";
@@ -38,4 +39,4 @@ export const GROUPS = ["conditions", "sheet-effects", "usage-effects", "items", 
  */
 
 /** @type {Patch[]} */
-export const PATCHES = [statusEffectsCompendium, encumberedStatusSync, itemEffectsOnActorSheet, usageEffectToggle, suppressedUsageEffects, temporaryUsageEffectExpiry, abilityDialogCost, armorPenaltyReduction, hideLegacyUpgrades, segmentedSceneSetting];
+export const PATCHES = [statusEffectsCompendium, encumberedStatusSync, itemEffectsOnActorSheet, usageEffectToggle, suppressedUsageEffects, appendedUsageChanges, temporaryUsageEffectExpiry, abilityDialogCost, armorPenaltyReduction, hideLegacyUpgrades, segmentedSceneSetting];

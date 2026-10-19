@@ -10,6 +10,10 @@ Não edite as seções de versão à mão.
 
 ## Unreleased
 
+### Fixed
+
+- `appended-usage-changes` (#23): a Inspiração Marcial soma o dano uma única vez e não vaza mais o bônus para os usos seguintes da Inspiração. Afeta Tormenta20 1.6.5.
+
 ## v1.0.0 - 2026-10-19
 
 **Compatibilidade:** Foundry VTT (mínimo 14, verificado 14.369) · Tormenta20 (mínimo 1.6.5, verificado 1.6.5)

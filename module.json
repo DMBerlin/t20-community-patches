@@ -2,7 +2,7 @@
   "id": "t20-community-patches",
   "title": "Tormenta20 Community Patches",
   "description": "Toggleable community fixes for confirmed bugs in the Tormenta20 system, to be used while official fixes are pending. / Correções comunitárias, ativáveis individualmente, para bugs confirmados do sistema Tormenta20 enquanto as correções oficiais não chegam.",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "authors": [
     {
       "name": "Daniel Marinho",
@@ -49,5 +49,5 @@
   "readme": "README.md",
   "changelog": "CHANGELOG.md",
   "manifest": "https://github.com/DMBerlin/t20-community-patches/releases/latest/download/module.json",
-  "download": "https://github.com/DMBerlin/t20-community-patches/releases/download/v0.1.0/module.zip"
+  "download": "https://github.com/DMBerlin/t20-community-patches/releases/download/v1.0.0/module.zip"
 }

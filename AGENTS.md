@@ -95,8 +95,9 @@ Regras:
 - Formato Keep a Changelog. A seção `## Unreleased` acumula tudo o que já entrou na main e ainda não tem tag.
 - Seções: `Added`, `Changed`, `Fixed`, `Security`, `Removed`. Cada entrada é **uma linha** em português que cita a issue (`(#n)`).
 - Entradas entram **somente no land**: `node tools/changelog.mjs add <Seção> "<linha>"`.
-- Release: `node tools/changelog.mjs release <x.y.z>` (skill `release`), seguido de commit e tag assinada `vX.Y.Z`. O usuário faz o push manualmente com `git push --follow-tags origin main`.
-- O workflow `.github/workflows/release.yml` publica a GitHub Release, com `module.json` e `module.zip`, quando recebe a tag. O manifesto instalado no Foundry aponta para `releases/latest/download/module.json`, ou seja, para a última release publicada, e não para uma branch.
+- Versões: SemVer próprio do módulo, independente do Tormenta20. A compatibilidade é documentada no `module.json`, na linha `**Compatibilidade:**` de cada versão do CHANGELOG (`node tools/changelog.mjs compat`) e no título da GitHub Release (`vX.Y.Z · Tormenta20 <verified>`).
+- Release: skill `release`. Ela confirma a versão com o usuário, roda `node tools/changelog.mjs release <x.y.z>`, cria o commit e a tag assinada `vX.Y.Z`, faz `git push --atomic origin main vX.Y.Z` e acompanha o workflow até o manifesto servir a nova versão. Tags publicadas nunca são movidas.
+- O workflow `.github/workflows/release.yml` publica a GitHub Release, com `module.json` e `module.zip`, quando recebe a tag, e confere a URL do manifesto depois de publicar. O manifesto instalado no Foundry aponta para `releases/latest/download/module.json`, ou seja, para a última release publicada, e não para uma branch.
 
 ## Ciclo de vida (skills)
 
@@ -106,4 +107,4 @@ Regras:
 2. `issue`: investiga e abre uma issue completa, pronta para outro agente implementar.
 3. `implement`: worktree, implementação, testes, commit e ciclo de review de QA (gpt-6.1-sol, no máximo 5 rodadas) até sair CLEAN; depois `make active` e o plano de teste manual.
 4. `land`: squash na main, entrada no CHANGELOG, push, comentário com as evidências, fechamento da issue e remoção da worktree.
-5. `release`: move Unreleased para a próxima versão, gera o commit e a tag assinados; o push é feito pelo usuário.
+5. `release`: anuncia, confirma a versão e os pontos abertos, gera o commit e a tag assinados, faz o push e acompanha o pipeline até a publicação.

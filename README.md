@@ -18,6 +18,10 @@ No Foundry, vá em **Add-on Modules → Install Module** e cole a URL do manifes
 https://github.com/DMBerlin/t20-community-patches/releases/latest/download/module.json
 ```
 
+## Versões e compatibilidade
+
+O módulo tem numeração própria, em [SemVer](https://semver.org/lang/pt-BR/), independente da versão do Tormenta20. As versões do Foundry VTT e do Tormenta20 com que cada versão foi verificada aparecem no título e nas notas de cada [release](https://github.com/DMBerlin/t20-community-patches/releases) e no início de cada versão do [CHANGELOG](CHANGELOG.md).
+
 ## Correções
 
 | Correção | Grupo | Versões verificadas | O que faz |
@@ -69,9 +73,9 @@ Todas seguem as regras de commit da skill `commit`.
 
 ### Release
 
-1. A skill `release` move `Unreleased` para a nova versão no `CHANGELOG.md`, atualiza o `module.json` e cria o commit e a tag assinada `vX.Y.Z`.
-2. Você faz o push: `git push --follow-tags origin main`.
-3. O workflow `Release` testa, empacota e publica a GitHub Release com `module.json` e `module.zip`. A URL do manifesto aponta sempre para a última release publicada.
+1. A skill `release` anuncia o que vai publicar, confirma a versão e os pontos abertos, move `Unreleased` para a nova versão no `CHANGELOG.md` (com a linha de compatibilidade), atualiza o `module.json`, cria o commit e a tag assinada `vX.Y.Z` e faz o push.
+2. A tag dispara o workflow `Release`, que valida, testa, empacota e publica a GitHub Release com `module.json` e `module.zip`, e confere que o manifesto passou a servir a nova versão.
+3. A skill acompanha o workflow até o fim e entrega o link da release.
 
 ## Licença
 

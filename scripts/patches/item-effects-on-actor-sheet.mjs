@@ -9,7 +9,7 @@
  * same set Foundry v10 showed). Rows of item effects show the item as source; Toggle/Edit/Delete (with
  * confirmation) and drag act on the effect inside the item.
  */
-import { MODULE_ID, markWrapper } from "../utils.mjs";
+import { MODULE_ID, markWrapper, stripComments, unwrap } from "../utils.mjs";
 import { resolveEffectFromRow } from "../effect-rows.mjs";
 
 /**
@@ -39,16 +39,38 @@ export function isItemHeldEffect(effect, actor) {
 }
 
 /**
- * Inspects the source of ActorSheetT20#getData: true when it still lists only `this.actor.effects`,
- * false when it already uses `allApplicableEffects`, undefined otherwise.
- * @param {string} source
- * @returns {boolean|undefined}
+ * Reads the sources of ActorSheetT20#getData (listing) and ActiveEffectT20.onManageActiveEffect (controls).
+ * The patch fixes both, so a fix of the listing alone is not a fix. Comments are ignored, and unrecognized code
+ * (for example another module's wrapper) gives "unknown". Only reading code, a fix is never high-confidence.
+ * @param {string|undefined} getData
+ * @param {string|undefined} manage
+ * @returns {import("../registry.mjs").Diagnosis}
  */
-export function getDataListsOnlyActorEffects(source) {
-  if (typeof source !== "string") return undefined;
-  if (source.includes("allApplicableEffects")) return false;
-  if (/prepareActiveEffectCategories\(\s*this\.actor\.effects\s*\)/.test(source)) return true;
-  return undefined;
+export function diagnoseItemEffectsSheet(getData, manage) {
+  if (typeof getData !== "string") return { bug: "unknown", confidence: "low", evidence: "getData source unavailable" };
+  const listing = stripComments(getData);
+  if (/prepareActiveEffectCategories\(\s*this\.actor\.effects\s*\)/.test(listing)) {
+    return { bug: "present", confidence: "high", evidence: "getData lists only actor.effects" };
+  }
+  if (!/allApplicableEffects\s*\(/.test(listing)) {
+    return { bug: "unknown", confidence: "low", evidence: "getData source not recognized" };
+  }
+  const actions = typeof manage === "string" ? stripComments(manage) : "";
+  if (/owner\.effects\.get\s*\(/.test(actions)) {
+    return {
+      bug: "present",
+      confidence: "low",
+      evidence: "getData uses allApplicableEffects, but effect controls still resolve through owner.effects"
+    };
+  }
+  if (!/dataset\.action/.test(actions)) {
+    return { bug: "unknown", confidence: "low", evidence: "onManageActiveEffect source not recognized" };
+  }
+  return {
+    bug: "fixed",
+    confidence: "low",
+    evidence: "getData uses allApplicableEffects and effect controls no longer use owner.effects"
+  };
 }
 
 /* -------------------------------------------- */
@@ -95,8 +117,11 @@ async function confirmItemEffectDeletion(effect) {
 }
 
 function isNeeded() {
-  const getData = findActorSheetBase()?.prototype?.getData;
-  return typeof getData === "function" ? getDataListsOnlyActorEffects(Function.prototype.toString.call(getData)) : undefined;
+  const source = (fn) => (typeof fn === "function" ? Function.prototype.toString.call(unwrap(fn)) : undefined);
+  return diagnoseItemEffectsSheet(
+    source(findActorSheetBase()?.prototype?.getData),
+    source(globalThis.tormenta20?.entities?.ActiveEffectT20?.onManageActiveEffect)
+  );
 }
 
 function apply() {
@@ -114,7 +139,7 @@ function apply() {
 
   // 1) Data: list actor effects + transferred item effects.
   const getData = ActorSheetBase.prototype.getData;
-  ActorSheetBase.prototype.getData = async function (...args) {
+  ActorSheetBase.prototype.getData = markWrapper(async function (...args) {
     const data = await getData.apply(this, args);
     if (!data?.effects || typeof this.actor?.allApplicableEffects !== "function") return data;
     try {
@@ -126,7 +151,7 @@ function apply() {
       console.error(`${MODULE_ID} | item-effects-on-actor-sheet: failed to list item effects`, err);
     }
     return data;
-  };
+  }, getData);
 
   // 2) DOM: runs after activateListeners for every T20 actor sheet (including non-editable NPC sheets).
   Hooks.on(`render${ActorSheetBase.name}`, annotateRows);

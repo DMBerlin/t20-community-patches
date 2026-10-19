@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   computePenaltyAdjustments,
+  diagnosePenaltyField,
   isArmorPenaltyReducer,
   parseReduction,
   resolveDataRefs
@@ -72,4 +73,12 @@ test("formula data references resolve recursively and unresolved ones are reject
   assert.throws(() => resolveDataRefs("2+@missing", {}, FakeRoll));
   const missing = () => resolveDataRefs("2+@missing", {}, FakeRoll);
   assert.equal(parseReduction("2+@missing", missing), 0);
+});
+
+test("the penalty field probe never reports a high-confidence fix", () => {
+  assert.equal(diagnosePenaltyField(-1).bug, "present");
+  assert.deepEqual([diagnosePenaltyField(0).bug, diagnosePenaltyField(0).confidence], ["fixed", "low"]);
+  assert.deepEqual([diagnosePenaltyField(1).bug, diagnosePenaltyField(1).confidence], ["fixed", "low"]);
+  assert.equal(diagnosePenaltyField(NaN).bug, "unknown");
+  assert.equal(diagnosePenaltyField(null).bug, "unknown");
 });

@@ -9,7 +9,7 @@ Módulo do Foundry VTT (`t20-community-patches`) com correções ativáveis para
 Princípios inegociáveis:
 - **Nunca** editar arquivos do sistema Tormenta20 nem do core do Foundry. Toda correção é feita por wrapper ou interceptação em tempo de execução, dentro do módulo.
 - Corrigir só o que está comprovadamente quebrado, seguindo a intenção do sistema. Não mudar comportamento oficial que funciona.
-- Toda correção pode ser ligada e desligada, é limitada por versão (`system.affected`) e, sempre que possível, tem um teste em tempo de execução (`isNeeded()`).
+- Toda correção tem três modos (Automático, Desligado, Forçar), é limitada por versão (`system.affected`) e, sempre que possível, tem um teste em tempo de execução (`isNeeded()`) que devolve um diagnóstico com nível de confiança.
 
 ## Layout de worktrees (`.bare`)
 
@@ -76,10 +76,19 @@ export default {
   group: "<um de GROUPS>",          // conditions | sheet-effects | usage-effects | items | settings
   issue: <n>,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.5" } },
-  isNeeded() { /* síncrono, seguro no init: true = bug presente, false = já corrigido, undefined = não sabe */ },
+  guarded: false,                   // opcional: true se o apply() só age quando o bug aparece
+  isNeeded() { /* síncrono, seguro no init, roda antes do apply(): devolve um Diagnosis */ },
+  async lateProbe() { /* opcional: diagnóstico depois do ready; só atualiza selo e aviso */ },
   apply() { /* instala os wrappers; chamado uma vez no init */ }
 };
 ```
+
+Diagnóstico (`Diagnosis`, em `scripts/registry.mjs`): `{ bug: "present" | "fixed" | "unknown", confidence: "high" | "low", evidence?: string }`.
+- `confidence: "high"` só quando a evidência cobre **tudo** o que o patch corrige. Em Automático, só `fixed`/high deixa de aplicar a correção; `fixed`/low vira `suspected-fixed` e a correção continua aplicada.
+- Um teste que **só lê código-fonte** nunca devolve `fixed`/high: ignore comentários (`stripComments`), leia a função original (`unwrap`, antes do `apply()`) e responda `unknown` para código não reconhecido (por exemplo, o wrapper de outro módulo). Uma correção parcial do sistema não é `fixed`.
+- Booleanos legados continuam aceitos: `true` → present/high, `false` → fixed/low, `undefined` → unknown.
+- `guarded: true` permite aplicar a correção numa versão não verificada sem confirmar o bug (`applied-guarded`).
+- `lateProbe()` só roda quando o patch foi aplicado, não pode medir o efeito do próprio patch e devolve `undefined` quando não aprendeu nada.
 
 Regras:
 - Lógica de decisão em **funções puras exportadas**, testadas em `tests/<id>.test.mjs`. A integração com o Foundry fica fina.

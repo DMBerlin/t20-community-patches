@@ -1,10 +1,11 @@
 import { MODULE_ID } from "./utils.mjs";
+import { normalizeMode, planModeMigration } from "./registry.mjs";
 import { PatchManager } from "./apps/patch-manager.mjs";
 
 export const SETTINGS = {
-  /** {[patchId]: boolean}. Missing ids fall back to the legacy setting, then to enabled. */
+  /** {[patchId]: "auto"|"off"|"force"}. Booleans and missing ids are read through normalizeMode. */
   patches: "patches",
-  /** {[patchId]: PatchState} seen by this user on the previous load, used to notify each GM once per change. */
+  /** {[patchId]: StatusRecord} seen by this user on the previous load, used to notify each GM once per change. */
   lastStatus: "lastStatus"
 };
 
@@ -40,26 +41,24 @@ export function registerSettings(patches) {
 
 /**
  * @param {string} id
- * @returns {boolean}
+ * @returns {import("./registry.mjs").PatchMode}
  */
-export function isPatchEnabled(id) {
+export function getPatchMode(id) {
   const value = game.settings.get(MODULE_ID, SETTINGS.patches)?.[id];
-  if (typeof value === "boolean") return value;
-  return game.settings.get(MODULE_ID, legacyKey(id)) !== false;
+  return normalizeMode(value, value === undefined ? game.settings.get(MODULE_ID, legacyKey(id)) : undefined);
 }
 
 /**
- * Copies patches disabled through the 0.1.0 settings into the `patches` setting. Run by the active GM.
+ * Rewrites booleans and the 0.1.0 settings as modes, keeping the effective behavior. Run by the active GM.
  * @param {{id: string}[]} patches
  */
 export async function migrateLegacySettings(patches) {
-  const current = game.settings.get(MODULE_ID, SETTINGS.patches) ?? {};
-  const migrated = patches.filter(
-    ({ id }) => typeof current[id] !== "boolean" && game.settings.get(MODULE_ID, legacyKey(id)) === false
+  const plan = planModeMigration(
+    game.settings.get(MODULE_ID, SETTINGS.patches) ?? {},
+    patches.map((p) => p.id),
+    (id) => game.settings.get(MODULE_ID, legacyKey(id))
   );
-  if (!migrated.length) return;
-  const next = { ...current };
-  for (const { id } of migrated) next[id] = false;
-  await game.settings.set(MODULE_ID, SETTINGS.patches, next);
-  console.log(`${MODULE_ID} | Migrated legacy settings: ${migrated.map((p) => p.id).join(", ")}`);
+  if (!plan) return;
+  await game.settings.set(MODULE_ID, SETTINGS.patches, plan.next);
+  console.log(`${MODULE_ID} | Migrated patch preferences: ${plan.migrated.join(", ")}`);
 }

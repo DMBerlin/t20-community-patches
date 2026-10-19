@@ -8,6 +8,7 @@
  * Fix: the check runs after items are created or deleted on the actor, and is serialized per actor, awaiting the
  * creation/removal. Every copy is removed when the character is no longer encumbered.
  */
+import { stripComments, unwrap } from "../utils.mjs";
 
 export const ENCUMBERED = "sobrecarregado";
 const LOG = "t20-community-patches | encumbered-status-sync:";
@@ -80,6 +81,45 @@ export function wrapDescendantCallback(original, after) {
   };
 }
 
+/**
+ * Whether a source is a class method definition (`name(…) {` or `async name(…) {`), as opposed to a function or
+ * arrow assigned by another module, whose body only forwards to code that cannot be read.
+ * @param {string} src
+ * @returns {boolean}
+ */
+export function isMethodSource(src) {
+  return /^\s*(?:async\s+)?(?!function\b|async\s*\()[A-Za-z_$][\w$]*\s*\(/.test(src ?? "");
+}
+
+/**
+ * Reads the sources of the create and delete paths (actor descendant callbacks and Item#_onCreate/_onDelete).
+ * Only reading code, the result is never a high-confidence fix: even with both paths calling the check, the
+ * system's _checkEncumbered (tormenta20 1.6.5) does not await its writes and removes only one copy. The bug is
+ * confirmed only when every source is a readable class method: a wrapper may hide a call.
+ * @param {{create: string[], delete: string[]}} sources
+ * @returns {import("../registry.mjs").Diagnosis}
+ */
+export function diagnoseEncumbranceHooks(sources) {
+  const calls = (list) => (list ?? []).some((src) => /_checkEncumbered\s*\(/.test(stripComments(src) ?? ""));
+  const onCreate = calls(sources?.create);
+  const onDelete = calls(sources?.delete);
+  if (onCreate && onDelete) {
+    return { bug: "fixed", confidence: "low", evidence: "item create and delete call _checkEncumbered" };
+  }
+  if (onCreate || onDelete) {
+    return {
+      bug: "unknown",
+      confidence: "low",
+      evidence: `only item ${onCreate ? "create" : "delete"} calls _checkEncumbered`
+    };
+  }
+  const all = [...(sources?.create ?? []), ...(sources?.delete ?? [])];
+  if (!all.length || !all.every(isMethodSource)) {
+    return { bug: "unknown", confidence: "low", evidence: "item create/delete paths are wrapped or missing" };
+  }
+  return { bug: "present", confidence: "high", evidence: "no item create/delete path calls _checkEncumbered" };
+}
+
 /* -------------------------------------------- */
 /*  Foundry integration                         */
 /* -------------------------------------------- */
@@ -123,21 +163,15 @@ function apply() {
   }
 }
 
-/**
- * The bug exists while no create/delete path calls the system's encumbrance check.
- * @returns {boolean|undefined}
- */
 function isNeeded() {
   const ActorClass = CONFIG.Actor?.documentClass;
   const ItemClass = CONFIG.Item?.documentClass;
   if (typeof ActorClass?.prototype?._checkEncumbered !== "function") return undefined;
-  const sources = [
-    ActorClass.prototype._onCreateDescendantDocuments,
-    ActorClass.prototype._onDeleteDescendantDocuments,
-    ItemClass?.prototype?._onCreate,
-    ItemClass?.prototype?._onDelete
-  ].map((fn) => String(fn));
-  return !sources.some((src) => src.includes("_checkEncumbered"));
+  const source = (fn) => (typeof fn === "function" ? Function.prototype.toString.call(unwrap(fn)) : "");
+  return diagnoseEncumbranceHooks({
+    create: [source(ActorClass.prototype._onCreateDescendantDocuments), source(ItemClass?.prototype?._onCreate)],
+    delete: [source(ActorClass.prototype._onDeleteDescendantDocuments), source(ItemClass?.prototype?._onDelete)]
+  });
 }
 
 export default {

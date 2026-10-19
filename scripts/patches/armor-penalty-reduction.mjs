@@ -54,6 +54,22 @@ export function parseReduction(value, evaluate) {
 }
 
 /**
+ * Interprets how the actor's armor penalty field cleans a positive value (a reduction). A negative result is the
+ * mechanism of the bug. Anything else only shows that the field changed, not that reductions now work (item
+ * link, cap at 0, stored values), so it is never a high-confidence fix.
+ * @param {unknown} cleaned  Result of `field.clean(1)` on `attributes.defesa.pda`.
+ * @returns {import("../registry.mjs").Diagnosis}
+ */
+export function diagnosePenaltyField(cleaned) {
+  if (typeof cleaned !== "number" || !Number.isFinite(cleaned)) {
+    return { bug: "unknown", confidence: "low", evidence: `defesa.pda cleans 1 to ${cleaned}` };
+  }
+  const value = cleaned;
+  if (value < 0) return { bug: "present", confidence: "high", evidence: "defesa.pda turns reductions into penalties" };
+  return { bug: "fixed", confidence: "low", evidence: `defesa.pda keeps positive values (1 → ${value})` };
+}
+
+/**
  * Computes the corrected penalties. Each reduction lowers the penalty of the item that carries it, down to 0.
  * The item's combined penalty is its base penalty plus the increases from its own upgrades (e.g. Reforçada),
  * which the system applies to the actor's `defesa.pda`. A reduction larger than the base penalty therefore
@@ -236,14 +252,10 @@ function apply() {
   }
 }
 
-/**
- * The bug exists while the actor's armor penalty field turns every value (including reductions) negative.
- * @returns {boolean|undefined}
- */
 function isNeeded() {
   const field = CONFIG.Actor.dataModels?.character?.schema?.getField?.("attributes.defesa.pda");
   if (!field) return undefined;
-  return field.clean(1) < 0;
+  return diagnosePenaltyField(field.clean(1));
 }
 
 export default {

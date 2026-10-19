@@ -65,20 +65,27 @@
     },
     "Notifications": {
       "error": "Tormenta20 Community Patches: failed to apply the patch \"{name}\" ({reason}). Check the console (F12).",
-      "fixed": "Tormenta20 Community Patches: {reason} already fixes \"{name}\", so the patch was switched off.",
-      "unverified": "Tormenta20 Community Patches: the patch \"{name}\" was not applied: the bug could not be confirmed on {reason}, an unverified version.",
+      "fixed": "Tormenta20 Community Patches: {reason} already fixes \"{name}\". The patch was not applied on this load and your preference was kept; you can turn it off in Configure Settings → Tormenta20 Community Patches → Manage patches.",
+      "unverified": "Tormenta20 Community Patches: the patch \"{name}\" was not applied on this load: the bug could not be confirmed on {reason}, an unverified version. Your preference was kept; to apply it anyway, use Force in Configure Settings → Tormenta20 Community Patches → Manage patches.",
       "applied-unverified": "Tormenta20 Community Patches: the patch \"{name}\" is still applied on {reason}, an unverified version, because the bug was detected.",
-      "incompatible": "Tormenta20 Community Patches: the patch \"{name}\" does not apply to {reason}."
+      "incompatible": "Tormenta20 Community Patches: the patch \"{name}\" does not apply to {reason}.",
+      "suspected-fixed": "Tormenta20 Community Patches: {reason} may already fix \"{name}\", but the check does not confirm the whole fix. The patch stays active; review it in Configure Settings → Tormenta20 Community Patches → Manage patches.",
+      "applied-guarded": "Tormenta20 Community Patches: the patch \"{name}\" stays active as a precaution on {reason}, an unverified version; it only acts when the bug shows up.",
+      "disabled-fixed": "Tormenta20 Community Patches: {reason} already fixes \"{name}\". The patch is off and can stay that way (Configure Settings → Tormenta20 Community Patches → Manage patches).",
+      "regression": "Tormenta20 Community Patches: the bug fixed by \"{name}\" was detected again on {reason}, so the patch is applied again. Review it in Configure Settings → Tormenta20 Community Patches → Manage patches."
     },
     "Manager": {
       "Name": "Patches",
       "Label": "Manage patches",
-      "Hint": "Turns each patch on or off and shows its state on this Tormenta20 version.",
+      "Hint": "Sets the mode of each patch (Automatic, Off or Force) and shows its state and diagnosis on this Tormenta20 version.",
       "Title": "Tormenta20 Community Patches",
-      "Intro": "Each patch is only applied while the bug exists. When Tormenta20 fixes the bug, the patch is switched off automatically. Changes require reloading the world.",
+      "Intro": "In Automatic, each patch is applied while the bug exists and is only skipped when there is strong evidence that Tormenta20 fixed it; your preference never changes by itself. Off does not apply the patch, but the diagnosis is still shown. Force applies it even when the diagnosis says otherwise. Changes require reloading the world.",
       "Issue": "Open the issue on GitHub",
       "Save": "Save",
-      "PendingReload": "Some saved changes only take effect after reloading the world (F5)."
+      "PendingReload": "Some saved changes only take effect after reloading the world (F5).",
+      "Mode": "Patch mode",
+      "ForceTitle": "Force patches",
+      "ForceContent": "These patches will be applied even if the diagnosis says Tormenta20 already fixed the bug. If the system did fix it, the behavior may be doubled (for example, two Encumbered conditions). Continue?"
     },
     "Groups": {
       "conditions": "Conditions",
@@ -101,12 +108,12 @@
         "Hint": "Patch turned off in this window."
       },
       "fixed": {
-        "Label": "Fixed in the system",
-        "Hint": "{reason} already fixes the bug; the patch is not applied."
+        "Label": "Fixed in the system — can be turned off",
+        "Hint": "{reason} already fixes the bug. The patch was not applied on this load and your preference was kept; you can turn it off."
       },
       "unverified": {
         "Label": "Unverified version",
-        "Hint": "The bug could not be confirmed on {reason}; the patch is not applied."
+        "Hint": "The bug could not be confirmed on {reason}. The patch was not applied on this load and your preference was kept; use Force if the bug persists."
       },
       "incompatible": {
         "Label": "Incompatible",
@@ -115,6 +122,39 @@
       "error": {
         "Label": "Error",
         "Hint": "Failed to apply: {reason}. Check the console (F12)."
+      },
+      "suspected-fixed": {
+        "Label": "Possibly fixed — review",
+        "Hint": "There are signs that {reason} fixed the bug, but the check does not cover the whole patch. It stays active; check the behavior without it before turning it off."
+      },
+      "applied-guarded": {
+        "Label": "Applied as a precaution",
+        "Hint": "Version {reason} is unverified and the bug cannot be checked at load time. The patch stays active and only acts when the bug shows up."
+      },
+      "forced": {
+        "Label": "Forced",
+        "Hint": "Applied by your choice, regardless of the diagnosis."
+      },
+      "disabled-fixed": {
+        "Label": "Off · fixed in the system",
+        "Hint": "{reason} already fixes the bug; the patch can stay off."
+      }
+    },
+    "Modes": {
+      "auto": "Automatic",
+      "off": "Off",
+      "force": "Force"
+    },
+    "Diagnosis": {
+      "Line": "Diagnosis: {bug}, {confidence} confidence{evidence}.",
+      "Bug": {
+        "present": "bug present",
+        "fixed": "bug fixed",
+        "unknown": "undetermined"
+      },
+      "Confidence": {
+        "high": "high",
+        "low": "low"
       }
     }
   }

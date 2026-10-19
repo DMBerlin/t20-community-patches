@@ -5,10 +5,15 @@ Módulo para Foundry VTT com correções comunitárias para bugs confirmados no 
 **Princípios**
 
 - Corrige apenas bugs comprovados, seguindo a intenção dos mantenedores do sistema. O comportamento padrão do Foundry e do Tormenta20 não é alterado.
-- As correções ficam em **Configurações → Configurar Definições → Tormenta20 Community Patches → Gerenciar correções**, agrupadas por área. Cada uma tem seu próprio liga/desliga, um selo de status e o link da issue. Ao alterar uma opção, o mundo é recarregado.
-- Cada correção verifica, ao carregar o mundo, se o bug ainda existe no sistema. Nas versões verificadas, ela é aplicada, a menos que esse teste mostre que o bug já foi corrigido. Em versões mais novas, ainda não verificadas, ela só é aplicada se o teste confirmar o bug. Esse teste verifica o sintoma principal do bug, não todo o comportamento. Por isso ele reduz bastante o risco de aplicar uma correção em dobro, mas não o elimina. Se notar algo estranho depois de atualizar o Tormenta20, desligue a correção e abra uma issue. Cada GM é avisado, uma vez, quando uma correção passa a precisar de atenção: corrigida no sistema, versão não verificada, aplicada em versão não verificada ou incompatível. Erros geram aviso a cada carregamento.
+- As correções ficam em **Configurações → Configurar Definições → Tormenta20 Community Patches → Gerenciar correções**, agrupadas por área. Cada uma tem um modo (Automático, Desligado ou Forçar), um selo de status com o diagnóstico na dica e o link da issue. Ao alterar um modo, o mundo é recarregado; Forçar pede confirmação.
+- Cada correção faz, ao carregar o mundo, um diagnóstico do bug no sistema, com nível de confiança (alto ou baixo). O diagnóstico roda também com a correção desligada.
+  - **Automático:** a correção só deixa de ser aplicada quando há evidência forte de que o Tormenta20 corrigiu o bug ("Corrigida no sistema — pode desmarcar"). Com um indício fraco, ela continua aplicada e o selo pede para verificar ("Possivelmente corrigida — verifique"). Em versões mais novas, ainda não verificadas, ela é aplicada se o bug for confirmado, ou por precaução quando a correção só age quando o bug aparece; nos demais casos, não é aplicada nesta carga. A preferência nunca muda sozinha.
+  - **Desligado:** não aplica a correção; se o sistema já corrigiu o bug, o selo mostra isso.
+  - **Forçar:** aplica a correção mesmo quando o diagnóstico diz que o bug foi corrigido ou não o confirma (nunca em sistema incompatível). Se o sistema também corrigiu, o comportamento pode ficar duplicado.
+  - Se notar algo estranho depois de atualizar o Tormenta20, desligue a correção e abra uma issue.
+- Cada GM é avisado uma vez por mudança, e de novo a cada nova versão do sistema, quando uma correção precisa de atenção. Uma correção feita pelo sistema gera um aviso informativo, com o caminho do gerenciador. Se um bug dado como corrigido voltar a ser detectado, há um aviso próprio. Erros geram aviso a cada carregamento.
 - Alterações salvas valem depois de recarregar o mundo. Se o GM recusar o recarregamento, a janela mostra que há alterações pendentes.
-- Selos: Aplicada · Aplicada (versão não verificada) · Desligada · Corrigida no sistema · Versão não verificada · Incompatível · Erro.
+- Selos: "Aplicada"; "Aplicada (versão não verificada)"; "Aplicada por precaução"; "Possivelmente corrigida — verifique"; "Forçada"; "Desligada"; "Desligada · corrigida no sistema"; "Corrigida no sistema — pode desmarcar"; "Versão não verificada"; "Incompatível"; "Erro".
 
 ## Instalação
 
@@ -46,7 +51,8 @@ As convenções completas estão em [`AGENTS.md`](AGENTS.md).
   - `issue`;
   - `system.affected`: as versões verificadas;
   - `apply()`;
-  - sempre que possível, `isNeeded()`: um teste síncrono, seguro no `init`, que retorna `true` se o bug existe, `false` se já foi corrigido e `undefined` se não dá para saber.
+  - sempre que possível, `isNeeded()`: um teste síncrono, seguro no `init`, que devolve um diagnóstico `{ bug, confidence, evidence }` (ou o booleano legado). Um teste que só lê código-fonte nunca devolve "corrigido" com confiança alta;
+  - opcionalmente, `guarded` (o `apply()` só age quando o bug aparece) e `lateProbe()` (diagnóstico depois do `ready`).
 - O nome e a descrição de cada correção vão em `lang/pt-BR.json` e `lang/en.json`.
 - O repositório usa worktrees no layout `.bare`: `main/` é a principal e cada issue ganha a sua (`<n>-<slug>/`, branch `issue/<n>-<slug>`).
 

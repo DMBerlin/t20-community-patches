@@ -55,3 +55,39 @@ export function unwrap(fn) {
   }
   return fn;
 }
+
+/**
+ * Removes // and block comments from JavaScript source, keeping string and template literals intact, so a
+ * source-reading probe never matches a term that only appears in a comment. Regex literals are not parsed; a
+ * probe must treat its result as a hint, not proof.
+ * @param {string} source
+ * @returns {string}
+ */
+export function stripComments(source) {
+  if (typeof source !== "string") return source;
+  let out = "";
+  let quote = null;
+  for (let i = 0; i < source.length; i++) {
+    const ch = source[i];
+    if (quote) {
+      out += ch;
+      if (ch === "\\") out += source[++i] ?? "";
+      else if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === "`") {
+      quote = ch;
+      out += ch;
+    } else if (ch === "/" && source[i + 1] === "/") {
+      while (i < source.length && source[i] !== "\n") i++;
+      out += "\n";
+    } else if (ch === "/" && source[i + 1] === "*") {
+      const end = source.indexOf("*/", i + 2);
+      i = end < 0 ? source.length : end + 1;
+      out += " ";
+    } else {
+      out += ch;
+    }
+  }
+  return out;
+}

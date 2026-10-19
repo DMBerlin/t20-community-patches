@@ -55,6 +55,7 @@ export default {
   issue: 8,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.5" } },
   // The template can't be inspected synchronously during init; the hook only acts when the legacy block exists.
-  isNeeded: () => true,
+  guarded: true,
+  isNeeded: () => ({ bug: "unknown", confidence: "low", evidence: "the item sheet template is only read when rendered" }),
   apply
 };

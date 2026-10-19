@@ -14,6 +14,10 @@ Não edite as seções de versão à mão.
 
 - Gerenciador de correções (#20): janela "Gerenciar correções" com as correções agrupadas por área, selo de status, link da issue e aviso de recarregamento pendente. Cada correção testa, ao carregar, se o bug ainda existe: é desligada quando o sistema já corrigiu e continua ativa em versões não verificadas se o bug persistir. Cada GM é avisado uma vez quando uma correção pede atenção.
 
+### Changed
+
+- Detecção de correções do sistema (#22): cada correção agora informa o nível de confiança do diagnóstico, só é pulada sozinha quando a evidência é forte, mostra quando pode ser desmarcada (inclusive se estiver desligada) e ganha o modo "Forçar".
+
 ### Fixed
 
 - `armor-penalty-reduction` (#19): Ajustada, Sob Medida e Mitral reduzem a penalidade de armadura do item até 0, em vez de aumentá-la; o excedente anula a Reforçada do próprio item. Afeta Tormenta20 1.6.5.

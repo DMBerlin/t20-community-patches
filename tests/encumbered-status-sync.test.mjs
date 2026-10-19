@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   createSerializer,
+  diagnoseEncumbranceHooks,
   encumbranceAction,
   shouldCheckAfterItems,
   wrapDescendantCallback
@@ -142,4 +143,34 @@ test("a synchronous original keeps its return value and still triggers the check
   assert.equal(wrapped.call({}), undefined);
   await tick();
   assert.ok(ran);
+});
+
+test("diagnoses the create/delete paths without accepting a partial fix", () => {
+  const calls = "_onCreate(data, options, userId) { super._onCreate(data, options, userId); this.actor._checkEncumbered(); }";
+  const silent = "_onDelete(options, userId) { super._onDelete(options, userId); }";
+  const commented = "_onDelete(options, userId) { // TODO this.actor._checkEncumbered()\n }";
+  assert.equal(diagnoseEncumbranceHooks({ create: [silent], delete: [silent] }).bug, "present");
+  assert.equal(diagnoseEncumbranceHooks({ create: [silent], delete: [commented] }).bug, "present");
+  assert.equal(diagnoseEncumbranceHooks({ create: [calls, silent], delete: [silent] }).bug, "unknown");
+  assert.equal(diagnoseEncumbranceHooks({ create: [silent], delete: [silent, calls] }).bug, "unknown");
+  assert.deepEqual(
+    { ...diagnoseEncumbranceHooks({ create: [calls], delete: [calls] }), evidence: undefined },
+    { bug: "fixed", confidence: "low", evidence: undefined }
+  );
+});
+
+test("does not confirm the bug when a path is wrapped by another module or missing", () => {
+  const method = "async _onCreateDescendantDocuments(...args) { await super._onCreateDescendantDocuments(...args); }";
+  for (const opaque of [
+    "function (...args) { return wrapped.apply(this, args); }",
+    "(...args) => wrapped(...args)",
+    "async function (...args) { return wrapped.apply(this, args); }",
+    "async (...args) => wrapped(...args)",
+    ""
+  ]) {
+    const diagnosis = diagnoseEncumbranceHooks({ create: [method, opaque], delete: [method] });
+    assert.deepEqual([diagnosis.bug, diagnosis.confidence], ["unknown", "low"], opaque);
+  }
+  assert.equal(diagnoseEncumbranceHooks({ create: [method], delete: [method] }).bug, "present");
+  assert.equal(diagnoseEncumbranceHooks({ create: [], delete: [] }).bug, "unknown");
 });

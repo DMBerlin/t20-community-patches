@@ -46,7 +46,7 @@
 
 ### Teste em tempo de execução (`isNeeded`)
 
-<Teste síncrono, seguro no `init`: true = bug presente, false = já corrigido, undefined = não sabe. Ou: "não há teste confiável porque …".>
+<Teste síncrono, seguro no `init`, que devolve `{ bug: "present"|"fixed"|"unknown", confidence: "high"|"low", evidence }`. Diga o que ele cobre e o que não cobre, e por que a confiança é essa (só ler código-fonte → no máximo `fixed`/low). Ou: "não há teste confiável porque …", e se o patch é `guarded` ou tem `lateProbe()`.>
 
 ### Código completo
 

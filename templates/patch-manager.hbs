@@ -14,7 +14,9 @@
         {{#if issueUrl}}
         <a class="t20cp-issue" href="{{issueUrl}}" target="_blank" rel="noopener" data-tooltip="{{localize "T20CP.Manager.Issue"}}">#{{issue}}</a>
         {{/if}}
-        <input type="checkbox" id="t20cp-{{id}}" name="{{id}}" {{checked enabled}}>
+        <select id="t20cp-{{id}}" name="{{id}}" aria-label="{{localize "T20CP.Manager.Mode"}}">
+          {{selectOptions modes selected=mode localize=true}}
+        </select>
       </div>
       <p class="hint">{{hint}}</p>
     </div>

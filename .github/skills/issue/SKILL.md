@@ -45,7 +45,7 @@ Entregáveis da investigação:
    - quais métodos podem ser embrulhados e em que momento (`init`, `setup`, `ready`);
    - funções locais do bundle **não** podem ser embrulhadas, então diga qual é a alternativa;
    - o efeito para outros usuários e para dados persistidos.
-4. **Teste em tempo de execução (`isNeeded`):** um teste síncrono, seguro no `init`, que diga se o bug ainda existe. Se não houver teste possível, diga isso.
+4. **Teste em tempo de execução (`isNeeded`):** um teste síncrono, seguro no `init`, que diga se o bug ainda existe, como um diagnóstico (`present`/`fixed`/`unknown`). Diga o **nível de confiança** (`high` só quando a evidência cobre tudo o que o patch corrige; um teste que só lê código-fonte nunca dá `fixed`/high) e **o que o teste cobre e o que não cobre** (por exemplo, a criação, mas não a exclusão). Se não houver teste possível, diga isso e avalie `guarded` (o `apply()` só age quando o bug aparece) ou um `lateProbe()` depois do `ready`.
 5. **Interações:** com patches existentes e com outras issues abertas (`#n`).
 6. **Classificação:**
    - `patch`: corrigível no módulo sem mudar o comportamento oficial;

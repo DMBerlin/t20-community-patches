@@ -22,8 +22,18 @@ export const GROUPS = ["conditions", "sheet-effects", "usage-effects", "items", 
  * @property {number} [issue]                    Issue number in this repository.
  * @property {{id: string, affected: {minimum?: string, maximum?: string}}} system
  *                                               System versions verified to contain the bug.
- * @property {() => boolean|undefined} [isNeeded] Synchronous runtime probe, safe during "init".
- *                                               true = bug present, false = fixed upstream, undefined = unknown.
+ * @property {() => import("../registry.mjs").Diagnosis|boolean|undefined} [isNeeded]
+ *                                               Synchronous runtime probe, safe during "init", run before apply().
+ *                                               Returns a Diagnosis, or a legacy boolean: true = present/high,
+ *                                               false = fixed/low, undefined = unknown. A probe that only reads
+ *                                               source code never returns fixed/high.
+ * @property {boolean} [guarded]                 apply() only acts when the bug shows up, so it is safe to apply on
+ *                                               an unverified system version without confirming the bug.
+ * @property {() => Promise<import("../registry.mjs").Diagnosis|boolean|undefined>} [lateProbe]
+ *                                               Optional diagnosis after "ready", for bugs that cannot be checked
+ *                                               during "init". Only runs when the patch was applied; it updates the
+ *                                               badge and notifications, never installs or removes wrappers. It
+ *                                               must not measure the patch's own effect. undefined = no news.
  * @property {() => void} apply                  Installs the fix. Called once during "init".
  */
 

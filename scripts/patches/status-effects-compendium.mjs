@@ -61,6 +61,11 @@ export function shouldRebuild({ collection, userId, currentUserId, hasUnconsciou
 /* -------------------------------------------- */
 
 let substituted = false;
+/** Resolved once the system's empty copy was replaced and written on this load: the bug did show up. */
+let markTriggered;
+const triggered = new Promise((resolve) => (markTriggered = resolve));
+/** How long the late probe waits for the system's routine, which runs without await on "ready". */
+const LATE_PROBE_TIMEOUT = 60_000;
 let rebuilding = false;
 let rebuildPending = false;
 
@@ -68,6 +73,7 @@ function wrapCreateDocuments() {
   const Base = foundry.documents.ActiveEffect;
   const original = Base.createDocuments;
   Base.createDocuments = async function (data = [], operation = {}) {
+    let substitutedNow = false;
     if (!substituted) {
       try {
         if (
@@ -77,6 +83,7 @@ function wrapCreateDocuments() {
           })
         ) {
           substituted = true;
+          substitutedNow = true;
           const docs = (await game.packs.get(SOURCE_PACK)?.getDocuments()) ?? [];
           data = selectConditionSources(docs.map((d) => d.toObject()));
           console.log(`${LOG} filling ${STATUS_PACK} with ${data.length} conditions`);
@@ -85,7 +92,9 @@ function wrapCreateDocuments() {
         console.error(`${LOG} could not read ${SOURCE_PACK}; keeping the system's data`, err);
       }
     }
-    return original.call(this, data, operation);
+    const result = original.call(this, data, operation);
+    if (substitutedNow) Promise.resolve(result).then(() => markTriggered(), () => {});
+    return result;
   };
 }
 
@@ -157,18 +166,38 @@ function apply() {
 /**
  * The broken copy lives in a local function of the system and the packs only load after "init", so the bug
  * cannot be probed here. Both interceptions only act when the bug shows up (an empty copy into an empty
- * `world.statuses`, or a client left without conditions after the pack is filled).
- * @returns {boolean}
+ * `world.statuses`, or a client left without conditions after the pack is filled), hence `guarded`.
+ * @returns {import("../registry.mjs").Diagnosis}
  */
 function isNeeded() {
-  return true;
+  return { bug: "unknown", confidence: "low", evidence: "only verifiable after the compendiums load" };
+}
+
+/**
+ * After "ready": the bug is confirmed when this load replaced the system's empty copy. If that did not happen
+ * (pack already filled, another GM, timeout), nothing is learned: a filled pack may have been filled by this
+ * patch on an earlier load, so it never proves an official fix.
+ * @returns {Promise<import("../registry.mjs").Diagnosis|undefined>}
+ */
+function lateProbe() {
+  const timeout = new Promise((resolve) => setTimeout(() => resolve(undefined), LATE_PROBE_TIMEOUT));
+  return Promise.race([
+    triggered.then(() => ({
+      bug: "present",
+      confidence: "high",
+      evidence: "the system copied an empty condition list into world.statuses"
+    })),
+    timeout
+  ]);
 }
 
 export default {
   id: "status-effects-compendium",
   group: "conditions",
   issue: 1,
+  guarded: true,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.5" } },
   isNeeded,
+  lateProbe,
   apply
 };

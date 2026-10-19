@@ -24,6 +24,10 @@
       "suppressed-usage-effects": {
         "Name": "Correção: efeitos de uso de itens não equipados",
         "Hint": "Efeitos de uso de armas e equipamentos não equipados (suprimidos) deixam de ser oferecidos ou aplicados automaticamente em rolagens de item, perícia e atributo. Os efeitos do próprio item rolado não mudam."
+      },
+      "ability-dialog-cost": {
+        "Name": "Correção: custo total no diálogo de uso",
+        "Hint": "O \"Custo de Mana Total\" do diálogo de uso passa a mostrar o custo base mais os aprimoramentos marcados (incluindo os de \"Aplicar Sempre\"), sem contagem dupla, e deixa de mostrar 0 quando há efeitos pagos em rolagens sem custo base. Só afeta a exibição."
       }
     },
     "ItemEffects": {

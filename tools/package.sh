@@ -10,6 +10,13 @@ if [[ "$download" != *"/v${version}/module.zip" ]]; then
   exit 1
 fi
 
+manifest=$(node -p 'require("./module.json").manifest')
+url=$(node -p 'require("./module.json").url.replace(/\/$/, "")')
+if [[ "$manifest" != "${url}/releases/latest/download/module.json" ]]; then
+  echo "module.json: 'manifest' must point to ${url}/releases/latest/download/module.json (found: ${manifest})" >&2
+  exit 1
+fi
+
 rm -rf dist && mkdir dist
 zip -qr dist/module.zip module.json scripts lang templates styles LICENSE README.md CHANGELOG.md
 cp module.json dist/module.json

@@ -20,6 +20,10 @@
       "usage-effect-toggle": {
         "Name": "Fix: usage effects \"Always Apply\" toggle",
         "Hint": "The toggle of usage effects on sheets now switches \"Always Apply\" (dialog pre-selection and automatic application), and the icon shows that state. Temporary usage effects held by items still switch between applied by default and optional."
+      },
+      "suppressed-usage-effects": {
+        "Name": "Fix: usage effects of unequipped items",
+        "Hint": "Usage effects of unequipped (suppressed) weapons and equipment are no longer offered or auto-applied on item, skill and attribute rolls. The rolled item's own effects are unchanged."
       }
     },
     "ItemEffects": {

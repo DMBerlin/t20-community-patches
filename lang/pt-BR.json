@@ -20,6 +20,10 @@
       "usage-effect-toggle": {
         "Name": "Correção: botão \"Aplicar Sempre\" dos efeitos de uso",
         "Hint": "O botão de alternar dos efeitos de uso na ficha passa a ligar e desligar \"Aplicar Sempre\" (pré-seleção no diálogo e aplicação automática), e o ícone mostra esse estado. Efeitos de uso temporários de itens continuam alternando entre aplicado por padrão e opcional."
+      },
+      "suppressed-usage-effects": {
+        "Name": "Correção: efeitos de uso de itens não equipados",
+        "Hint": "Efeitos de uso de armas e equipamentos não equipados (suprimidos) deixam de ser oferecidos ou aplicados automaticamente em rolagens de item, perícia e atributo. Os efeitos do próprio item rolado não mudam."
       }
     },
     "ItemEffects": {

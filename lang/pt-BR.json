@@ -25,6 +25,10 @@
         "Name": "Correção: efeitos de uso de itens não equipados",
         "Hint": "Efeitos de uso de armas e equipamentos não equipados (suprimidos) deixam de ser oferecidos ou aplicados automaticamente em rolagens de item, perícia e atributo. Os efeitos do próprio item rolado não mudam."
       },
+      "temporary-usage-effect-expiry": {
+        "Name": "Correção: expiração de efeitos de uso temporários",
+        "Hint": "Efeitos de uso temporários nos atores (por exemplo, buffs aplicados pelo card do chat) passam a expirar como os demais efeitos temporários: no fim da cena, por rodadas/turnos ou pelo avanço do tempo. Efeitos desativados manualmente não expiram."
+      },
       "ability-dialog-cost": {
         "Name": "Correção: custo total no diálogo de uso",
         "Hint": "O \"Custo de Mana Total\" do diálogo de uso passa a mostrar o custo base mais os aprimoramentos marcados (incluindo os de \"Aplicar Sempre\"), sem contagem dupla, e deixa de mostrar 0 quando há efeitos pagos em rolagens sem custo base. Só afeta a exibição."

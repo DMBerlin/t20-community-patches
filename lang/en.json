@@ -25,6 +25,10 @@
         "Name": "Fix: usage effects of unequipped items",
         "Hint": "Usage effects of unequipped (suppressed) weapons and equipment are no longer offered or auto-applied on item, skill and attribute rolls. The rolled item's own effects are unchanged."
       },
+      "temporary-usage-effect-expiry": {
+        "Name": "Fix: temporary usage effects expiry",
+        "Hint": "Temporary usage effects on actors (e.g. buffs applied from a chat card) now expire like other temporary effects: at scene end, by rounds/turns or by time advancement. Manually disabled effects do not expire."
+      },
       "ability-dialog-cost": {
         "Name": "Fix: total cost in the usage dialog",
         "Hint": "The usage dialog \"Total Mana Cost\" now shows the base cost plus the checked enhancements (including \"Always Apply\" ones), without double counting, and no longer shows 0 when paid effects are checked on rolls without base cost. Display only."

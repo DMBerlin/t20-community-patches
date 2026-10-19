@@ -2,36 +2,36 @@
   "T20CP": {
     "Patches": {
       "status-effects-compendium": {
-        "Name": "Correção: lista de condições vazia",
-        "Hint": "Preenche o compêndio Condições (world.statuses) com as condições do sistema quando ele está vazio, restaurando o HUD de condições, Morto/Cego/Invisível e Sobrecarregado. Jogadores conectados durante o reparo recebem as condições sem recarregar. Um compêndio com conteúdo nunca é alterado."
+        "Name": "Lista de condições vazia",
+        "Hint": "Preenche o compêndio Condições vazio com as condições do sistema, o que restaura o HUD de condições. Compêndios com conteúdo não são alterados."
       },
       "encumbered-status-sync": {
-        "Name": "Correção: Sobrecarregado ao adicionar ou remover itens",
-        "Hint": "Aplica ou remove a condição Sobrecarregado assim que itens são adicionados ou excluídos da ficha, sem precisar editar outro item, e evita cópias duplicadas da condição."
+        "Name": "Sobrecarregado ao adicionar ou remover itens",
+        "Hint": "Atualiza Sobrecarregado assim que itens entram ou saem da ficha, sem duplicar a condição."
       },
       "armor-penalty-reduction": {
-        "Name": "Correção: melhorias que reduzem a penalidade de armadura",
-        "Hint": "Faz Ajustada, Sob Medida e Mitral reduzirem a penalidade de armadura do item (até 0), em vez de aumentá-la. Afeta perícias e rolagens; a ficha do item continua exibindo a penalidade base."
+        "Name": "Melhorias que reduzem a penalidade de armadura",
+        "Hint": "Ajustada, Sob Medida e Mitral reduzem a penalidade de armadura (até 0), em vez de aumentá-la."
       },
       "item-effects-on-actor-sheet": {
-        "Name": "Correção: efeitos de itens na ficha do ator",
-        "Hint": "Mostra na aba de efeitos da ficha do ator os efeitos transferidos pelos itens (passivos, de uso e suprimidos), com o item como fonte. Alternar, Editar, Excluir (com confirmação) e Arrastar agem no efeito dentro do item."
+        "Name": "Efeitos de itens na ficha do ator",
+        "Hint": "Lista na ficha do ator os efeitos vindos dos itens, que podem ser alternados, editados, excluídos e arrastados."
       },
       "usage-effect-toggle": {
-        "Name": "Correção: botão \"Aplicar Sempre\" dos efeitos de uso",
-        "Hint": "O botão de alternar dos efeitos de uso na ficha passa a ligar e desligar \"Aplicar Sempre\" (pré-seleção no diálogo e aplicação automática), e o ícone mostra esse estado. Efeitos de uso temporários de itens continuam alternando entre aplicado por padrão e opcional."
+        "Name": "Botão \"Aplicar Sempre\" dos efeitos de uso",
+        "Hint": "O botão de alternar dos efeitos de uso liga e desliga \"Aplicar Sempre\", e o ícone mostra o estado."
       },
       "suppressed-usage-effects": {
-        "Name": "Correção: efeitos de uso de itens não equipados",
-        "Hint": "Efeitos de uso de armas e equipamentos não equipados (suprimidos) deixam de ser oferecidos ou aplicados automaticamente em rolagens de item, perícia e atributo. Os efeitos do próprio item rolado não mudam."
+        "Name": "Efeitos de uso de itens não equipados",
+        "Hint": "Efeitos de uso de armas e equipamentos não equipados deixam de ser oferecidos e aplicados nas rolagens."
       },
       "temporary-usage-effect-expiry": {
-        "Name": "Correção: expiração de efeitos de uso temporários",
-        "Hint": "Efeitos de uso temporários nos atores (por exemplo, buffs aplicados pelo card do chat) passam a expirar como os demais efeitos temporários: no fim da cena, por rodadas/turnos ou pelo avanço do tempo. Efeitos desativados manualmente não expiram."
+        "Name": "Expiração de efeitos de uso temporários",
+        "Hint": "Efeitos de uso temporários expiram no fim da cena, por rodadas ou pelo avanço do tempo, como os demais efeitos."
       },
       "ability-dialog-cost": {
-        "Name": "Correção: custo total no diálogo de uso",
-        "Hint": "O \"Custo de Mana Total\" do diálogo de uso passa a mostrar o custo base mais os aprimoramentos marcados (incluindo os de \"Aplicar Sempre\"), sem contagem dupla, e deixa de mostrar 0 quando há efeitos pagos em rolagens sem custo base. Só afeta a exibição."
+        "Name": "Custo total no diálogo de uso",
+        "Hint": "O \"Custo de Mana Total\" soma o custo base e os aprimoramentos marcados, sem contagem dupla. Só afeta a exibição."
       }
     },
     "ItemEffects": {
@@ -39,18 +39,18 @@
       "DeleteContent": "Excluir o efeito <strong>{effect}</strong> do item <strong>{item}</strong>? Isso altera o item."
     },
     "Notifications": {
-      "error": "Tormenta20 Community Patches: falha ao aplicar \"{name}\" ({reason}). Veja o console (F12).",
-      "fixed": "Tormenta20 Community Patches: \"{name}\" não é mais necessária, porque {reason} já corrige o bug. A correção foi desativada automaticamente.",
-      "unverified": "Tormenta20 Community Patches: \"{name}\" não foi aplicada porque a versão {reason} ainda não foi verificada e o bug não pôde ser confirmado.",
-      "applied-unverified": "Tormenta20 Community Patches: \"{name}\" continua aplicada em {reason} (versão não verificada), porque o bug ainda foi detectado.",
-      "incompatible": "Tormenta20 Community Patches: \"{name}\" não se aplica a {reason}."
+      "error": "Tormenta20 Community Patches: falha ao aplicar a correção \"{name}\" ({reason}). Veja o console (F12).",
+      "fixed": "Tormenta20 Community Patches: {reason} já corrige \"{name}\", então a correção foi desligada.",
+      "unverified": "Tormenta20 Community Patches: a correção \"{name}\" não foi aplicada: o bug não foi confirmado em {reason}, uma versão não verificada.",
+      "applied-unverified": "Tormenta20 Community Patches: a correção \"{name}\" continua aplicada em {reason}, uma versão não verificada, porque o bug foi detectado.",
+      "incompatible": "Tormenta20 Community Patches: a correção \"{name}\" não se aplica a {reason}."
     },
     "Manager": {
       "Name": "Correções",
       "Label": "Gerenciar correções",
-      "Hint": "Liga ou desliga cada correção e mostra se ela está sendo aplicada nesta versão do Tormenta20.",
+      "Hint": "Liga ou desliga cada correção e mostra o estado dela nesta versão do Tormenta20.",
       "Title": "Tormenta20 Community Patches",
-      "Intro": "Cada correção é aplicada somente enquanto o bug existir no sistema. Quando uma versão nova do Tormenta20 corrigir o bug, a correção é desativada automaticamente e aparece como \"Corrigida no sistema\". Alterações exigem recarregar o mundo.",
+      "Intro": "Cada correção só é aplicada enquanto o bug existir. Quando o Tormenta20 corrigir o bug, ela é desligada automaticamente. Alterações exigem recarregar o mundo.",
       "Issue": "Abrir a issue no GitHub",
       "Save": "Salvar",
       "PendingReload": "Há alterações salvas que só valem depois de recarregar o mundo (F5)."
@@ -65,11 +65,11 @@
     "States": {
       "applied": {
         "Label": "Aplicada",
-        "Hint": "O bug existe nesta versão do sistema e a correção está ativa."
+        "Hint": "O bug existe nesta versão; a correção está ativa."
       },
       "applied-unverified": {
         "Label": "Aplicada (versão não verificada)",
-        "Hint": "A versão {reason} ainda não foi verificada, mas o teste do módulo detectou o bug, então a correção está ativa."
+        "Hint": "A versão {reason} não foi verificada, mas o bug foi detectado; a correção está ativa."
       },
       "disabled": {
         "Label": "Desligada",
@@ -77,15 +77,15 @@
       },
       "fixed": {
         "Label": "Corrigida no sistema",
-        "Hint": "O teste do módulo indica que {reason} já corrige este bug. A correção não é aplicada."
+        "Hint": "{reason} já corrige o bug; a correção não é aplicada."
       },
       "unverified": {
         "Label": "Versão não verificada",
-        "Hint": "Não foi possível confirmar o bug em {reason}. A correção não é aplicada até uma nova versão do módulo."
+        "Hint": "O bug não foi confirmado em {reason}; a correção não é aplicada."
       },
       "incompatible": {
         "Label": "Incompatível",
-        "Hint": "Esta correção não se aplica a {reason}."
+        "Hint": "Não se aplica a {reason}."
       },
       "error": {
         "Label": "Erro",

@@ -2,36 +2,36 @@
   "T20CP": {
     "Patches": {
       "status-effects-compendium": {
-        "Name": "Fix: empty condition list",
-        "Hint": "Fills the Conditions compendium (world.statuses) with the system conditions when it is empty, restoring the token HUD conditions, Dead/Blind/Invisible and Overloaded. Players connected during the repair get the conditions without reloading. A compendium with content is never changed."
+        "Name": "Empty condition list",
+        "Hint": "Fills an empty Conditions compendium with the system conditions, restoring the token HUD conditions. Compendiums with content are never changed."
       },
       "encumbered-status-sync": {
-        "Name": "Fix: Overloaded when adding or removing items",
-        "Hint": "Applies or removes the Overloaded (Sobrecarregado) condition as soon as items are added to or deleted from the sheet, without editing another item, and prevents duplicate copies of the condition."
+        "Name": "Overloaded when adding or removing items",
+        "Hint": "Updates Overloaded (Sobrecarregado) as soon as items are added to or removed from the sheet, without duplicating the condition."
       },
       "armor-penalty-reduction": {
-        "Name": "Fix: upgrades that reduce armor penalty",
-        "Hint": "Makes Ajustada (Adjusted), Sob Medida (Under Measure) and Mitral (Mithril) reduce the item's armor penalty (down to 0) instead of increasing it. Affects skills and rolls; the item sheet keeps showing the base penalty."
+        "Name": "Upgrades that reduce armor penalty",
+        "Hint": "Ajustada, Sob Medida and Mitral reduce the armor penalty (down to 0) instead of increasing it."
       },
       "item-effects-on-actor-sheet": {
-        "Name": "Fix: item effects on the actor sheet",
-        "Hint": "Shows the effects transferred by items (passive, usage and suppressed) on the actor sheet effects tab, with the item as source. Toggle, Edit, Delete (with confirmation) and Drag act on the effect inside the item."
+        "Name": "Item effects on the actor sheet",
+        "Hint": "Lists effects coming from items on the actor sheet, where they can be toggled, edited, deleted and dragged."
       },
       "usage-effect-toggle": {
-        "Name": "Fix: usage effects \"Always Apply\" toggle",
-        "Hint": "The toggle of usage effects on sheets now switches \"Always Apply\" (dialog pre-selection and automatic application), and the icon shows that state. Temporary usage effects held by items still switch between applied by default and optional."
+        "Name": "Usage effects \"Always Apply\" toggle",
+        "Hint": "The usage effect toggle switches \"Always Apply\" on and off, and the icon shows its state."
       },
       "suppressed-usage-effects": {
-        "Name": "Fix: usage effects of unequipped items",
-        "Hint": "Usage effects of unequipped (suppressed) weapons and equipment are no longer offered or auto-applied on item, skill and attribute rolls. The rolled item's own effects are unchanged."
+        "Name": "Usage effects of unequipped items",
+        "Hint": "Usage effects of unequipped weapons and equipment are no longer offered or applied on rolls."
       },
       "temporary-usage-effect-expiry": {
-        "Name": "Fix: temporary usage effects expiry",
-        "Hint": "Temporary usage effects on actors (e.g. buffs applied from a chat card) now expire like other temporary effects: at scene end, by rounds/turns or by time advancement. Manually disabled effects do not expire."
+        "Name": "Temporary usage effects expiry",
+        "Hint": "Temporary usage effects expire at scene end, by rounds or by time advancement, like other effects."
       },
       "ability-dialog-cost": {
-        "Name": "Fix: total cost in the usage dialog",
-        "Hint": "The usage dialog \"Total Mana Cost\" now shows the base cost plus the checked enhancements (including \"Always Apply\" ones), without double counting, and no longer shows 0 when paid effects are checked on rolls without base cost. Display only."
+        "Name": "Total cost in the usage dialog",
+        "Hint": "\"Total Mana Cost\" adds the base cost and the checked enhancements, without double counting. Display only."
       }
     },
     "ItemEffects": {
@@ -39,18 +39,18 @@
       "DeleteContent": "Delete the effect <strong>{effect}</strong> from the item <strong>{item}</strong>? This changes the item."
     },
     "Notifications": {
-      "error": "Tormenta20 Community Patches: failed to apply \"{name}\" ({reason}). Check the console (F12).",
-      "fixed": "Tormenta20 Community Patches: \"{name}\" is no longer needed, because {reason} already fixes the bug. The patch was switched off automatically.",
-      "unverified": "Tormenta20 Community Patches: \"{name}\" was not applied because version {reason} has not been verified yet and the bug could not be confirmed.",
-      "applied-unverified": "Tormenta20 Community Patches: \"{name}\" is still applied on {reason} (unverified version), because the bug was still detected.",
-      "incompatible": "Tormenta20 Community Patches: \"{name}\" does not apply to {reason}."
+      "error": "Tormenta20 Community Patches: failed to apply the patch \"{name}\" ({reason}). Check the console (F12).",
+      "fixed": "Tormenta20 Community Patches: {reason} already fixes \"{name}\", so the patch was switched off.",
+      "unverified": "Tormenta20 Community Patches: the patch \"{name}\" was not applied: the bug could not be confirmed on {reason}, an unverified version.",
+      "applied-unverified": "Tormenta20 Community Patches: the patch \"{name}\" is still applied on {reason}, an unverified version, because the bug was detected.",
+      "incompatible": "Tormenta20 Community Patches: the patch \"{name}\" does not apply to {reason}."
     },
     "Manager": {
       "Name": "Patches",
       "Label": "Manage patches",
-      "Hint": "Turns each patch on or off and shows whether it is applied on this Tormenta20 version.",
+      "Hint": "Turns each patch on or off and shows its state on this Tormenta20 version.",
       "Title": "Tormenta20 Community Patches",
-      "Intro": "Each patch is only applied while the bug exists in the system. When a new Tormenta20 release fixes the bug, the patch is switched off automatically and shows as \"Fixed in the system\". Changes require reloading the world.",
+      "Intro": "Each patch is only applied while the bug exists. When Tormenta20 fixes the bug, the patch is switched off automatically. Changes require reloading the world.",
       "Issue": "Open the issue on GitHub",
       "Save": "Save",
       "PendingReload": "Some saved changes only take effect after reloading the world (F5)."
@@ -65,11 +65,11 @@
     "States": {
       "applied": {
         "Label": "Applied",
-        "Hint": "The bug exists in this system version and the patch is active."
+        "Hint": "The bug exists on this version; the patch is active."
       },
       "applied-unverified": {
         "Label": "Applied (unverified version)",
-        "Hint": "Version {reason} has not been verified yet, but the module's check detected the bug, so the patch is active."
+        "Hint": "Version {reason} is unverified, but the bug was detected; the patch is active."
       },
       "disabled": {
         "Label": "Off",
@@ -77,15 +77,15 @@
       },
       "fixed": {
         "Label": "Fixed in the system",
-        "Hint": "The module's check indicates that {reason} already fixes this bug. The patch is not applied."
+        "Hint": "{reason} already fixes the bug; the patch is not applied."
       },
       "unverified": {
         "Label": "Unverified version",
-        "Hint": "The bug could not be confirmed on {reason}. The patch is not applied until a new module release."
+        "Hint": "The bug could not be confirmed on {reason}; the patch is not applied."
       },
       "incompatible": {
         "Label": "Incompatible",
-        "Hint": "This patch does not apply to {reason}."
+        "Hint": "Does not apply to {reason}."
       },
       "error": {
         "Label": "Error",

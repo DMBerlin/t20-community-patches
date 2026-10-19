@@ -108,7 +108,8 @@ Acompanhe até o fim:
 sleep 5
 run=$(gh run list -R DMBerlin/t20-community-patches --workflow release.yml --branch v<x.y.z> --limit 1 --json databaseId -q '.[0].databaseId')
 gh run watch "$run" -R DMBerlin/t20-community-patches --exit-status --interval 10 > /dev/null
-gh release view v<x.y.z> -R DMBerlin/t20-community-patches --json name,isLatest,assets -q '"\(.name) · latest=\(.isLatest) · \([.assets[].name] | join(", "))"'
+gh release view v<x.y.z> -R DMBerlin/t20-community-patches --json name,url,assets -q '"\(.name) · \([.assets[].name] | join(", ")) · \(.url)"'
+gh api repos/DMBerlin/t20-community-patches/releases/latest -q '"latest=\(.tag_name)"'
 curl -sL https://github.com/DMBerlin/t20-community-patches/releases/latest/download/module.json | node -p 'JSON.parse(require("fs").readFileSync(0)).version'
 ```
 

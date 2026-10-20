@@ -204,6 +204,18 @@
       "FieldPlaceholder": "module default (no limit)",
       "FieldPlaceholderDefault": "module default: {formula}",
       "FieldHint": "Optional rule from the Tormenta20 Community Patches module. Empty: module default. \"none\": no limit. Or an integer ≥ 0 or a dice-free formula, such as floor((@nvl.bardo - 1) / 4). An invalid formula does not limit."
+    },
+    "SameAbility": {
+      "Setting": {
+        "Name": "Effects of the same ability",
+        "Hint": "Optional rule (chapter 5, \"Acumulando Efeitos\"): effects of the same ability do not stack on the target. Applies to effects applied from the chat card when using a power (class, race and origin abilities, and powers), such as the Bard's Inspiration, even from different characters. Replace the previous: the new effect removes the previous one. Keep the greater: the greater bonus stays; a new effect that is not greater is refused. Spells, items and effects applied before this module version do not take part.",
+        "off": "Off",
+        "replace": "Replace the previous",
+        "highest": "Keep the greater"
+      },
+      "Refused": "{actor} already has an equal or greater \"{effect}\" effect; the new effect was not applied. Effects of the same ability do not stack ({reference}).",
+      "Replaced": "The previous \"{effect}\" effect on {actor} was replaced by the newest one. Effects of the same ability do not stack ({reference}).",
+      "Reference": "Tormenta20 Jogo do Ano, ch. 5, \"Acumulando Efeitos\", p. 232"
     }
   }
 }

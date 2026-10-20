@@ -11,6 +11,7 @@ import {
 import { SETTINGS, getPatchMode, migrateLegacySettings, registerSettings } from "./settings.mjs";
 import { installManaLimitRule, registerManaLimitSetting } from "./rules/mana-limit.mjs";
 import { installUsageEffectMaxRule, registerUsageEffectMaxSetting } from "./rules/usage-effect-max.mjs";
+import { installSameAbilityRule, registerSameAbilitySetting } from "./rules/same-ability-stacking.mjs";
 
 /**
  * @type {{id: string, group: string, mode: import("./registry.mjs").PatchMode, state: import("./registry.mjs").PatchState,
@@ -57,6 +58,7 @@ Hooks.once("init", () => {
   // Optional rules are not bug fixes: they stay installed and read their own setting on every use.
   registerManaLimitSetting();
   registerUsageEffectMaxSetting();
+  registerSameAbilitySetting();
   if (game.system.id === "tormenta20") {
     try {
       installManaLimitRule();
@@ -67,6 +69,11 @@ Hooks.once("init", () => {
       installUsageEffectMaxRule();
     } catch (err) {
       console.error(`${MODULE_ID} | Failed to install the usage effect maximum rule`, err);
+    }
+    try {
+      installSameAbilityRule();
+    } catch (err) {
+      console.error(`${MODULE_ID} | Failed to install the same ability stacking rule`, err);
     }
   }
 

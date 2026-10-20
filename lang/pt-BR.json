@@ -204,6 +204,18 @@
       "FieldPlaceholder": "padrão do módulo (sem limite)",
       "FieldPlaceholderDefault": "padrão do módulo: {formula}",
       "FieldHint": "Regra opcional do módulo Tormenta20 Community Patches. Vazio: padrão do módulo. \"none\": sem limite. Ou um inteiro ≥ 0 ou uma fórmula sem dados, como floor((@nvl.bardo - 1) / 4). Uma fórmula inválida não limita."
+    },
+    "SameAbility": {
+      "Setting": {
+        "Name": "Efeitos da mesma habilidade",
+        "Hint": "Regra opcional (capítulo 5, \"Acumulando Efeitos\"): efeitos da mesma habilidade não acumulam no alvo. Vale para efeitos aplicados pelo card ao usar um poder (habilidades de classe, raça, origem e poderes), como a Inspiração do Bardo, mesmo vindos de personagens diferentes. Substituir o anterior: o novo efeito remove o anterior. Manter o maior: fica o de maior bônus; um novo efeito que não seja maior é recusado. Magias, itens e efeitos aplicados antes desta versão do módulo não participam.",
+        "off": "Desligado",
+        "replace": "Substituir o anterior",
+        "highest": "Manter o maior"
+      },
+      "Refused": "{actor} já tem um efeito \"{effect}\" igual ou maior; o novo efeito não foi aplicado. Efeitos da mesma habilidade não acumulam ({reference}).",
+      "Replaced": "O efeito \"{effect}\" anterior de {actor} foi substituído pelo mais recente. Efeitos da mesma habilidade não acumulam ({reference}).",
+      "Reference": "Tormenta20 Jogo do Ano, cap. 5, \"Acumulando Efeitos\", p. 232"
     }
   }
 }

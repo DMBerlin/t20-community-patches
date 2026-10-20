@@ -188,6 +188,22 @@
       "FieldLabel": "Limite de PM por uso",
       "FieldPlaceholder": "automático",
       "FieldHint": "Regra opcional do módulo Tormenta20 Community Patches. Vazio: automático (nível na classe do poder ou nível de personagem). \"none\": sem limite. Ou uma fórmula sem dados, como @nvl.arcanista ou @nivel."
+    },
+    "UsageEffectMax": {
+      "Setting": {
+        "Name": "Máximo de aplicações de efeitos de uso",
+        "Hint": "Regra opcional: cada efeito de uso pode ter um máximo de aplicações por uso, dado por uma fórmula (por exemplo, o aumento da Inspiração do Bardo: +1 a cada quatro níveis). Avisar mostra um aviso e deixa usar; Bloquear mantém o diálogo aberto até as aplicações respeitarem o máximo. O máximo de cada efeito pode ser definido no campo \"Máximo de aplicações\" da aba Uso do efeito.",
+        "off": "Desligado",
+        "warn": "Avisar",
+        "block": "Bloquear"
+      },
+      "Exceeded": "{item}: \"{effect}\" aplicado {requested}×, acima do máximo de {max}.",
+      "Blocked": "Uso bloqueado: reduza as aplicações.",
+      "DialogHint": "máx. {max}",
+      "FieldLabel": "Máximo de aplicações",
+      "FieldPlaceholder": "padrão do módulo (sem limite)",
+      "FieldPlaceholderDefault": "padrão do módulo: {formula}",
+      "FieldHint": "Regra opcional do módulo Tormenta20 Community Patches. Vazio: padrão do módulo. \"none\": sem limite. Ou um inteiro ≥ 0 ou uma fórmula sem dados, como floor((@nvl.bardo - 1) / 4). Uma fórmula inválida não limita."
     }
   }
 }

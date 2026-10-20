@@ -188,6 +188,22 @@
       "FieldLabel": "Mana limit per use",
       "FieldPlaceholder": "automatic",
       "FieldHint": "Optional rule from the Tormenta20 Community Patches module. Empty: automatic (level in the power's class or character level). \"none\": no limit. Or a dice-free formula, such as @nvl.arcanista or @nivel."
+    },
+    "UsageEffectMax": {
+      "Setting": {
+        "Name": "Usage effect maximum applications",
+        "Hint": "Optional rule: each usage effect may have a maximum number of applications per use, given by a formula (for example, the Bard's Inspiration increase: +1 every four levels). Warn shows a warning and lets the use go on; Block keeps the dialog open until the applications respect the maximum. Each effect's maximum can be set in the \"Maximum applications\" field of the effect's Use tab.",
+        "off": "Off",
+        "warn": "Warn",
+        "block": "Block"
+      },
+      "Exceeded": "{item}: \"{effect}\" applied {requested}×, above the maximum of {max}.",
+      "Blocked": "Use blocked: reduce the applications.",
+      "DialogHint": "max. {max}",
+      "FieldLabel": "Maximum applications",
+      "FieldPlaceholder": "module default (no limit)",
+      "FieldPlaceholderDefault": "module default: {formula}",
+      "FieldHint": "Optional rule from the Tormenta20 Community Patches module. Empty: module default. \"none\": no limit. Or an integer ≥ 0 or a dice-free formula, such as floor((@nvl.bardo - 1) / 4). An invalid formula does not limit."
     }
   }
 }

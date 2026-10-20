@@ -10,6 +10,7 @@ import {
 } from "./registry.mjs";
 import { SETTINGS, getPatchMode, migrateLegacySettings, registerSettings } from "./settings.mjs";
 import { installManaLimitRule, registerManaLimitSetting } from "./rules/mana-limit.mjs";
+import { installUsageEffectMaxRule, registerUsageEffectMaxSetting } from "./rules/usage-effect-max.mjs";
 
 /**
  * @type {{id: string, group: string, mode: import("./registry.mjs").PatchMode, state: import("./registry.mjs").PatchState,
@@ -55,11 +56,17 @@ Hooks.once("init", () => {
 
   // Optional rules are not bug fixes: they stay installed and read their own setting on every use.
   registerManaLimitSetting();
+  registerUsageEffectMaxSetting();
   if (game.system.id === "tormenta20") {
     try {
       installManaLimitRule();
     } catch (err) {
       console.error(`${MODULE_ID} | Failed to install the mana limit rule`, err);
+    }
+    try {
+      installUsageEffectMaxRule();
+    } catch (err) {
+      console.error(`${MODULE_ID} | Failed to install the usage effect maximum rule`, err);
     }
   }
 

@@ -164,6 +164,30 @@
         "high": "alta",
         "low": "baixa"
       }
+    },
+    "ManaLimit": {
+      "Setting": {
+        "Name": "Limite de PM por uso",
+        "Hint": "Regra opcional do livro: um uso não pode gastar mais PM do que o nível na classe que fornece a habilidade (ou o nível de personagem para raça, origem, poderes gerais e concedidos). O custo mínimo é sempre permitido. Avisar mostra um aviso e deixa usar; Bloquear impede o uso, a não ser que a origem do limite seja desconhecida. O limite de cada item pode ser definido no campo \"Limite de PM por uso\" da ficha do item.",
+        "off": "Desligado",
+        "warn": "Avisar",
+        "block": "Bloquear"
+      },
+      "Source": {
+        "class": "nível de {class}",
+        "character": "nível de personagem",
+        "item": "definido no item: {formula}",
+        "unknown": "nível de personagem; origem desconhecida",
+        "invalid": "nível de personagem; fórmula do item inválida"
+      },
+      "DialogLabel": "Limite de PM por uso",
+      "DialogValue": "{limit} PM ({source})",
+      "Exceeded": "{name}: o uso custa {cost} PM, acima do limite de {limit} PM por uso ({source}).",
+      "Blocked": "Uso bloqueado: reduza os aprimoramentos ou use o custo mínimo ({minimum} PM).",
+      "Unknown": "Origem do limite desconhecida, por isso o uso não é bloqueado. Preencha o campo \"Limite de PM por uso\" na ficha do item.",
+      "FieldLabel": "Limite de PM por uso",
+      "FieldPlaceholder": "automático",
+      "FieldHint": "Regra opcional do módulo Tormenta20 Community Patches. Vazio: automático (nível na classe do poder ou nível de personagem). \"none\": sem limite. Ou uma fórmula sem dados, como @nvl.arcanista ou @nivel."
     }
   }
 }

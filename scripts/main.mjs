@@ -9,6 +9,7 @@ import {
   statusRecord
 } from "./registry.mjs";
 import { SETTINGS, getPatchMode, migrateLegacySettings, registerSettings } from "./settings.mjs";
+import { installManaLimitRule, registerManaLimitSetting } from "./rules/mana-limit.mjs";
 
 /**
  * @type {{id: string, group: string, mode: import("./registry.mjs").PatchMode, state: import("./registry.mjs").PatchState,
@@ -50,6 +51,16 @@ Hooks.once("init", () => {
       console.log(`${MODULE_ID} | Patch not applied: ${patch.id} (${state}${reason ? `: ${reason}` : ""}${describe(diagnosis)})`);
     }
     status.push({ id: patch.id, group: patch.group, mode, state, diagnosis, reason });
+  }
+
+  // Optional rules are not bug fixes: they stay installed and read their own setting on every use.
+  registerManaLimitSetting();
+  if (game.system.id === "tormenta20") {
+    try {
+      installManaLimitRule();
+    } catch (err) {
+      console.error(`${MODULE_ID} | Failed to install the mana limit rule`, err);
+    }
   }
 
   game.modules.get(MODULE_ID).api = { status, groups: GROUPS };

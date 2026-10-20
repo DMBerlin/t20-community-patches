@@ -164,6 +164,30 @@
         "high": "high",
         "low": "low"
       }
+    },
+    "ManaLimit": {
+      "Setting": {
+        "Name": "Mana limit per use",
+        "Hint": "Optional rule from the book: a use cannot spend more mana than the level in the class that grants the ability (or the character level for race, origin, general and granted powers). The minimum cost is always allowed. Warn shows a warning and lets the use go on; Block stops the use, unless the source of the limit is unknown. Each item's limit can be set in the \"Mana limit per use\" field of the item sheet.",
+        "off": "Off",
+        "warn": "Warn",
+        "block": "Block"
+      },
+      "Source": {
+        "class": "{class} level",
+        "character": "character level",
+        "item": "set on the item: {formula}",
+        "unknown": "character level; unknown source",
+        "invalid": "character level; invalid item formula"
+      },
+      "DialogLabel": "Mana limit per use",
+      "DialogValue": "{limit} MP ({source})",
+      "Exceeded": "{name}: this use costs {cost} MP, above the limit of {limit} MP per use ({source}).",
+      "Blocked": "Use blocked: reduce the enhancements or use the minimum cost ({minimum} MP).",
+      "Unknown": "The source of the limit is unknown, so the use is not blocked. Fill in the \"Mana limit per use\" field on the item sheet.",
+      "FieldLabel": "Mana limit per use",
+      "FieldPlaceholder": "automatic",
+      "FieldHint": "Optional rule from the Tormenta20 Community Patches module. Empty: automatic (level in the power's class or character level). \"none\": no limit. Or a dice-free formula, such as @nvl.arcanista or @nivel."
     }
   }
 }

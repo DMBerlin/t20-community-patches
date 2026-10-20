@@ -33,6 +33,10 @@
         "Name": "Changes appended by usage effects",
         "Hint": "Usage effects that append a bonus to another effect (such as Inspiração Marcial) are added only once and no longer alter the original effect between uses."
       },
+      "linked-usage-effects": {
+        "Name": "Linked effects from another item",
+        "Hint": "Usage effects that deliver an effect stored in another item (such as Arte Mágica and Esgrima Mágica on Inspiração) now add it to the chat card, without mixing changes."
+      },
       "temporary-usage-effect-expiry": {
         "Name": "Temporary usage effects expiry",
         "Hint": "Temporary usage effects expire at scene end, by rounds or by time advancement, like other effects."

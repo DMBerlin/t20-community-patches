@@ -33,6 +33,10 @@
         "Name": "Changes acrescentadas por efeitos de uso",
         "Hint": "Efeitos de uso que acrescentam bônus a outro efeito (como a Inspiração Marcial) passam a somar uma única vez e não alteram mais o efeito original entre um uso e outro."
       },
+      "linked-usage-effects": {
+        "Name": "Efeitos vinculados de outro item",
+        "Hint": "Efeitos de uso que entregam um efeito guardado em outro item (como Arte Mágica e Esgrima Mágica na Inspiração) passam a incluí-lo no card, sem misturar as changes."
+      },
       "temporary-usage-effect-expiry": {
         "Name": "Expiração de efeitos de uso temporários",
         "Hint": "Efeitos de uso temporários expiram no fim da cena, por rodadas ou pelo avanço do tempo, como os demais efeitos."

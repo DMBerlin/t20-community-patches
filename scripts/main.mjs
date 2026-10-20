@@ -12,6 +12,7 @@ import { SETTINGS, getPatchMode, migrateLegacySettings, registerSettings } from 
 import { installManaLimitRule, registerManaLimitSetting } from "./rules/mana-limit.mjs";
 import { installUsageEffectMaxRule, registerUsageEffectMaxSetting } from "./rules/usage-effect-max.mjs";
 import { installSameAbilityRule, registerSameAbilitySetting } from "./rules/same-ability-stacking.mjs";
+import { installSourceStackingRule, registerSourceStackingSetting } from "./rules/source-stacking.mjs";
 
 /**
  * @type {{id: string, group: string, mode: import("./registry.mjs").PatchMode, state: import("./registry.mjs").PatchState,
@@ -59,6 +60,7 @@ Hooks.once("init", () => {
   registerManaLimitSetting();
   registerUsageEffectMaxSetting();
   registerSameAbilitySetting();
+  registerSourceStackingSetting();
   if (game.system.id === "tormenta20") {
     try {
       installManaLimitRule();
@@ -74,6 +76,11 @@ Hooks.once("init", () => {
       installSameAbilityRule();
     } catch (err) {
       console.error(`${MODULE_ID} | Failed to install the same ability stacking rule`, err);
+    }
+    try {
+      installSourceStackingRule();
+    } catch (err) {
+      console.error(`${MODULE_ID} | Failed to install the item and spell stacking rule`, err);
     }
   }
 

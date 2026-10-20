@@ -15,6 +15,7 @@ Não edite as seções de versão à mão.
 - Regra opcional "Limite de PM por uso" (#25): avisa ou bloqueia usos que gastam mais PM do que o nível na classe que fornece a habilidade (ou o nível de personagem), respeitando o custo mínimo; o limite pode ser definido por item.
 - Regra opcional "Máximo de aplicações de efeitos de uso" (#26): limita, por fórmula, quantas vezes um efeito de uso pode ser aplicado, com modos Avisar, Bloquear e Desligado e padrão embarcado para a Inspiração do Bardo.
 - Regra opcional "Efeitos da mesma habilidade" (#27): efeitos de uma mesma habilidade, como duas Inspirações, deixam de acumular no alvo, substituindo o anterior ou mantendo o maior.
+- Regra opcional "Bônus de itens e magias" (#28): bônus de itens não acumulam com outros itens, nem magias com outras magias; vale o maior, e entre os itens além da armadura e do escudo só conta o de maior Defesa, com aviso e marca na ficha citando o livro.
 
 ### Fixed
 

@@ -216,6 +216,26 @@
       "Refused": "{actor} already has an equal or greater \"{effect}\" effect; the new effect was not applied. Effects of the same ability do not stack ({reference}).",
       "Replaced": "The previous \"{effect}\" effect on {actor} was replaced by the newest one. Effects of the same ability do not stack ({reference}).",
       "Reference": "Tormenta20 Jogo do Ano, ch. 5, \"Acumulando Efeitos\", p. 232"
+    },
+    "SourceStacking": {
+      "Setting": {
+        "Name": "Item and spell bonuses",
+        "Hint": "Optional rule (chapter 5, \"Acumulando Efeitos\"): effects of items do not stack with other items, nor spells with other spells; different sources still add up. For each statistic, the greatest bonus and the greatest penalty of each source apply; the others are suppressed, never deleted, and apply again when the greater one ends. The equipped armor and shield always add to Defense; among the other items, only the one with the greatest Defense counts. Abilities, conditions and effects applied by macros or dragged onto the sheet do not take part.",
+        "off": "Off",
+        "on": "Apply the book rule"
+      },
+      "Suppressed": "{loser}: {stat} {value} does not apply to {actor}; {winner} ({winnerValue}) applies instead. {reason} ({reference}).",
+      "Tooltip": "Suppressed by the \"Item and spell bonuses\" rule:",
+      "Accessory": "Besides the armor and the shield, only one item adds Defense and armor penalty",
+      "Category": {
+        "magia": "Spell bonuses do not stack with each other",
+        "item": "Item bonuses do not stack with each other"
+      },
+      "Stat": {
+        "defense": "Defense",
+        "penalty": "Armor penalty"
+      },
+      "Reference": "Tormenta20 Jogo do Ano, ch. 5, \"Acumulando Efeitos\", p. 232"
     }
   }
 }

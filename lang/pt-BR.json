@@ -216,6 +216,26 @@
       "Refused": "{actor} já tem um efeito \"{effect}\" igual ou maior; o novo efeito não foi aplicado. Efeitos da mesma habilidade não acumulam ({reference}).",
       "Replaced": "O efeito \"{effect}\" anterior de {actor} foi substituído pelo mais recente. Efeitos da mesma habilidade não acumulam ({reference}).",
       "Reference": "Tormenta20 Jogo do Ano, cap. 5, \"Acumulando Efeitos\", p. 232"
+    },
+    "SourceStacking": {
+      "Setting": {
+        "Name": "Bônus de itens e magias",
+        "Hint": "Regra opcional (capítulo 5, \"Acumulando Efeitos\"): efeitos de itens não acumulam com os de outros itens, nem magias com outras magias; fontes diferentes continuam somando. Para cada estatística, vale o maior bônus e a maior penalidade de cada fonte; os demais ficam suprimidos, sem serem apagados, e voltam a valer quando o maior acaba. A armadura e o escudo equipados sempre somam Defesa; entre os demais itens, só conta o de maior Defesa. Habilidades, condições e efeitos aplicados por macros ou arrastados para a ficha não participam.",
+        "off": "Desligado",
+        "on": "Aplicar a regra do livro"
+      },
+      "Suppressed": "{loser}: {stat} {value} não se aplica a {actor}; vale {winner} ({winnerValue}). {reason} ({reference}).",
+      "Tooltip": "Suprimido pela regra \"Bônus de itens e magias\":",
+      "Accessory": "Além da armadura e do escudo, só um item soma Defesa e penalidade de armadura",
+      "Category": {
+        "magia": "Bônus de magias não acumulam entre si",
+        "item": "Bônus de itens não acumulam entre si"
+      },
+      "Stat": {
+        "defense": "Defesa",
+        "penalty": "Penalidade de armadura"
+      },
+      "Reference": "Tormenta20 Jogo do Ano, cap. 5, \"Acumulando Efeitos\", p. 232"
     }
   }
 }

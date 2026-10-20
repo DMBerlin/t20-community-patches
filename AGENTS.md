@@ -17,7 +17,8 @@ Princípios inegociáveis:
 t20-community-patches/
 ├── .bare/                 repositório bare (git common dir)
 ├── .git                   "gitdir: ./.bare"
-├── .envrc                 local (direnv): GH_TOKEN, FOUNDRY_DATA, FOUNDRY_CORE
+├── .envrc                 local (direnv): GH_TOKEN, FOUNDRY_DATA, FOUNDRY_CORE, T20_BOOKS
+├── LOCAL.md               local (opcional): referências desta máquina (core do Foundry, livros)
 ├── main/                  worktree da branch main (principal)
 └── <n>-<slug>/            worktree da issue #n, branch issue/<n>-<slug>
 ```
@@ -37,7 +38,9 @@ t20-community-patches/
 |---|---|---|
 | `FOUNDRY_DATA` | Pasta Data do Foundry | `~/Library/Application Support/FoundryVTT/Data` |
 | `FOUNDRY_CORE` | Código-fonte do core do Foundry (`client/`, `common/`) | sem padrão; definir no `.envrc` |
+| `T20_BOOKS` | PDFs dos livros do Tormenta20 (base bibliográfica das regras) | sem padrão; definir no `.envrc` |
 
+- Se `../LOCAL.md` existir (na raiz do projeto, fora do git), leia-o para saber o que há em `FOUNDRY_CORE` e em `T20_BOOKS` e quando consultar cada um. O arquivo é opcional e nunca é versionado.
 - Bundle do sistema (somente leitura): `$FOUNDRY_DATA/systems/tormenta20/tormenta20.mjs`. Nas issues, as referências ao código usam o formato `T20:<linha>`, e as linhas podem mudar entre versões. Confirme sempre pelo conteúdo, não só pelo número.
 - Versão instalada do sistema: `node -p "require('$FOUNDRY_DATA/systems/tormenta20/system.json').version"`.
 

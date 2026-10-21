@@ -26,6 +26,7 @@ Não edite as seções de versão à mão.
 - `rest-recovery` (#31): Cuidados Prolongados no descanso soma +1 PV por nível, em vez de dobrar toda a recuperação de PV. Afeta Tormenta20 1.6.5.
 - `spell-dc-bonus` (#35): a CD das magias soma os efeitos de "CD de Magias", os bônus de CD dos NPCs e o Fortalecimento Arcano como bônus passivo. Afeta Tormenta20 1.6.5.
 - `spell-cost-zero` (#34): redutores de −1 PM em "Aplicar Sempre" e aprimoramentos de custo 0 não transformam mais a magia em Truque gratuito, e o Truque não combina com outros aprimoramentos. Afeta Tormenta20 1.6.5.
+- `conditional-powers` (#33): Estilo de Duas Mãos, Estilo de Uma Arma, Estilo de Arma e Escudo, Encouraçado e Inexpugnável só dão o bônus com o equipamento exigido, e Fanático ignora o −3 m da armadura pesada. Afeta Tormenta20 1.6.5.
 
 ## v1.0.0 - 2026-10-19
 

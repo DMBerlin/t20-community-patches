@@ -37,6 +37,10 @@
         "Name": "Usage effects \"Always Apply\" toggle",
         "Hint": "The usage effect toggle switches \"Always Apply\" on and off, and the icon shows its state."
       },
+      "conditional-powers": {
+        "Name": "Equipment-conditional powers",
+        "Hint": "Two-Handed Style (Estilo de Duas Mãos), One-Weapon Style (Estilo de Uma Arma), Weapon and Shield Style (Estilo de Arma e Escudo), Armored (Encouraçado, including the +2 from Fanatic and Impregnable) and Impregnable (Inexpugnável) are suppressed when the equipment does not meet the power's condition. Fanatic (Fanático) now ignores the −3 m from heavy armor."
+      },
       "suppressed-usage-effects": {
         "Name": "Usage effects of unequipped items",
         "Hint": "Usage effects of unequipped weapons and equipment are no longer offered or applied on rolls."

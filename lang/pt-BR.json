@@ -37,6 +37,10 @@
         "Name": "Botão \"Aplicar Sempre\" dos efeitos de uso",
         "Hint": "O botão de alternar dos efeitos de uso liga e desliga \"Aplicar Sempre\", e o ícone mostra o estado."
       },
+      "conditional-powers": {
+        "Name": "Poderes com condição de equipamento",
+        "Hint": "Estilo de Duas Mãos, Estilo de Uma Arma, Estilo de Arma e Escudo, Encouraçado (e os +2 de Fanático e Inexpugnável) e Inexpugnável ficam suprimidos quando o equipamento não atende à condição do poder. Fanático passa a ignorar o −3 m da armadura pesada."
+      },
       "suppressed-usage-effects": {
         "Name": "Efeitos de uso de itens não equipados",
         "Hint": "Efeitos de uso de armas e equipamentos não equipados deixam de ser oferecidos e aplicados nas rolagens."

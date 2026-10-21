@@ -9,6 +9,10 @@
         "Name": "Overloaded when adding or removing items",
         "Hint": "Updates Overloaded (Sobrecarregado) as soon as items are added to or removed from the sheet, without duplicating the condition."
       },
+      "death-threshold": {
+        "Name": "Minimum HP (death threshold)",
+        "Hint": "A character dies at −10 HP or at minus half their maximum HP, whichever is lower. Applies to player characters, threats and GM characters."
+      },
       "armor-penalty-reduction": {
         "Name": "Upgrades that reduce armor penalty",
         "Hint": "Ajustada, Sob Medida and Mitral reduce the armor penalty (down to 0) instead of increasing it."

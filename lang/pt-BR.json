@@ -9,6 +9,10 @@
         "Name": "Sobrecarregado ao adicionar ou remover itens",
         "Hint": "Atualiza Sobrecarregado assim que itens entram ou saem da ficha, sem duplicar a condição."
       },
+      "death-threshold": {
+        "Name": "PV mínimo (limiar de morte)",
+        "Hint": "O personagem morre em −10 PV ou em menos a metade dos PV máximos, o que for mais baixo. Vale para Personagens de Jogador, Ameaças e Personagens do Mestre."
+      },
       "armor-penalty-reduction": {
         "Name": "Melhorias que reduzem a penalidade de armadura",
         "Hint": "Ajustada, Sob Medida e Mitral reduzem a penalidade de armadura (até 0), em vez de aumentá-la."

@@ -22,6 +22,7 @@ Não edite as seções de versão à mão.
 - `appended-usage-changes` (#23): a Inspiração Marcial soma o dano uma única vez e não vaza mais o bônus para os usos seguintes da Inspiração. Afeta Tormenta20 1.6.5.
 - `linked-usage-effects` (#24): Arte Mágica e Esgrima Mágica entregam seus efeitos ao usar a Inspiração, e o efeito principal não recebe mais a change "efeito". Afeta Tormenta20 1.6.5.
 - `death-threshold` (#29): o PV mínimo segue a regra do livro (−10 ou −metade dos PV máximos, o que for mais baixo) para Personagens de Jogador, Ameaças e Personagens do Mestre. Afeta Tormenta20 1.6.5.
+- `threatening-crit-range` (#30): armas com o encanto Ameaçadora voltam a critar, com a margem de ameaça duplicada (espada longa 19 → 17) antes dos outros aumentos. Afeta Tormenta20 1.6.5.
 
 ## v1.0.0 - 2026-10-19
 

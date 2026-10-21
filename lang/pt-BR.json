@@ -17,6 +17,10 @@
         "Name": "Melhorias que reduzem a penalidade de armadura",
         "Hint": "Ajustada, Sob Medida e Mitral reduzem a penalidade de armadura (até 0), em vez de aumentá-la."
       },
+      "threatening-crit-range": {
+        "Name": "Margem de ameaça da Ameaçadora",
+        "Hint": "O encanto Ameaçadora passa a duplicar a margem de ameaça da arma (espada longa 19 → 17), antes dos efeitos que aumentam a margem. Antes, a arma deixava de fazer críticos."
+      },
       "hide-legacy-upgrades": {
         "Name": "Ocultar aprimoramentos antigos (\"Deprecated\")",
         "Hint": "Oculta o bloco \"Deprecated\" da aba Aprimoramentos das fichas de item, cujos campos não funcionam. Nenhum dado é alterado."

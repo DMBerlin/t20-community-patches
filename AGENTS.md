@@ -118,5 +118,6 @@ Regras:
 1. `triage`: lista as issues abertas por prioridade (valor × complexidade). Não altera nada.
 2. `issue`: investiga e abre uma issue completa, pronta para outro agente implementar.
 3. `implement`: worktree, implementação, testes, commit e ciclo de review de QA (gpt-6.1-sol, no máximo 5 rodadas) até sair CLEAN; depois `make active` e o plano de teste manual.
+   - `playtest`: opcional, entre `implement` e `land`; executa o plano de teste manual no Foundry real com Playwright e grava as evidências em `.work/playtest.md`.
 4. `land`: squash na main, entrada no CHANGELOG, push, comentário com as evidências, fechamento da issue e remoção da worktree.
 5. `release`: anuncia, confirma a versão e os pontos abertos, gera o commit e a tag assinados, faz o push e acompanha o pipeline até a publicação.

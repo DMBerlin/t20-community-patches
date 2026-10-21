@@ -162,6 +162,8 @@ Se o `module.json` mudou, reinicie o Foundry.
 
 Escreva `.work/manual-tests.md` a partir do plano de teste manual da issue, ajustado ao que foi implementado. Use passos numerados, dados concretos e o resultado esperado. O último passo é sempre: "desligar o patch em Gerenciar correções → o comportamento oficial volta".
 
+Se o Foundry estiver rodando com um mundo Tormenta20 ativo, ofereça rodar a skill `playtest`, que executa esse plano no Foundry sem intervenção humana e grava as evidências em `.work/playtest.md`.
+
 ## 8. Relatório ao usuário
 
 Seja extremamente conciso, em português:
@@ -171,4 +173,4 @@ Seja extremamente conciso, em português:
 - QA: quantas rodadas e o resultado final, mais as decisões tomadas;
 - os passos de teste manual (copiados de `.work/manual-tests.md`).
 
-Termine com: "Após validar, use a skill `land` para a issue #<n>."
+Termine com: "Após validar (manualmente ou com a skill `playtest`), use a skill `land` para a issue #<n>."

@@ -97,6 +97,7 @@ Carregue sob demanda, quando a tarefa pedir:
 | priorizar ou escolher o que fazer | a skill `triage` |
 | registrar um bug ou uma melhoria | a skill `issue` (e os modelos dela) |
 | implementar a issue #n | a skill `implement`, o corpo e os comentários da #n, e o patch existente mais parecido como modelo |
+| testar a #n no Foundry sem intervenção humana | a skill `playtest` |
 | integrar ou fechar a #n | a skill `land` |
 | publicar uma versão | a skill `release` |
 | entender um bug do sistema | trechos do bundle `tormenta20.mjs`, localizados por busca (`grep -n`), **nunca** o arquivo inteiro (mais de 20 mil linhas) |

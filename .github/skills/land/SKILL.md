@@ -28,7 +28,12 @@ git worktree list                                      # localizar <wt> (branch 
 3. `<wt>/.work/review.md` termina com `Resultado final: CLEAN …` ou `Resultado final: risco aceito pelo usuário …`. Se não terminar, oriente a rodar a skill `implement`.
 4. `<wt>/.work/changelog.md` existe, com `Section: <Added|Changed|Fixed|Security|Removed>` e **uma** linha de entrada em português que cita `(#n)`.
 5. `git -C <main> status --short` está vazio.
-6. **Teste manual:** mostre os passos de `<wt>/.work/manual-tests.md` e pergunte com `ask_user`:
+6. **Teste manual:** se `<wt>/.work/playtest.md` existir (skill `playtest`), confira antes que ele vale para o que vai ser integrado: a linha `Commit:` é igual a `git -C <wt> rev-parse HEAD`, sem "com alterações não commitadas", e a linha `Plano (sha256 …)` é igual a `shasum -a 256 <wt>/.work/manual-tests.md`. Faça essa conferência **antes** de gravar qualquer coisa no `manual-tests.md`. Se não bater, o relatório está velho: rode a skill `playtest` de novo ou trate como se ele não existisse. Valendo, leia a linha `Resultado:`:
+   - `PASSOU`: vale como validação. Registre no fim de `.work/manual-tests.md`: "Validado pela skill playtest: <resumo>" e siga;
+   - `PARCIAL`: mostre os passos com SKIP e pergunte ao usuário, como abaixo, só sobre eles;
+   - `FALHOU`: pare e oriente voltar para `implement`.
+
+   Sem `playtest.md`, mostre os passos de `<wt>/.work/manual-tests.md` e pergunte com `ask_user`:
    - "Todos passaram";
    - "Algum falhou" (pare, peça os detalhes e volte para `implement`);
    - "Integrar sem teste manual" (registre como **não validado manualmente**).
@@ -46,6 +51,8 @@ git -C <wt> rebase main
 - Se não for trivial, rode `git rebase --abort` e pergunte com `ask_user`.
 
 Depois, rode `make -C <wt> check`. Ele precisa passar.
+
+Se a validação veio do `playtest`, o relatório vale para o commit testado. Anote esse commit antes do rebase (`git -C <wt> rev-parse HEAD`) e, depois dele, confira `git -C <wt> diff --name-only <commit testado> HEAD -- scripts lang templates styles module.json`. Se sair algum arquivo, mesmo que a branch não o tenha alterado, rode a skill `playtest` de novo antes do squash.
 
 ## 3. Squash na main
 
@@ -70,6 +77,7 @@ git -C <main> push origin main
 
 Se o push for rejeitado porque a `main` remota avançou:
 1. `git -C <main> pull --rebase origin main`;
+   - se a validação veio do `playtest` e o pull trouxe mudanças em `scripts lang templates styles module.json` (`git -C <main> diff --name-only <sha do squash> HEAD -- …`), pare antes do push e pergunte com `ask_user` se é preciso rodar o playtest de novo com a `main` ativa;
 2. `make check` de novo;
 3. push de novo.
 
@@ -99,7 +107,7 @@ Modelo (em português, objetivo, sem placeholders):
 - Review de QA (gpt-6.1-sol): <k> rodada(s), resultado <CLEAN | risco aceito>.
   - Rodada 1: <n achados → resumo do que foi corrigido>
   - …
-- Teste manual no Foundry <versão> / Tormenta20 <versão>: <passou | falhou | não validado manualmente>.
+- Teste manual no Foundry <versão> / Tormenta20 <versão>: <passou | passou no playtest automatizado (<x>/<y> verificações) | não validado manualmente>.
   1. <passo> → ✅
   2. Patch desligado → comportamento oficial ✅
 

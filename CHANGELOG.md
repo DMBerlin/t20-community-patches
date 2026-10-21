@@ -25,6 +25,7 @@ Não edite as seções de versão à mão.
 - `threatening-crit-range` (#30): armas com o encanto Ameaçadora voltam a critar, com a margem de ameaça duplicada (espada longa 19 → 17) antes dos outros aumentos. Afeta Tormenta20 1.6.5.
 - `rest-recovery` (#31): Cuidados Prolongados no descanso soma +1 PV por nível, em vez de dobrar toda a recuperação de PV. Afeta Tormenta20 1.6.5.
 - `spell-dc-bonus` (#35): a CD das magias soma os efeitos de "CD de Magias", os bônus de CD dos NPCs e o Fortalecimento Arcano como bônus passivo. Afeta Tormenta20 1.6.5.
+- `spell-cost-zero` (#34): redutores de −1 PM em "Aplicar Sempre" e aprimoramentos de custo 0 não transformam mais a magia em Truque gratuito, e o Truque não combina com outros aprimoramentos. Afeta Tormenta20 1.6.5.
 
 ## v1.0.0 - 2026-10-19
 

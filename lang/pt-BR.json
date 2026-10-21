@@ -57,6 +57,10 @@
         "Name": "Custo total no diálogo de uso",
         "Hint": "O \"Custo de Mana Total\" soma o custo base e os aprimoramentos marcados, sem contagem dupla. Só afeta a exibição."
       },
+      "spell-cost-zero": {
+        "Name": "Custo de magias zerado por falso Truque",
+        "Hint": "Redutores de −1 PM em \"Aplicar Sempre\" e aprimoramentos de custo 0 não transformam mais a magia em Truque (0 PM). Com o Truque marcado, os outros aprimoramentos ficam indisponíveis."
+      },
       "segmented-scene-setting": {
         "Name": "Configuração de Cena Segmentada",
         "Hint": "Remove a linha quebrada \"Cena Segmentada\" (erro no console) e adiciona um botão na aba Tormenta20 para configurar a regra."
@@ -86,6 +90,9 @@
         "Name": "Limite de segmentos da Cena Segmentada",
         "Hint": "Número máximo de segmentos por cena aceito pelo formulário de Cena Segmentada. A lista de jogadores desenha um círculo por segmento em todos os clientes, então valores altos podem deixar a interface lenta."
       }
+    },
+    "SpellCost": {
+      "Locked": "Truques não podem ser usados em conjunto com outros aprimoramentos."
     },
     "Notifications": {
       "error": "Tormenta20 Community Patches: falha ao aplicar a correção \"{name}\" ({reason}). Veja o console (F12).",

@@ -57,6 +57,10 @@
         "Name": "Total cost in the usage dialog",
         "Hint": "\"Total Mana Cost\" adds the base cost and the checked enhancements, without double counting. Display only."
       },
+      "spell-cost-zero": {
+        "Name": "Spell cost zeroed by a false cantrip",
+        "Hint": "−1 PM reductions set to \"Always Apply\" and 0-cost enhancements no longer turn the spell into a Cantrip (0 PM). With Cantrip checked, the other enhancements are unavailable."
+      },
       "segmented-scene-setting": {
         "Name": "Segmented Scene setting",
         "Hint": "Removes the broken \"Segmented Scene\" row (console error) and adds a button in the Tormenta20 tab to configure the rule."
@@ -86,6 +90,9 @@
         "Name": "Segmented Scene segment limit",
         "Hint": "Maximum number of segments per scene accepted by the Segmented Scene form. The players list draws one circle per segment on every client, so high values may slow down the interface."
       }
+    },
+    "SpellCost": {
+      "Locked": "Cantrips cannot be combined with other enhancements."
     },
     "Notifications": {
       "error": "Tormenta20 Community Patches: failed to apply the patch \"{name}\" ({reason}). Check the console (F12).",

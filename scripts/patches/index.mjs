@@ -6,6 +6,7 @@ import encumberedStatusSync from "./encumbered-status-sync.mjs";
 import hideLegacyUpgrades from "./hide-legacy-upgrades.mjs";
 import itemEffectsOnActorSheet from "./item-effects-on-actor-sheet.mjs";
 import linkedUsageEffects from "./linked-usage-effects.mjs";
+import restRecovery from "./rest-recovery.mjs";
 import segmentedSceneSetting from "./segmented-scene-setting.mjs";
 import statusEffectsCompendium from "./status-effects-compendium.mjs";
 import suppressedUsageEffects from "./suppressed-usage-effects.mjs";
@@ -17,7 +18,7 @@ import usageEffectToggle from "./usage-effect-toggle.mjs";
  * Display groups, in the order they appear in the patch manager. i18n: T20CP.Groups.<id>.
  * Groups are only for organization: every patch keeps its own toggle, because upstream fixes bugs one at a time.
  */
-export const GROUPS = ["conditions", "sheet-effects", "usage-effects", "items", "settings"];
+export const GROUPS = ["conditions", "sheet-effects", "usage-effects", "items", "settings", "actor"];
 
 /**
  * @typedef {object} Patch
@@ -42,4 +43,4 @@ export const GROUPS = ["conditions", "sheet-effects", "usage-effects", "items", 
  */
 
 /** @type {Patch[]} */
-export const PATCHES = [statusEffectsCompendium, encumberedStatusSync, deathThreshold, itemEffectsOnActorSheet, usageEffectToggle, suppressedUsageEffects, appendedUsageChanges, linkedUsageEffects, temporaryUsageEffectExpiry, abilityDialogCost, armorPenaltyReduction, threateningCritRange, hideLegacyUpgrades, segmentedSceneSetting];
+export const PATCHES = [statusEffectsCompendium, encumberedStatusSync, deathThreshold, itemEffectsOnActorSheet, usageEffectToggle, suppressedUsageEffects, appendedUsageChanges, linkedUsageEffects, temporaryUsageEffectExpiry, abilityDialogCost, armorPenaltyReduction, threateningCritRange, hideLegacyUpgrades, segmentedSceneSetting, restRecovery];

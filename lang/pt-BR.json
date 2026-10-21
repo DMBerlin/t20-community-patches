@@ -56,6 +56,10 @@
       "segmented-scene-setting": {
         "Name": "Configuração de Cena Segmentada",
         "Hint": "Remove a linha quebrada \"Cena Segmentada\" (erro no console) e adiciona um botão na aba Tormenta20 para configurar a regra."
+      },
+      "rest-recovery": {
+        "Name": "Cuidados Prolongados no descanso",
+        "Hint": "No diálogo Descanso, Cuidados Prolongados passa a somar +1 PV por nível à recuperação, como na perícia Cura, em vez de dobrar todos os PV recuperados."
       }
     },
     "ItemEffects": {
@@ -108,7 +112,8 @@
       "sheet-effects": "Efeitos na ficha",
       "usage-effects": "Efeitos de uso",
       "items": "Itens e equipamento",
-      "settings": "Configurações do sistema"
+      "settings": "Configurações do sistema",
+      "actor": "Personagem"
     },
     "States": {
       "applied": {

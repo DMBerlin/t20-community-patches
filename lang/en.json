@@ -56,6 +56,10 @@
       "segmented-scene-setting": {
         "Name": "Segmented Scene setting",
         "Hint": "Removes the broken \"Segmented Scene\" row (console error) and adds a button in the Tormenta20 tab to configure the rule."
+      },
+      "rest-recovery": {
+        "Name": "Prolonged care on rest",
+        "Hint": "In the Rest dialog, Prolonged Care (Cuidados Prolongados) adds +1 HP per level to the recovery, as in the Cura skill, instead of doubling all recovered HP."
       }
     },
     "ItemEffects": {
@@ -108,7 +112,8 @@
       "sheet-effects": "Effects on sheets",
       "usage-effects": "Usage effects",
       "items": "Items and equipment",
-      "settings": "System settings"
+      "settings": "System settings",
+      "actor": "Character"
     },
     "States": {
       "applied": {

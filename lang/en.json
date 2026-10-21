@@ -17,6 +17,10 @@
         "Name": "Upgrades that reduce armor penalty",
         "Hint": "Ajustada, Sob Medida and Mitral reduce the armor penalty (down to 0) instead of increasing it."
       },
+      "spell-dc-bonus": {
+        "Name": "Spell DC bonuses",
+        "Hint": "Spell DCs now include the character's \"Spell DC\" effects, the DC bonus of NPC items and usage effects, and Fortalecimento Arcano as a passive bonus (+1, or +2 with 4th-circle spells)."
+      },
       "threatening-crit-range": {
         "Name": "Ameaçadora threat range",
         "Hint": "The Ameaçadora (keen) enchantment now doubles the weapon's threat range (long sword 19 → 17) before effects that increase it. Before, the weapon could no longer score critical hits."

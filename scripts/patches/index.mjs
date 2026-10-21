@@ -7,6 +7,7 @@ import hideLegacyUpgrades from "./hide-legacy-upgrades.mjs";
 import itemEffectsOnActorSheet from "./item-effects-on-actor-sheet.mjs";
 import linkedUsageEffects from "./linked-usage-effects.mjs";
 import restRecovery from "./rest-recovery.mjs";
+import spellDcBonus from "./spell-dc-bonus.mjs";
 import segmentedSceneSetting from "./segmented-scene-setting.mjs";
 import statusEffectsCompendium from "./status-effects-compendium.mjs";
 import suppressedUsageEffects from "./suppressed-usage-effects.mjs";
@@ -43,4 +44,4 @@ export const GROUPS = ["conditions", "sheet-effects", "usage-effects", "items", 
  */
 
 /** @type {Patch[]} */
-export const PATCHES = [statusEffectsCompendium, encumberedStatusSync, deathThreshold, itemEffectsOnActorSheet, usageEffectToggle, suppressedUsageEffects, appendedUsageChanges, linkedUsageEffects, temporaryUsageEffectExpiry, abilityDialogCost, armorPenaltyReduction, threateningCritRange, hideLegacyUpgrades, segmentedSceneSetting, restRecovery];
+export const PATCHES = [statusEffectsCompendium, encumberedStatusSync, deathThreshold, itemEffectsOnActorSheet, usageEffectToggle, suppressedUsageEffects, appendedUsageChanges, linkedUsageEffects, temporaryUsageEffectExpiry, abilityDialogCost, armorPenaltyReduction, spellDcBonus, threateningCritRange, hideLegacyUpgrades, segmentedSceneSetting, restRecovery];

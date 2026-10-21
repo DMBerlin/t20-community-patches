@@ -17,6 +17,10 @@
         "Name": "Melhorias que reduzem a penalidade de armadura",
         "Hint": "Ajustada, Sob Medida e Mitral reduzem a penalidade de armadura (até 0), em vez de aumentá-la."
       },
+      "spell-dc-bonus": {
+        "Name": "Bônus na CD de magia",
+        "Hint": "A CD das magias passa a somar os efeitos de \"CD de Magias\" do personagem, o bônus de CD dos itens e efeitos de uso dos NPCs, e o Fortalecimento Arcano como bônus passivo (+1, ou +2 com magias de 4º círculo)."
+      },
       "threatening-crit-range": {
         "Name": "Margem de ameaça da Ameaçadora",
         "Hint": "O encanto Ameaçadora passa a duplicar a margem de ameaça da arma (espada longa 19 → 17), antes dos efeitos que aumentam a margem. Antes, a arma deixava de fazer críticos."

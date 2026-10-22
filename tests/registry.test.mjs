@@ -1,7 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  APPLY_STATES,
   applyLateDiagnosis,
+  isPatchApplied,
   displayState,
   normalizeDiagnosis,
   normalizeMode,
@@ -201,4 +203,13 @@ test("a late diagnosis reports news against the previous load without repeating 
   }
   // Nothing changed since "ready".
   assert.equal(lateKey(record("applied", { bug: "present" }), record("applied", { bug: "unknown" }), undefined), null);
+});
+
+test("isPatchApplied is true only for states that ran apply()", () => {
+  for (const state of APPLY_STATES) assert.equal(isPatchApplied([{ id: "p", state }], "p"), true, state);
+  for (const state of ["disabled", "fixed", "unverified", "incompatible", "error"]) {
+    assert.equal(isPatchApplied([{ id: "p", state }], "p"), false, state);
+  }
+  assert.equal(isPatchApplied([{ id: "q", state: "applied" }], "p"), false);
+  assert.equal(isPatchApplied(undefined, "p"), false);
 });

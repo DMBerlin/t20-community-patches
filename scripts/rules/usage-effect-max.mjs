@@ -192,6 +192,15 @@ function resolveEffect(effect) {
   });
 }
 
+/** Whether usage-effect-max limits this usage effect (rule on and a maximum resolved for it). */
+export function hasUsageLimit(effect) {
+  try {
+    return getMode() !== "off" && resolveEffect(effect).kind === "formula";
+  } catch {
+    return false;
+  }
+}
+
 const evaluate = (formula, rollData) => evaluateManaLimit(formula, rollData, foundry.dice.Roll);
 
 /**

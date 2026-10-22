@@ -29,7 +29,8 @@
     "scripts/main.mjs"
   ],
   "styles": [
-    "styles/patch-manager.css"
+    "styles/patch-manager.css",
+    "styles/item-effective-stats.css"
   ],
   "languages": [
     {

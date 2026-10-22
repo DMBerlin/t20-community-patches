@@ -264,6 +264,36 @@
         "penalty": "Armor penalty"
       },
       "Reference": "Tormenta20 Jogo do Ano, ch. 5, \"Acumulando Efeitos\", p. 232"
+    },
+    "ItemEffectiveStats": {
+      "Setting": {
+        "Name": "Effective item values",
+        "Hint": "Shows on items the final value after upgrades, materials and enchantments. In Effective item mode, a module that writes item data back may save the final value as the base.",
+        "ends": "Only where it applies (system default)",
+        "display": "Show on the item (base → effective)",
+        "effective": "Effective item (other modules read the final value)"
+      },
+      "Base": "Base",
+      "Final": "Final",
+      "Optional": "on use (optional)",
+      "NotApplied": "not applied by the system (see #43)",
+      "Bearer": "Effects on the bearer",
+      "BearerDepends": "depends on the bearer",
+      "StepNotAdded": "not added",
+      "AppliedOnRoll": "applied on the roll",
+      "PolishedNote": "the book limits it to the 1st round of combat (Tormenta20, p. 166)",
+      "PenaltyFixOff": "Reduction treated as a penalty by the system; enable the armor-penalty-reduction fix",
+      "ThreatFixOff": "Threat range {value}: the weapon never crits; enable the threatening-crit-range fix",
+      "Stat": {
+        "penalty": "Armor penalty",
+        "defense": "Defense",
+        "threat": "Threat range",
+        "multiplier": "Critical multiplier",
+        "attack": "Attack",
+        "damage": "Damage",
+        "step": "Damage step",
+        "critical": "Critical"
+      }
     }
   }
 }

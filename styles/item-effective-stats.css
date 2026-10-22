@@ -1,0 +1,29 @@
+/* Optional rule "Valor efetivo dos itens" (#65). */
+.t20cp-effective {
+  color: var(--color-text-hyperlink, #ff6400);
+  cursor: help;
+}
+
+.t20cp-effective-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
+  margin-left: 0.35em;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.t20cp-effective-info {
+  cursor: help;
+  opacity: 0.75;
+  margin-left: 0.25em;
+}
+
+.t20cp-effective-summary {
+  list-style: none;
+}
+
+.t20cp-effective-line {
+  margin: 0.25em 0;
+  font-size: var(--font-size-12, 12px);
+}

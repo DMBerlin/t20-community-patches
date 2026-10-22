@@ -264,6 +264,36 @@
         "penalty": "Penalidade de armadura"
       },
       "Reference": "Tormenta20 Jogo do Ano, cap. 5, \"Acumulando Efeitos\", p. 232"
+    },
+    "ItemEffectiveStats": {
+      "Setting": {
+        "Name": "Valor efetivo dos itens",
+        "Hint": "Mostra nos itens o valor final depois de melhorias, materiais e encantos. No modo Item efetivo, um módulo que grave os dados do item de volta pode salvar o valor final como base.",
+        "ends": "Só nas pontas (como o sistema)",
+        "display": "Mostrar no item (base → efetivo)",
+        "effective": "Item efetivo (outros módulos leem o valor final)"
+      },
+      "Base": "Base",
+      "Final": "Final",
+      "Optional": "ao usar (opcional)",
+      "NotApplied": "não aplicado pelo sistema (ver #43)",
+      "Bearer": "Efeitos no portador",
+      "BearerDepends": "depende do portador",
+      "StepNotAdded": "não somado",
+      "AppliedOnRoll": "aplicado na rolagem",
+      "PolishedNote": "o livro limita à 1ª rodada de combate (Tormenta20, p. 166)",
+      "PenaltyFixOff": "Redução tratada como penalidade pelo sistema; ative a correção armor-penalty-reduction",
+      "ThreatFixOff": "Margem {value}: a arma nunca crita; ative a correção threatening-crit-range",
+      "Stat": {
+        "penalty": "Penalidade de armadura",
+        "defense": "Defesa",
+        "threat": "Margem de ameaça",
+        "multiplier": "Multiplicador de crítico",
+        "attack": "Ataque",
+        "damage": "Dano",
+        "step": "Passo de dano",
+        "critical": "Crítico"
+      }
     }
   }
 }

@@ -13,6 +13,7 @@ import { installManaLimitRule, registerManaLimitSetting } from "./rules/mana-lim
 import { installUsageEffectMaxRule, registerUsageEffectMaxSetting } from "./rules/usage-effect-max.mjs";
 import { installSameAbilityRule, registerSameAbilitySetting } from "./rules/same-ability-stacking.mjs";
 import { installSourceStackingRule, registerSourceStackingSetting } from "./rules/source-stacking.mjs";
+import { installItemEffectiveStatsRule, registerItemEffectiveStatsSetting } from "./rules/item-effective-stats.mjs";
 
 /**
  * @type {{id: string, group: string, mode: import("./registry.mjs").PatchMode, state: import("./registry.mjs").PatchState,
@@ -61,6 +62,7 @@ Hooks.once("init", () => {
   registerUsageEffectMaxSetting();
   registerSameAbilitySetting();
   registerSourceStackingSetting();
+  registerItemEffectiveStatsSetting();
   if (game.system.id === "tormenta20") {
     try {
       installManaLimitRule();
@@ -81,6 +83,12 @@ Hooks.once("init", () => {
       installSourceStackingRule();
     } catch (err) {
       console.error(`${MODULE_ID} | Failed to install the item and spell stacking rule`, err);
+    }
+    // Last on purpose: its wrappers must sit outside those of the patches and the other rules.
+    try {
+      installItemEffectiveStatsRule();
+    } catch (err) {
+      console.error(`${MODULE_ID} | Failed to install the effective item values rule`, err);
     }
   }
 

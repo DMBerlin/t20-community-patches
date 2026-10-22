@@ -53,6 +53,10 @@
         "Name": "Detalhamento de tokens e da Defesa",
         "Hint": "O detalhamento que surge ao passar o mouse sobre os valores da ficha passa a usar os dados do próprio token não vinculado (antes mostrava os do ator base) e a Defesa passa a listar a penalidade das condições (Desprevenido, Cego, Enredado…)."
       },
+      "attribute-breakdown": {
+        "Name": "Detalhamento dos atributos",
+        "Hint": "Ao passar o mouse sobre um atributo na ficha, mostra de onde vem o valor: base, racial, bônus temporário e cada item, magia, poder ou efeito pelo nome, como já acontece com PV, PM, Defesa e perícias."
+      },
       "suppressed-usage-effects": {
         "Name": "Efeitos de uso de itens não equipados",
         "Hint": "Efeitos de uso de armas e equipamentos não equipados deixam de ser oferecidos e aplicados nas rolagens."
@@ -384,6 +388,19 @@
     },
     "FieldBonuses": {
       "Condition": "Condição"
+    },
+    "AttributeBreakdown": {
+      "Base": "Base",
+      "Racial": "Racial",
+      "Temporary": "Bônus Temporário",
+      "Other": "Outros",
+      "Total": "Total",
+      "Type": {
+        "override": "substitui",
+        "upgrade": "no mínimo",
+        "downgrade": "no máximo",
+        "multiply": "multiplica"
+      }
     }
   }
 }

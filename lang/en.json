@@ -53,6 +53,10 @@
         "Name": "Token and Defesa breakdowns",
         "Hint": "The breakdown shown when hovering the sheet values uses the unlinked token's own data (it showed the base actor's) and the Defesa breakdown lists the penalty of conditions (Desprevenido, Cego, Enredado…)."
       },
+      "attribute-breakdown": {
+        "Name": "Attribute breakdown",
+        "Hint": "Hovering an attribute on the sheet shows where its value comes from: base, racial, temporary bonus and each item, spell, power or effect by name, like PV, PM, Defesa and skills already do."
+      },
       "suppressed-usage-effects": {
         "Name": "Usage effects of unequipped items",
         "Hint": "Usage effects of unequipped weapons and equipment are no longer offered or applied on rolls."
@@ -384,6 +388,19 @@
     },
     "FieldBonuses": {
       "Condition": "Condition"
+    },
+    "AttributeBreakdown": {
+      "Base": "Base",
+      "Racial": "Racial",
+      "Temporary": "Temporary Bonus",
+      "Other": "Other",
+      "Total": "Total",
+      "Type": {
+        "override": "overrides",
+        "upgrade": "at least",
+        "downgrade": "at most",
+        "multiply": "multiplies"
+      }
     }
   }
 }

@@ -19,6 +19,7 @@ Não edite as seções de versão à mão.
 - Regra opcional "Valor efetivo dos itens" (#65): mostra na ficha do item, no inventário e no card do chat a Defesa, a penalidade, o ataque, o dano e o crítico finais depois de melhorias, materiais e encantos, com o detalhamento de cada fonte; modos Só nas pontas, Mostrar no item (padrão) e Item efetivo.
 - Regra opcional "Restrições ao lançar magias": uma magia sustentada por vez, ou duas com Fluxo de Mana (aviso ao lançar e ao aplicar), condições que impedem magias (avisar ou bloquear) e aviso de concentração em condição ruim, citando o livro (#37).
 - Regra opcional "Penalidades por não proficiência": −5 no ataque com arma sem proficiência e penalidade de armadura sem proficiência em todas as perícias de Força e Destreza, com proficiências derivadas da classe inicial, de poderes e da aba Traços, só para personagens (#39).
+- `attribute-breakdown` (#72): ao passar o mouse sobre um atributo, a ficha mostra base, racial, bônus temporário e cada item, magia, poder ou efeito que compõe o valor. Afeta Tormenta20 1.6.5.
 
 ### Fixed
 

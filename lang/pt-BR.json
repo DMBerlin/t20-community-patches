@@ -45,6 +45,14 @@
         "Name": "Poderes com condição de equipamento",
         "Hint": "Estilo de Duas Mãos, Estilo de Uma Arma, Estilo de Arma e Escudo, Encouraçado (e os +2 de Fanático e Inexpugnável) e Inexpugnável ficam suprimidos quando o equipamento não atende à condição do poder. Fanático passa a ignorar o −3 m da armadura pesada."
       },
+      "modified-fields-filter": {
+        "Name": "Efeitos de valor 3 ou 4 no detalhamento",
+        "Hint": "Efeitos que somam exatamente 3 ou 4 (por exemplo Defesa +3) voltam a aparecer no detalhamento que surge ao passar o mouse sobre os valores da ficha, e o total do detalhamento volta a bater com a ficha."
+      },
+      "field-bonuses-tooltip": {
+        "Name": "Detalhamento de tokens e da Defesa",
+        "Hint": "O detalhamento que surge ao passar o mouse sobre os valores da ficha passa a usar os dados do próprio token não vinculado (antes mostrava os do ator base) e a Defesa passa a listar a penalidade das condições (Desprevenido, Cego, Enredado…)."
+      },
       "suppressed-usage-effects": {
         "Name": "Efeitos de uso de itens não equipados",
         "Hint": "Efeitos de uso de armas e equipamentos não equipados deixam de ser oferecidos e aplicados nas rolagens."
@@ -80,6 +88,10 @@
       "menace-xp-fraction": {
         "Name": "XP de ameaças com ND fracionário",
         "Hint": "Ameaças de ND 1/4 e 1/2 valem 250 e 500 XP (ND × 1.000), em vez de 1.000 XP."
+      },
+      "save-skill-bonus": {
+        "Name": "Bônus de perícias exceto ataque nas resistências",
+        "Hint": "Fortitude, Reflexos e Vontade recebem os bônus de \"Testes de Perícias, exceto de Ataque\" mesmo quando o personagem também tem bônus de \"Testes de Perícias de Resistências\". Antes, o segundo anulava o primeiro."
       },
       "spell-compendium-data": {
         "Name": "Dados de magias do compêndio",
@@ -346,6 +358,24 @@
         "Message": "Concentração: {actor} lança {item} em condição ruim ({conditions}). Teste de Vontade CD {dc}; se falhar, a magia é perdida, mas os PM são gastos ({reference}).",
         "Reference": "Tormenta20 Jogo do Ano, cap. 4, \"Concentração\", p. 170"
       }
+    },
+    "NonProficiency": {
+      "Setting": {
+        "Name": "Penalidades por não proficiência",
+        "Hint": "Personagens sofrem −5 no ataque com arma sem proficiência, e a penalidade da armadura ou do escudo sem proficiência vale em todas as perícias de Força e Destreza (livro básico, pág. 142 e 152). As proficiências vêm da classe inicial, dos poderes reconhecidos e da aba Traços. Escolhas (Proficiência, Balística, Abençoar Arma) precisam ser marcadas na aba Traços; enquanto não forem, os itens afetados mostram um aviso e não são penalizados. Ameaças não são afetadas.",
+        "off": "Desligado",
+        "on": "Aplicar a regra do livro"
+      },
+      "Weapon": "Sem proficiência: {penalty} no ataque",
+      "Armor": "Sem proficiência: penalidade {penalty} em perícias de Força e Destreza",
+      "Pending": "Proficiência indeterminada ({sources}): marque a escolha na aba Traços. Sem penalidade até lá",
+      "TooltipLabel": "Penalidade de armadura (sem proficiência)",
+      "InitialClass": "classe inicial",
+      "Reference": "Tormenta20 Jogo do Ano, cap. 3, pág. 142 e 152",
+      "UnknownSource": "Penalidades por não proficiência: o código do sistema mudou ({methods}). Confira se o Tormenta20 já aplica essas penalidades, para não dobrá-las."
+    },
+    "FieldBonuses": {
+      "Condition": "Condição"
     }
   }
 }

@@ -505,7 +505,7 @@ function markSheet(app, html) {
 }
 
 /** Actors to prepare again when the setting changes: world actors and the synthetic actors of unlinked tokens. */
-function* allActors() {
+export function* allActors() {
   yield* game.actors ?? [];
   for (const scene of game.scenes ?? []) {
     for (const token of scene.tokens ?? []) if (!token.actorLink && token.actor) yield token.actor;

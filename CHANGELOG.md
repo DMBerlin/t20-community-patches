@@ -18,6 +18,7 @@ Não edite as seções de versão à mão.
 - Regra opcional "Bônus de itens e magias" (#28): bônus de itens não acumulam com outros itens, nem magias com outras magias; vale o maior, e entre os itens além da armadura e do escudo só conta o de maior Defesa, com aviso e marca na ficha citando o livro.
 - Regra opcional "Valor efetivo dos itens" (#65): mostra na ficha do item, no inventário e no card do chat a Defesa, a penalidade, o ataque, o dano e o crítico finais depois de melhorias, materiais e encantos, com o detalhamento de cada fonte; modos Só nas pontas, Mostrar no item (padrão) e Item efetivo.
 - Regra opcional "Restrições ao lançar magias": uma magia sustentada por vez, ou duas com Fluxo de Mana (aviso ao lançar e ao aplicar), condições que impedem magias (avisar ou bloquear) e aviso de concentração em condição ruim, citando o livro (#37).
+- Regra opcional "Penalidades por não proficiência": −5 no ataque com arma sem proficiência e penalidade de armadura sem proficiência em todas as perícias de Força e Destreza, com proficiências derivadas da classe inicial, de poderes e da aba Traços, só para personagens (#39).
 
 ### Fixed
 
@@ -32,6 +33,8 @@ Não edite as seções de versão à mão.
 - `menace-xp-fraction` (#36): ameaças de ND 1/4 e 1/2 mostram 250 e 500 XP, em vez de 1.000. Afeta Tormenta20 1.6.5.
 - `spell-compendium-data` (#32): aprimoramentos de Curar Ferimentos, Sono, Raio do Enfraquecimento, Arma Mágica e a marca de múltiplas aplicações de 12 aprimoramentos seguem o livro. Afeta Tormenta20 1.6.5.
 - `condition-skill-lists` (#38): Cego, Fraco e Debilitado penalizam Ladinagem, e Frustrado e Esmorecido penalizam os Ofícios, inclusive os personalizados. Afeta Tormenta20 1.6.5.
+- Fortitude, Reflexos e Vontade passam a receber os bônus de "Testes de Perícias, exceto de Ataque" também quando há bônus de "Testes de Perícias de Resistências" (`save-skill-bonus`, #39).
+- O detalhamento dos valores da ficha volta a mostrar efeitos de valor 3 ou 4, usa os dados do próprio token não vinculado e lista a penalidade de condição da Defesa (`modified-fields-filter`, `field-bonuses-tooltip`, #39).
 
 ## v1.0.0 - 2026-10-19
 

@@ -45,6 +45,14 @@
         "Name": "Equipment-conditional powers",
         "Hint": "Two-Handed Style (Estilo de Duas Mãos), One-Weapon Style (Estilo de Uma Arma), Weapon and Shield Style (Estilo de Arma e Escudo), Armored (Encouraçado, including the +2 from Fanatic and Impregnable) and Impregnable (Inexpugnável) are suppressed when the equipment does not meet the power's condition. Fanatic (Fanático) now ignores the −3 m from heavy armor."
       },
+      "modified-fields-filter": {
+        "Name": "Effects worth 3 or 4 in the breakdown",
+        "Hint": "Effects that add exactly 3 or 4 (for example Defesa +3) show up again in the breakdown shown when hovering the sheet values, and the breakdown total matches the sheet again."
+      },
+      "field-bonuses-tooltip": {
+        "Name": "Token and Defesa breakdowns",
+        "Hint": "The breakdown shown when hovering the sheet values uses the unlinked token's own data (it showed the base actor's) and the Defesa breakdown lists the penalty of conditions (Desprevenido, Cego, Enredado…)."
+      },
       "suppressed-usage-effects": {
         "Name": "Usage effects of unequipped items",
         "Hint": "Usage effects of unequipped weapons and equipment are no longer offered or applied on rolls."
@@ -80,6 +88,10 @@
       "menace-xp-fraction": {
         "Name": "XP of threats with fractional CR",
         "Hint": "Threats of CR 1/4 and 1/2 are worth 250 and 500 XP (CR × 1,000) instead of 1,000 XP."
+      },
+      "save-skill-bonus": {
+        "Name": "Skill (except attack) bonuses on saves",
+        "Hint": "Fortitude, Reflexos and Vontade get \"Testes de Perícias, exceto de Ataque\" bonuses even when the character also has \"Testes de Perícias de Resistências\" bonuses. Before, the latter cancelled the former."
       },
       "spell-compendium-data": {
         "Name": "Spell compendium data",
@@ -346,6 +358,24 @@
         "Message": "Concentration: {actor} casts {item} in a bad condition ({conditions}). Vontade test DC {dc}; on a failure, the spell is lost, but the MP are spent ({reference}).",
         "Reference": "Tormenta20 Jogo do Ano, ch. 4, \"Concentração\", p. 170"
       }
+    },
+    "NonProficiency": {
+      "Setting": {
+        "Name": "Non-proficiency penalties",
+        "Hint": "Characters take −5 on attacks with weapons they are not proficient with, and the armor penalty of armor or shields they are not proficient with applies to every Strength and Dexterity skill (core book, p. 142 and 152). Proficiencies come from the initial class, recognized powers and the Traits tab. Choices (Proficiência, Balística, Abençoar Arma) must be marked on the Traits tab; until then, affected items show a warning and are not penalized. Threats are not affected.",
+        "off": "Off",
+        "on": "Apply the book rule"
+      },
+      "Weapon": "Not proficient: {penalty} on attacks",
+      "Armor": "Not proficient: {penalty} armor penalty on Strength and Dexterity skills",
+      "Pending": "Undetermined proficiency ({sources}): mark the choice on the Traits tab. No penalty until then",
+      "TooltipLabel": "Armor penalty (not proficient)",
+      "InitialClass": "initial class",
+      "Reference": "Tormenta20 Jogo do Ano, ch. 3, p. 142 and 152",
+      "UnknownSource": "Non-proficiency penalties: the system code changed ({methods}). Check whether Tormenta20 already applies these penalties, so they are not doubled."
+    },
+    "FieldBonuses": {
+      "Condition": "Condition"
     }
   }
 }

@@ -15,6 +15,7 @@ import { installSameAbilityRule, registerSameAbilitySetting } from "./rules/same
 import { installSourceStackingRule, registerSourceStackingSetting } from "./rules/source-stacking.mjs";
 import { installItemEffectiveStatsRule, registerItemEffectiveStatsSetting } from "./rules/item-effective-stats.mjs";
 import { installCastingRestrictionsRule, registerCastingRestrictionsSettings } from "./rules/casting-restrictions.mjs";
+import { installNonProficiencyRule, registerNonProficiencySetting } from "./rules/non-proficiency-penalties.mjs";
 
 /**
  * @type {{id: string, group: string, mode: import("./registry.mjs").PatchMode, state: import("./registry.mjs").PatchState,
@@ -65,6 +66,7 @@ Hooks.once("init", () => {
   registerSourceStackingSetting();
   registerItemEffectiveStatsSetting();
   registerCastingRestrictionsSettings();
+  registerNonProficiencySetting();
   if (game.system.id === "tormenta20") {
     try {
       installManaLimitRule();
@@ -85,6 +87,11 @@ Hooks.once("init", () => {
       installSourceStackingRule();
     } catch (err) {
       console.error(`${MODULE_ID} | Failed to install the item and spell stacking rule`, err);
+    }
+    try {
+      installNonProficiencyRule();
+    } catch (err) {
+      console.error(`${MODULE_ID} | Failed to install the non-proficiency penalties rule`, err);
     }
     // After the other ItemT20#roll/displayCard wrappers (usage-effect-max): a blocked use never reaches them.
     try {

@@ -13,6 +13,9 @@ import restRecovery from "./rest-recovery.mjs";
 import spellCostZero from "./spell-cost-zero.mjs";
 import spellCompendiumData from "./spell-compendium-data.mjs";
 import spellDcBonus from "./spell-dc-bonus.mjs";
+import fieldBonusesTooltip from "./field-bonuses-tooltip.mjs";
+import modifiedFieldsFilter from "./modified-fields-filter.mjs";
+import saveSkillBonus from "./save-skill-bonus.mjs";
 import segmentedSceneSetting from "./segmented-scene-setting.mjs";
 import statusEffectsCompendium from "./status-effects-compendium.mjs";
 import suppressedUsageEffects from "./suppressed-usage-effects.mjs";
@@ -49,4 +52,4 @@ export const GROUPS = ["conditions", "sheet-effects", "usage-effects", "items", 
  */
 
 /** @type {Patch[]} */
-export const PATCHES = [statusEffectsCompendium, encumberedStatusSync, conditionSkillLists, deathThreshold, itemEffectsOnActorSheet, usageEffectToggle, conditionalPowers, suppressedUsageEffects, appendedUsageChanges, linkedUsageEffects, temporaryUsageEffectExpiry, abilityDialogCost, spellCostZero, armorPenaltyReduction, spellDcBonus, threateningCritRange, hideLegacyUpgrades, segmentedSceneSetting, restRecovery, menaceXpFraction, spellCompendiumData];
+export const PATCHES = [statusEffectsCompendium, encumberedStatusSync, conditionSkillLists, deathThreshold, itemEffectsOnActorSheet, usageEffectToggle, conditionalPowers, modifiedFieldsFilter, fieldBonusesTooltip, suppressedUsageEffects, appendedUsageChanges, linkedUsageEffects, temporaryUsageEffectExpiry, abilityDialogCost, spellCostZero, armorPenaltyReduction, spellDcBonus, threateningCritRange, hideLegacyUpgrades, segmentedSceneSetting, restRecovery, menaceXpFraction, saveSkillBonus, spellCompendiumData];

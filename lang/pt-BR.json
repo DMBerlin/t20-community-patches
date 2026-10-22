@@ -9,6 +9,10 @@
         "Name": "Sobrecarregado ao adicionar ou remover itens",
         "Hint": "Atualiza Sobrecarregado assim que itens entram ou saem da ficha, sem duplicar a condição."
       },
+      "condition-skill-lists": {
+        "Name": "Perícias faltando nas condições",
+        "Hint": "Cego, Fraco e Debilitado passam a penalizar Ladinagem, e Frustrado e Esmorecido, os Ofícios. Toda perícia do personagem cujo atributo-chave é citado pela condição, inclusive as personalizadas, recebe a mesma penalidade."
+      },
       "death-threshold": {
         "Name": "PV mínimo (limiar de morte)",
         "Hint": "O personagem morre em −10 PV ou em menos a metade dos PV máximos, o que for mais baixo. Vale para Personagens de Jogador, Ameaças e Personagens do Mestre."

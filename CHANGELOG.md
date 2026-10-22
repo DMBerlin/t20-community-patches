@@ -40,6 +40,7 @@ Não edite as seções de versão à mão.
 - `skill-modifier-attributes` (#68): modificadores de perícia com atributo na fórmula, como a Aura Sagrada, passam a contar os bônus temporários de atributo na ficha e na rolagem. Afeta Tormenta20 1.6.5.
 - `prone-defense` (#40): a condição Caído soma −5 à Defesa em vez de trocar o bônus manual "Outros" da ficha por −5, que fazia a Defesa cair mais de 5 ou não cair. Afeta Tormenta20 1.6.5.
 - `ongoing-damage-conditions` (#45): Em Chamas rola 1d6 de fogo e Sangrando rola o teste de Constituição (CD 15) e a perda de 1d6 PV no início do turno. Afeta Tormenta20 1.6.5.
+- `alchemical-damage-bonus` (#69): o bônus de dano alquímico entra no dano de itens alquímicos mesmo sem bônus de dano de magias. Afeta Tormenta20 1.6.5.
 
 ## v1.0.0 - 2026-10-19
 

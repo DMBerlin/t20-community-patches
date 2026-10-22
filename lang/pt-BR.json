@@ -37,6 +37,10 @@
         "Name": "Margem de ameaça da Ameaçadora",
         "Hint": "O encanto Ameaçadora passa a duplicar a margem de ameaça da arma (espada longa 19 → 17), antes dos efeitos que aumentam a margem. Antes, a arma deixava de fazer críticos."
       },
+      "alchemical-damage-bonus": {
+        "Name": "Bônus de dano alquímico",
+        "Hint": "Os bônus de \"Dano Alquímico\" (modificadores.dano.alq) passam a ser somados ao dano dos itens alquímicos, como Fogo alquímico, mesmo sem um bônus de dano de magias."
+      },
       "hide-legacy-upgrades": {
         "Name": "Ocultar aprimoramentos antigos (\"Deprecated\")",
         "Hint": "Oculta o bloco \"Deprecated\" da aba Aprimoramentos das fichas de item, cujos campos não funcionam. Nenhum dado é alterado."

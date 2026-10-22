@@ -1,4 +1,5 @@
 import abilityDialogCost from "./ability-dialog-cost.mjs";
+import alchemicalDamageBonus from "./alchemical-damage-bonus.mjs";
 import appendedUsageChanges from "./appended-usage-changes.mjs";
 import conditionalPowers from "./conditional-powers.mjs";
 import conditionSkillLists from "./condition-skill-lists.mjs";
@@ -57,4 +58,4 @@ export const GROUPS = ["conditions", "sheet-effects", "usage-effects", "items", 
  */
 
 /** @type {Patch[]} */
-export const PATCHES = [statusEffectsCompendium, encumberedStatusSync, ongoingDamageConditions, proneDefense, conditionSkillLists, deathThreshold, itemEffectsOnActorSheet, usageEffectToggle, conditionalPowers, modifiedFieldsFilter, fieldBonusesTooltip, attributeBreakdown, suppressedUsageEffects, appendedUsageChanges, linkedUsageEffects, temporaryUsageEffectExpiry, abilityDialogCost, spellCostZero, armorPenaltyReduction, spellDcBonus, threateningCritRange, hideLegacyUpgrades, segmentedSceneSetting, restRecovery, menaceXpFraction, saveSkillBonus, sheetInitiativeToken, spellCompendiumData, skillModifierAttributes];
+export const PATCHES = [statusEffectsCompendium, encumberedStatusSync, ongoingDamageConditions, proneDefense, conditionSkillLists, deathThreshold, itemEffectsOnActorSheet, usageEffectToggle, conditionalPowers, modifiedFieldsFilter, fieldBonusesTooltip, attributeBreakdown, suppressedUsageEffects, appendedUsageChanges, linkedUsageEffects, temporaryUsageEffectExpiry, abilityDialogCost, spellCostZero, armorPenaltyReduction, spellDcBonus, threateningCritRange, alchemicalDamageBonus, hideLegacyUpgrades, segmentedSceneSetting, restRecovery, menaceXpFraction, saveSkillBonus, sheetInitiativeToken, spellCompendiumData, skillModifierAttributes];

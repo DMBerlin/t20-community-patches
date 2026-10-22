@@ -35,6 +35,7 @@ Não edite as seções de versão à mão.
 - `condition-skill-lists` (#38): Cego, Fraco e Debilitado penalizam Ladinagem, e Frustrado e Esmorecido penalizam os Ofícios, inclusive os personalizados. Afeta Tormenta20 1.6.5.
 - Fortitude, Reflexos e Vontade passam a receber os bônus de "Testes de Perícias, exceto de Ataque" também quando há bônus de "Testes de Perícias de Resistências" (`save-skill-bonus`, #39).
 - O detalhamento dos valores da ficha volta a mostrar efeitos de valor 3 ou 4, usa os dados do próprio token não vinculado e lista a penalidade de condição da Defesa (`modified-fields-filter`, `field-bonuses-tooltip`, #39).
+- `sheet-initiative-token` (#67): a Iniciativa rolada pela ficha vai para o combatente daquele token, e não para o primeiro token do mesmo ator, e passa a funcionar com o rótulo da perícia renomeado ou traduzido. Afeta Tormenta20 1.6.5.
 
 ## v1.0.0 - 2026-10-19
 

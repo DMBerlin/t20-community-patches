@@ -97,6 +97,10 @@
         "Name": "Iniciativa rolada pela ficha no combatente certo",
         "Hint": "Rolar Iniciativa pela ficha ou por macro grava o resultado no combatente daquele token, mesmo com vários tokens não vinculados do mesmo ator, e também quando o rótulo da perícia foi renomeado ou traduzido por outro módulo. Antes, o resultado ia para o primeiro token do mesmo ator e, com outro rótulo que não \"Iniciativa\", não ia para o tracker."
       },
+      "skill-modifier-attributes": {
+        "Name": "Bônus temporários de atributo nos modificadores globais",
+        "Hint": "Modificadores globais de perícia, atributo, dano e cura que usam um atributo (como o @car da Aura Sagrada ou o @con de Trincado) passam a usar o atributo com os bônus temporários (itens, magias, poções), na ficha e nas rolagens, como o detalhamento já mostrava. PV e PM continuam ignorando esses bônus."
+      },
       "spell-compendium-data": {
         "Name": "Dados de magias do compêndio",
         "Hint": "Corrige, sem gravar nada, aprimoramentos de magias que divergem do livro: truque de Curar Ferimentos (1d8 de dano de luz), Sono, Raio do Enfraquecimento, Arma Mágica e a marca de múltiplas aplicações (Físico/Mente Divina, Queda Suave e outras). Efeitos editados não são alterados."

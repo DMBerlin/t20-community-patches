@@ -97,6 +97,10 @@
         "Name": "Initiative rolled from the sheet goes to the right combatant",
         "Hint": "Rolling Initiative from the sheet or a macro writes the result to that token's combatant, even with several unlinked tokens of the same actor, and also when the skill label was renamed or translated by another module. Before, the result went to the first token of the same actor and, with a label other than \"Iniciativa\", never reached the tracker."
       },
+      "skill-modifier-attributes": {
+        "Name": "Temporary attribute bonuses in global modifiers",
+        "Hint": "Global skill, attribute, damage and healing modifiers that use an attribute (such as the @car of Aura Sagrada or the @con of Trincado) now use the attribute with its temporary bonuses (items, spells, potions), on the sheet and on rolls, as the breakdown already showed. PV and PM still ignore those bonuses."
+      },
       "spell-compendium-data": {
         "Name": "Spell compendium data",
         "Hint": "Fixes, without saving anything, spell enhancements that diverge from the rulebook: Curar Ferimentos cantrip (1d8 light damage), Sono, Raio do Enfraquecimento, Arma Mágica and the multiple-application flag (Físico/Mente Divina, Queda Suave and others). Edited effects are left untouched."

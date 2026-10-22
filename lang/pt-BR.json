@@ -76,6 +76,10 @@
       "menace-xp-fraction": {
         "Name": "XP de ameaças com ND fracionário",
         "Hint": "Ameaças de ND 1/4 e 1/2 valem 250 e 500 XP (ND × 1.000), em vez de 1.000 XP."
+      },
+      "spell-compendium-data": {
+        "Name": "Dados de magias do compêndio",
+        "Hint": "Corrige, sem gravar nada, aprimoramentos de magias que divergem do livro: truque de Curar Ferimentos (1d8 de dano de luz), Sono, Raio do Enfraquecimento, Arma Mágica e a marca de múltiplas aplicações (Físico/Mente Divina, Queda Suave e outras). Efeitos editados não são alterados."
       }
     },
     "ItemEffects": {

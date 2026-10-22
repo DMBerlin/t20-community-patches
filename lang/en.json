@@ -76,6 +76,10 @@
       "menace-xp-fraction": {
         "Name": "XP of threats with fractional CR",
         "Hint": "Threats of CR 1/4 and 1/2 are worth 250 and 500 XP (CR × 1,000) instead of 1,000 XP."
+      },
+      "spell-compendium-data": {
+        "Name": "Spell compendium data",
+        "Hint": "Fixes, without saving anything, spell enhancements that diverge from the rulebook: Curar Ferimentos cantrip (1d8 light damage), Sono, Raio do Enfraquecimento, Arma Mágica and the multiple-application flag (Físico/Mente Divina, Queda Suave and others). Edited effects are left untouched."
       }
     },
     "ItemEffects": {

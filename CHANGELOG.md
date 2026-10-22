@@ -29,6 +29,7 @@ Não edite as seções de versão à mão.
 - `spell-cost-zero` (#34): redutores de −1 PM em "Aplicar Sempre" e aprimoramentos de custo 0 não transformam mais a magia em Truque gratuito, e o Truque não combina com outros aprimoramentos. Afeta Tormenta20 1.6.5.
 - `conditional-powers` (#33): Estilo de Duas Mãos, Estilo de Uma Arma, Estilo de Arma e Escudo, Encouraçado e Inexpugnável só dão o bônus com o equipamento exigido, e Fanático ignora o −3 m da armadura pesada. Afeta Tormenta20 1.6.5.
 - `menace-xp-fraction` (#36): ameaças de ND 1/4 e 1/2 mostram 250 e 500 XP, em vez de 1.000. Afeta Tormenta20 1.6.5.
+- `spell-compendium-data` (#32): aprimoramentos de Curar Ferimentos, Sono, Raio do Enfraquecimento, Arma Mágica e a marca de múltiplas aplicações de 12 aprimoramentos seguem o livro. Afeta Tormenta20 1.6.5.
 
 ## v1.0.0 - 2026-10-19
 

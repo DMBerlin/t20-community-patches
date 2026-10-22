@@ -72,6 +72,10 @@
       "rest-recovery": {
         "Name": "Prolonged care on rest",
         "Hint": "In the Rest dialog, Prolonged Care (Cuidados Prolongados) adds +1 HP per level to the recovery, as in the Cura skill, instead of doubling all recovered HP."
+      },
+      "menace-xp-fraction": {
+        "Name": "XP of threats with fractional CR",
+        "Hint": "Threats of CR 1/4 and 1/2 are worth 250 and 500 XP (CR × 1,000) instead of 1,000 XP."
       }
     },
     "ItemEffects": {

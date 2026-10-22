@@ -72,6 +72,10 @@
       "rest-recovery": {
         "Name": "Cuidados Prolongados no descanso",
         "Hint": "No diálogo Descanso, Cuidados Prolongados passa a somar +1 PV por nível à recuperação, como na perícia Cura, em vez de dobrar todos os PV recuperados."
+      },
+      "menace-xp-fraction": {
+        "Name": "XP de ameaças com ND fracionário",
+        "Hint": "Ameaças de ND 1/4 e 1/2 valem 250 e 500 XP (ND × 1.000), em vez de 1.000 XP."
       }
     },
     "ItemEffects": {

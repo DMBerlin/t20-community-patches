@@ -14,6 +14,7 @@ import { installUsageEffectMaxRule, registerUsageEffectMaxSetting } from "./rule
 import { installSameAbilityRule, registerSameAbilitySetting } from "./rules/same-ability-stacking.mjs";
 import { installSourceStackingRule, registerSourceStackingSetting } from "./rules/source-stacking.mjs";
 import { installItemEffectiveStatsRule, registerItemEffectiveStatsSetting } from "./rules/item-effective-stats.mjs";
+import { installCastingRestrictionsRule, registerCastingRestrictionsSettings } from "./rules/casting-restrictions.mjs";
 
 /**
  * @type {{id: string, group: string, mode: import("./registry.mjs").PatchMode, state: import("./registry.mjs").PatchState,
@@ -63,6 +64,7 @@ Hooks.once("init", () => {
   registerSameAbilitySetting();
   registerSourceStackingSetting();
   registerItemEffectiveStatsSetting();
+  registerCastingRestrictionsSettings();
   if (game.system.id === "tormenta20") {
     try {
       installManaLimitRule();
@@ -83,6 +85,12 @@ Hooks.once("init", () => {
       installSourceStackingRule();
     } catch (err) {
       console.error(`${MODULE_ID} | Failed to install the item and spell stacking rule`, err);
+    }
+    // After the other ItemT20#roll/displayCard wrappers (usage-effect-max): a blocked use never reaches them.
+    try {
+      installCastingRestrictionsRule();
+    } catch (err) {
+      console.error(`${MODULE_ID} | Failed to install the casting restrictions rule`, err);
     }
     // Last on purpose: its wrappers must sit outside those of the patches and the other rules.
     try {

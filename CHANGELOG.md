@@ -17,6 +17,7 @@ Não edite as seções de versão à mão.
 - Regra opcional "Efeitos da mesma habilidade" (#27): efeitos de uma mesma habilidade, como duas Inspirações, deixam de acumular no alvo, substituindo o anterior ou mantendo o maior.
 - Regra opcional "Bônus de itens e magias" (#28): bônus de itens não acumulam com outros itens, nem magias com outras magias; vale o maior, e entre os itens além da armadura e do escudo só conta o de maior Defesa, com aviso e marca na ficha citando o livro.
 - Regra opcional "Valor efetivo dos itens" (#65): mostra na ficha do item, no inventário e no card do chat a Defesa, a penalidade, o ataque, o dano e o crítico finais depois de melhorias, materiais e encantos, com o detalhamento de cada fonte; modos Só nas pontas, Mostrar no item (padrão) e Item efetivo.
+- Regra opcional "Restrições ao lançar magias": uma magia sustentada por vez, ou duas com Fluxo de Mana (aviso ao lançar e ao aplicar), condições que impedem magias (avisar ou bloquear) e aviso de concentração em condição ruim, citando o livro (#37).
 
 ### Fixed
 

@@ -302,6 +302,46 @@
         "step": "Passo de dano",
         "critical": "Crítico"
       }
+    },
+    "CastingRestrictions": {
+      "Sustained": {
+        "Setting": {
+          "Name": "Uma magia sustentada por vez",
+          "Hint": "Regra opcional do livro (p. 227): você pode manter várias habilidades sustentadas, mas só uma magia sustentada; duas com o poder Fluxo de Mana (p. 38). Avisar mostra um aviso ao lançar e ao aplicar uma magia sustentada além do limite, e ao aplicar um card de lançamento já superado. Nada é encerrado sozinho: encerre a magia pela ficha ou pelo card \"Sustentar Efeitos\". Habilidades (poderes) sustentadas não contam.",
+          "off": "Desligado",
+          "warn": "Avisar"
+        },
+        "Warning": "{actor} {held} (limite: {capacity}). Ao lançar {item}, encerre uma magia sustentada: encerrar é ação livre ({reference}).",
+        "Apply": "Ao aplicar {spell}: {actor} {held} (limite: {capacity}). Encerre uma magia sustentada ({reference}).",
+        "Held": "sustenta {spells}",
+        "Uncertain": "tem marcadores que podem ser de uma magia (conferir na ficha): {markers}",
+        "Stale": "Este card de {spell} é de um lançamento superado: depois dele, {actor} lançou {current} (limite: {capacity}). Confira antes de aplicar ({reference}).",
+        "Reference": "Tormenta20 Jogo do Ano, \"Duração\", p. 227; \"Fluxo de Mana\", p. 38"
+      },
+      "Conditions": {
+        "Setting": {
+          "Name": "Condições que impedem magias",
+          "Hint": "Regra opcional do livro (p. 394-395 e 170): Atordoado, Fascinado, Pasmo e Surpreendido não podem fazer ações, mas podem reagir (p. 233); Inconsciente e Petrificado não fazem nem reações; Paralisado só faz ações mentais e não gesticula nem fala, a não ser com Magia Discreta. Vale para magias e pergaminhos. Avisar mostra um aviso (recomendado); Bloquear impede o uso antes do diálogo, sem gastar PM. Quando um aprimoramento muda a execução (por exemplo, Campo de Força como reação), a verificação de Atordoado, Fascinado, Pasmo e Surpreendido é feita ao confirmar o diálogo de uso.",
+          "off": "Desligado",
+          "warn": "Avisar",
+          "block": "Bloquear"
+        },
+        "Warning": "{actor} não pode lançar {item}: {conditions} ({reference}).",
+        "Subtle": "{actor} tem Magia Discreta: com o aprimoramento, a magia pode ser lançada mesmo Paralisado. Confira com o mestre.",
+        "Reaction": "Com esta condição, só uma reação é permitida: escolha um aprimoramento que torne a magia uma reação.",
+        "Blocked": "Uso bloqueado.",
+        "Reference": "Tormenta20 Jogo do Ano, Apêndice, \"Lista de Condições\", p. 394-395; cap. 4, \"Gestos e Palavras\", p. 170"
+      },
+      "Concentration": {
+        "Setting": {
+          "Name": "Concentração em condição ruim",
+          "Hint": "Regra opcional do livro (p. 170): lançar uma magia Caído ou Surdo exige um teste de Vontade (CD 15 + PM gasto). Avisar mostra a CD no chat depois do card. O teste é rolado pela ficha.",
+          "off": "Desligado",
+          "warn": "Avisar"
+        },
+        "Message": "Concentração: {actor} lança {item} em condição ruim ({conditions}). Teste de Vontade CD {dc}; se falhar, a magia é perdida, mas os PM são gastos ({reference}).",
+        "Reference": "Tormenta20 Jogo do Ano, cap. 4, \"Concentração\", p. 170"
+      }
     }
   }
 }

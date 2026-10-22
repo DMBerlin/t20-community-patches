@@ -302,6 +302,46 @@
         "step": "Damage step",
         "critical": "Critical"
       }
+    },
+    "CastingRestrictions": {
+      "Sustained": {
+        "Setting": {
+          "Name": "One sustained spell at a time",
+          "Hint": "Optional book rule (p. 227): you can keep several sustained abilities, but only one sustained spell; two with the Fluxo de Mana power (p. 38). Warn shows a warning when casting or applying a sustained spell beyond the limit, and when applying a card from a superseded cast. Nothing is ended automatically: end the spell from the sheet or from the \"Sustentar Efeitos\" card. Sustained abilities (powers) do not count.",
+          "off": "Off",
+          "warn": "Warn"
+        },
+        "Warning": "{actor} {held} (limit: {capacity}). When casting {item}, end a sustained spell: ending is a free action ({reference}).",
+        "Apply": "Applying {spell}: {actor} {held} (limit: {capacity}). End a sustained spell ({reference}).",
+        "Held": "sustains {spells}",
+        "Uncertain": "has markers that may belong to a spell (check the sheet): {markers}",
+        "Stale": "This {spell} card comes from a superseded cast: after it, {actor} cast {current} (limit: {capacity}). Check before applying ({reference}).",
+        "Reference": "Tormenta20 Jogo do Ano, \"Duração\", p. 227; \"Fluxo de Mana\", p. 38"
+      },
+      "Conditions": {
+        "Setting": {
+          "Name": "Conditions that prevent spells",
+          "Hint": "Optional book rule (p. 394-395 and 170): Atordoado, Fascinado, Pasmo and Surpreendido cannot take actions, but can react (p. 233); Inconsciente and Petrificado cannot even react; Paralisado only takes mental actions and cannot gesture or speak, unless with Magia Discreta. Applies to spells and scrolls. Warn shows a warning (recommended); Block stops the use before the dialog, without spending MP. When an enhancement changes the execution (for example, Campo de Força as a reaction), Atordoado, Fascinado, Pasmo and Surpreendido are checked when the use dialog is confirmed.",
+          "off": "Off",
+          "warn": "Warn",
+          "block": "Block"
+        },
+        "Warning": "{actor} cannot cast {item}: {conditions} ({reference}).",
+        "Subtle": "{actor} has Magia Discreta: with the enhancement, the spell can be cast even while Paralisado. Check with the GM.",
+        "Reaction": "Under this condition, only a reaction is allowed: choose an enhancement that turns the spell into a reaction.",
+        "Blocked": "Use blocked.",
+        "Reference": "Tormenta20 Jogo do Ano, Appendix, \"Lista de Condições\", p. 394-395; ch. 4, \"Gestos e Palavras\", p. 170"
+      },
+      "Concentration": {
+        "Setting": {
+          "Name": "Concentration in a bad condition",
+          "Hint": "Optional book rule (p. 170): casting a spell while Caído or Surdo requires a Vontade test (DC 15 + MP spent). Warn posts the DC to the chat after the card. The test is rolled from the sheet.",
+          "off": "Off",
+          "warn": "Warn"
+        },
+        "Message": "Concentration: {actor} casts {item} in a bad condition ({conditions}). Vontade test DC {dc}; on a failure, the spell is lost, but the MP are spent ({reference}).",
+        "Reference": "Tormenta20 Jogo do Ano, ch. 4, \"Concentração\", p. 170"
+      }
     }
   }
 }

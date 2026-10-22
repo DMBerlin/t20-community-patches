@@ -9,6 +9,10 @@
         "Name": "Sobrecarregado ao adicionar ou remover itens",
         "Hint": "Atualiza Sobrecarregado assim que itens entram ou saem da ficha, sem duplicar a condição."
       },
+      "ongoing-damage-conditions": {
+        "Name": "Dano por turno de Em Chamas e Sangrando",
+        "Hint": "No início do turno, quem está Em Chamas rola 1d6 de dano de fogo no chat. Quem está Sangrando faz um teste de Constituição (CD 15): se passar, a condição sai; se falhar, rola a perda de 1d6 PV. O dano é aplicado pelo chat, como no dano contínuo do sistema. Antes, essas condições nunca causavam dano."
+      },
       "prone-defense": {
         "Name": "Defesa da condição Caído",
         "Hint": "Caído soma −5 à Defesa, em vez de trocar o campo Outros da ficha por −5. O bônus manual é mantido, e cópias repetidas de Caído não acumulam."
@@ -405,6 +409,10 @@
         "downgrade": "no máximo",
         "multiply": "multiplica"
       }
+    },
+    "OngoingDamage": {
+      "TestPassed": "{name}: teste de Constituição (CD {dc}). Sucesso: a condição foi removida.",
+      "TestFailed": "{name}: teste de Constituição (CD {dc}). Falha."
     }
   }
 }

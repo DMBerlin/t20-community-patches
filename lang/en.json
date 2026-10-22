@@ -9,6 +9,10 @@
         "Name": "Overloaded when adding or removing items",
         "Hint": "Updates Overloaded (Sobrecarregado) as soon as items are added to or removed from the sheet, without duplicating the condition."
       },
+      "ongoing-damage-conditions": {
+        "Name": "Per-turn damage of Em Chamas and Sangrando",
+        "Hint": "At the start of the turn, a creature that is Em Chamas (on fire) rolls 1d6 fire damage to chat. A creature that is Sangrando (bleeding) rolls a Constitution test (DC 15): on a success the condition ends; on a failure it rolls the loss of 1d6 HP. Damage is applied from the chat, like the system's ongoing damage. Before, these conditions never dealt damage."
+      },
       "prone-defense": {
         "Name": "Prone (Caído) Defense",
         "Hint": "Prone (Caído) adds −5 to Defense instead of replacing the sheet's Other (Outros) field with −5. The manual bonus is kept, and repeated copies of Prone do not stack."
@@ -405,6 +409,10 @@
         "downgrade": "at most",
         "multiply": "multiplies"
       }
+    },
+    "OngoingDamage": {
+      "TestPassed": "{name}: Constitution test (DC {dc}). Success: the condition was removed.",
+      "TestFailed": "{name}: Constitution test (DC {dc}). Failure."
     }
   }
 }

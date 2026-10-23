@@ -136,6 +136,10 @@
       "enchantment-data": {
         "Name": "Dados de melhorias, materiais e encantos",
         "Hint": "Guardião, Protetor, Relampejante, Sombrio, Mitral e Incandescente passam a valer para o personagem; Gelo Eterno, Adamante, Invulnerável, Delicada e Discreto seguem o livro; armadura pesada de Mitral aceita até 2 de Destreza e itens de Mitral ocupam 1 espaço a menos; o Manto da Resistência é criado ativo."
+      },
+      "engenhoqueiro-armor-penalty": {
+        "Name": "Engenhoqueiro sem penalidade de armadura",
+        "Hint": "Ofício (Engenhoqueiro) deixa de sofrer penalidade de armadura, como os outros Ofícios no livro básico. Vale para todos os personagens, inclusive os já criados, e nada é gravado: desligar a correção devolve o comportamento do sistema."
       }
     },
     "ItemEffects": {

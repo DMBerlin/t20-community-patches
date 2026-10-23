@@ -430,6 +430,41 @@
     "OngoingDamage": {
       "TestPassed": "{name}: teste de Constituição (CD {dc}). Sucesso: a condição foi removida.",
       "TestFailed": "{name}: teste de Constituição (CD {dc}). Falha."
+    },
+    "SaveButton": {
+      "Setting": {
+        "Name": "Teste de resistência pelo card",
+        "Hint": "Adiciona ao card de magias e habilidades com teste de resistência um botão para cada alvo rolar Fortitude, Reflexos ou Vontade contra a CD. O card mostra quem passou, quem falhou e o efeito do livro (anula, parcial, reduz à metade).",
+        "off": "Desligado",
+        "on": "Ligado"
+      },
+      "Title": "Teste de resistência",
+      "Header": "{text} · CD {dc}",
+      "Roll": "{skill} (CD {dc})",
+      "RollSelected": "Rolar {skill} para os tokens selecionados",
+      "Reroll": "Rolar de novo",
+      "NoTargets": "Nenhum alvo marcado. Selecione os tokens e use o botão abaixo.",
+      "NoSelection": "Selecione um ou mais tokens seus.",
+      "Target": "Alvo {n}",
+      "Unavailable": "alvo indisponível",
+      "UnavailableSuffix": "(indisponível)",
+      "Hidden": "resultado oculto",
+      "Success": "Passou",
+      "Failure": "Falhou",
+      "Natural20": "(20 natural)",
+      "Natural1": "(1 natural)",
+      "Against": "Contra {item} (CD {dc}): {outcome}.",
+      "ApplyDamage": "Aplicar dano",
+      "ApplyHalfDamage": "Aplicar metade do dano",
+      "RollFailed": "Não foi possível rolar o teste de resistência. Veja o console.",
+      "Reference": "Tormenta20 Jogo do Ano, cap. 5, \"Testes de Resistência\", p. 227",
+      "Effect": {
+        "anula": "A habilidade não tem efeito sobre um alvo que passe em seu teste de resistência.",
+        "parcial": "O efeito é menor em um alvo que passe no teste de resistência.",
+        "metade": "O efeito é reduzido à metade em um alvo que passe no teste de resistência.",
+        "desacredita": "Percebe que a ilusão não é real. A ilusão continua funcionando; essa criatura pode avisar seus aliados como uma ação livre, permitindo que eles façam testes para desacreditar.",
+        "evita": "O alvo que passa no teste evita o efeito."
+      }
     }
   }
 }

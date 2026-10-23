@@ -430,6 +430,41 @@
     "OngoingDamage": {
       "TestPassed": "{name}: Constitution test (DC {dc}). Success: the condition was removed.",
       "TestFailed": "{name}: Constitution test (DC {dc}). Failure."
+    },
+    "SaveButton": {
+      "Setting": {
+        "Name": "Saving throw from the chat card",
+        "Hint": "Adds to the card of spells and abilities with a saving throw a button for each target to roll Fortitude, Reflexes or Will against the DC. The card shows who passed, who failed and the book effect (negates, partial, half).",
+        "off": "Off",
+        "on": "On"
+      },
+      "Title": "Saving throw",
+      "Header": "{text} · DC {dc}",
+      "Roll": "{skill} (DC {dc})",
+      "RollSelected": "Roll {skill} for the selected tokens",
+      "Reroll": "Roll again",
+      "NoTargets": "No targets. Select the tokens and use the button below.",
+      "NoSelection": "Select one or more of your tokens.",
+      "Target": "Target {n}",
+      "Unavailable": "target unavailable",
+      "UnavailableSuffix": "(unavailable)",
+      "Hidden": "hidden result",
+      "Success": "Passed",
+      "Failure": "Failed",
+      "Natural20": "(natural 20)",
+      "Natural1": "(natural 1)",
+      "Against": "Against {item} (DC {dc}): {outcome}.",
+      "ApplyDamage": "Apply damage",
+      "ApplyHalfDamage": "Apply half damage",
+      "RollFailed": "Could not roll the saving throw. See the console.",
+      "Reference": "Tormenta20 Jogo do Ano, ch. 5, \"Testes de Resistência\", p. 227",
+      "Effect": {
+        "anula": "The ability has no effect on a target that passes its saving throw.",
+        "parcial": "The effect is lesser on a target that passes the saving throw.",
+        "metade": "The effect is halved on a target that passes the saving throw.",
+        "desacredita": "Realizes the illusion is not real. The illusion keeps working; this creature may warn its allies as a free action, letting them test to disbelieve.",
+        "evita": "A target that passes the test avoids the effect."
+      }
     }
   }
 }

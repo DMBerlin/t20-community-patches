@@ -16,6 +16,7 @@ import { installSourceStackingRule, registerSourceStackingSetting } from "./rule
 import { installItemEffectiveStatsRule, registerItemEffectiveStatsSetting } from "./rules/item-effective-stats.mjs";
 import { installCastingRestrictionsRule, registerCastingRestrictionsSettings } from "./rules/casting-restrictions.mjs";
 import { installNonProficiencyRule, registerNonProficiencySetting } from "./rules/non-proficiency-penalties.mjs";
+import { installSaveButtonRule, registerSaveButtonSetting } from "./rules/save-button.mjs";
 
 /**
  * @type {{id: string, group: string, mode: import("./registry.mjs").PatchMode, state: import("./registry.mjs").PatchState,
@@ -67,6 +68,7 @@ Hooks.once("init", () => {
   registerItemEffectiveStatsSetting();
   registerCastingRestrictionsSettings();
   registerNonProficiencySetting();
+  registerSaveButtonSetting();
   if (game.system.id === "tormenta20") {
     try {
       installManaLimitRule();
@@ -92,6 +94,13 @@ Hooks.once("init", () => {
       installNonProficiencyRule();
     } catch (err) {
       console.error(`${MODULE_ID} | Failed to install the non-proficiency penalties rule`, err);
+    }
+    // Before casting-restrictions: its ItemT20#roll wrapper clones the item before calling the next one, so the shared
+    // use-target wrappers (scripts/rules/shared/targets.mjs) must sit inside it to bind the system's clone.
+    try {
+      installSaveButtonRule();
+    } catch (err) {
+      console.error(`${MODULE_ID} | Failed to install the save button rule`, err);
     }
     // After the other ItemT20#roll/displayCard wrappers (usage-effect-max): a blocked use never reaches them.
     try {

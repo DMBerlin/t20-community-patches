@@ -20,6 +20,7 @@ Não edite as seções de versão à mão.
 - Regra opcional "Restrições ao lançar magias": uma magia sustentada por vez, ou duas com Fluxo de Mana (aviso ao lançar e ao aplicar), condições que impedem magias (avisar ou bloquear) e aviso de concentração em condição ruim, citando o livro (#37).
 - Regra opcional "Penalidades por não proficiência": −5 no ataque com arma sem proficiência e penalidade de armadura sem proficiência em todas as perícias de Força e Destreza, com proficiências derivadas da classe inicial, de poderes e da aba Traços, só para personagens (#39).
 - `attribute-breakdown` (#72): ao passar o mouse sobre um atributo, a ficha mostra base, racial, bônus temporário e cada item, magia, poder ou efeito que compõe o valor. Afeta Tormenta20 1.6.5.
+- Regra opcional "Teste de resistência pelo card": botões para os alvos rolarem Fortitude, Reflexos ou Vontade contra a CD, com passou/falhou, o efeito do livro e o dano pela metade por alvo (#58).
 
 ### Fixed
 

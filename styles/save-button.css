@@ -1,0 +1,66 @@
+/* Optional rule "Teste de resistência pelo card" (#58). */
+.t20cp-save {
+  gap: 4px;
+  margin-top: 6px;
+  padding-top: 4px;
+  border-top: 1px solid var(--color-border-light-2, #999);
+}
+
+.t20cp-save-title {
+  font-weight: bold;
+}
+
+.t20cp-save-row {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.t20cp-save-name {
+  flex: 1 1 100%;
+  font-weight: bold;
+}
+
+.t20cp-save-button {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 2em;
+  margin: 0;
+  padding: 0 6px;
+  line-height: 22px;
+  font-size: var(--font-size-12, 12px);
+}
+
+.t20cp-save-outcome {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.t20cp-save-outcome.success strong,
+.t20cp-save-result.success strong {
+  color: #18520b;
+}
+
+.t20cp-save-outcome.failure strong,
+.t20cp-save-result.failure strong {
+  color: #aa0200;
+}
+
+.t20cp-save-effect {
+  flex: 1 1 100%;
+  font-size: var(--font-size-12, 12px);
+  font-style: italic;
+}
+
+.t20cp-save-result {
+  margin-top: 4px;
+}
+
+.t20cp-save-hint {
+  margin: 0;
+  font-style: italic;
+}

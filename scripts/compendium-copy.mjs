@@ -349,6 +349,47 @@ export function wrapActorPreCreate(original, entries, patchId) {
   }, original);
 }
 
+/** Ids of owned items still holding the wrong data of a known entry (created before the correction was on). */
+export function outdatedItemIds(items, entries) {
+  const ids = [];
+  for (const item of items ?? []) {
+    const src = item?._source ?? item;
+    if (src?._id && fixFor(src, entries, "Item")) ids.push(src._id);
+  }
+  return ids;
+}
+
+/**
+ * Render hook for actor sheets: marks the rows of the owned items that `entries` would still correct with the text of
+ * `tooltipKey`, so they can be removed and added again. Fails safe.
+ */
+export function outdatedMarker(entries, tooltipKey, patchId) {
+  return function (app, html) {
+    try {
+      const actor = app?.actor ?? app?.document;
+      const root = globalThis.HTMLElement && html instanceof HTMLElement ? html : html?.[0];
+      if (!actor?.items || !root?.querySelectorAll) return;
+      const ids = outdatedItemIds(actor.items, entries);
+      if (!ids.length) return;
+      const tooltip = game.i18n.localize(tooltipKey);
+      for (const id of ids) {
+        for (const row of root.querySelectorAll(`[data-item-id="${id}"]`)) {
+          if (row.querySelector(".t20cp-outdated")) continue;
+          const icon = document.createElement("i");
+          icon.className = "fa-solid fa-triangle-exclamation t20cp-outdated";
+          icon.dataset.tooltip = tooltip;
+          icon.setAttribute("aria-label", tooltip);
+          const anchor = row.querySelector(".item-name label, a.item-control");
+          if (anchor) anchor.after(icon);
+          else row.append(icon);
+        }
+      }
+    } catch (error) {
+      console.warn(`${MODULE_ID} | ${patchId}: outdated marker skipped`, error);
+    }
+  };
+}
+
 /** State of a source: "present" (exact wrong data), "fixed" (book data, fully checked), "unknown" or "missing". */
 export function classify(entry, src) {
   if (!src) return "missing";

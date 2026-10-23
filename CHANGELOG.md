@@ -49,6 +49,7 @@ Não edite as seções de versão à mão.
 - `finesse-agile-weapons` (#44): Acuidade com Arma passa a usar Destreza no ataque e no dano "Padrão" de armas ágeis, como Florete e Cimitarra. Afeta Tormenta20 1.6.5.
 - `engenhoqueiro-armor-penalty` (#41): Ofício (Engenhoqueiro) deixa de sofrer penalidade de armadura, inclusive em personagens já criados. Afeta Tormenta20 1.6.5.
 - `race-data` (#57): Minotauro, Pequeno e Rechonchudo (Hynne), Conhecimento das Rochas (Anão) e Sentidos Élficos (Elfo) passam a ser criados com os dados do livro básico, e a ficha marca as cópias antigas para serem adicionadas de novo. Afeta Tormenta20 1.6.5.
+- `partner-combatant` (#56): o parceiro Combatente passa a dar +2/+3/+4 no ataque, como no livro básico, e as cópias antigas são marcadas na ficha. Afeta Tormenta20 1.6.5.
 
 ## v1.0.0 - 2026-10-19
 

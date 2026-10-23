@@ -141,10 +141,17 @@
         "Name": "Race data",
         "Hint": "When the copy is created in the world, corrects races and racial powers that diverge from the core rulebook: Minotauro (Con +1 instead of Dex +1), Hynne's Pequeno e Rechonchudo (Small, 6m), Anão's Conhecimento das Rochas (darkvision) and Elfo's Sentidos Élficos (low-light vision). Acts only on system compendium copies that still hold the original data. Characters and items already created are not changed: on the sheet, a warning icon marks the old copy, which must be removed and added again to receive the corrected data. Turning the fix off does not undo copies already corrected."
       },
+      "partner-combatant": {
+        "Name": "Combatente partner",
+        "Hint": "When the copy is created in the world, the Combatente partner's usage effects give +2, +3 and +4 to attack (Iniciante, Veterano and Mestre), as in the core rulebook and the item description, instead of +1, +2 and +3. Each effect changes only if it still holds the original system compendium data. Items already created are not changed: on the sheet, a warning icon marks the old copy, which must be removed and added again (or have its effects edited). Turning the fix off does not undo copies already corrected."
+      },
       "engenhoqueiro-armor-penalty": {
         "Name": "Engenhoqueiro without armor penalty",
         "Hint": "Ofício (Engenhoqueiro) no longer takes the armor penalty, like the other Ofícios in the core rulebook. Applies to every character, including those already created, and nothing is saved: turning the fix off restores the system behavior."
       }
+    },
+    "PartnerCombatant": {
+      "Outdated": "Copy created with the wrong attack effects of the system compendium (+1/+2/+3). Remove it and add it again, or edit the effects to +2/+3/+4 (core rulebook, p. 261)."
     },
     "RaceData": {
       "Outdated": "Copy created with the wrong data of the system compendium. Remove it and add it again to receive the corrected data (core rulebook)."

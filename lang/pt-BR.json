@@ -465,6 +465,28 @@
         "desacredita": "Percebe que a ilusão não é real. A ilusão continua funcionando; essa criatura pode avisar seus aliados como uma ação livre, permitindo que eles façam testes para desacreditar.",
         "evita": "O alvo que passa no teste evita o efeito."
       }
+    },
+    "AttackVsDefense": {
+      "Setting": {
+        "Name": "Ataque contra Defesa",
+        "Hint": "Regra opcional (capítulo 5, \"Teste de Ataque\" e \"Acertos Críticos\"): compara o teste de ataque de cada item com a Defesa de cada alvo marcado no momento da rolagem e mostra no card se acertou ou errou. 20 natural sempre acerta e 1 natural sempre erra. O crítico só vale se acertar: quando o ataque erra todos os alvos, o dano não é multiplicado. Contra um alvo caído, ataques à distância usam a Defesa +5 em vez de −5. A Defesa de ameaças segue o ajuste \"Exibir CD de Ameaças ao jogadores\" do sistema. Sem alvo marcado, nada muda.",
+        "off": "Desligado",
+        "on": "Comparar com a Defesa dos alvos"
+      },
+      "Hit": "Acertou",
+      "HitCritical": "Acertou (crítico)",
+      "Miss": "Errou",
+      "MissConcealment": "Errou (camuflagem)",
+      "Unknown": "Defesa desconhecida",
+      "Natural20": "20 natural",
+      "Natural1": "1 natural",
+      "Defense": "Defesa {value}",
+      "Target": "Alvo {n}",
+      "CriticalCancelled": "Sem acerto crítico: o ataque errou todos os alvos.",
+      "Reference": "Tormenta20 Jogo do Ano, cap. 5, \"Teste de Ataque\" e \"Acertos Críticos\", p. 230-231"
+    },
+    "DefenseAdjustment": {
+      "prone-ranged": "caído: +5 contra ataque à distância"
     }
   }
 }

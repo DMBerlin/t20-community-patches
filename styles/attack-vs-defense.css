@@ -1,0 +1,8 @@
+/* Optional rule "Ataque contra Defesa" (#42). */
+.chat-message .t20cp-attack-vs-defense { margin: 2px 0 4px; font-size: var(--font-size-12, 12px); }
+.chat-message .t20cp-attack-vs-defense ul { margin: 0; padding-left: 1em; }
+.chat-message .t20cp-attack-vs-defense .t20cp-avd-hit { color: #1d6b22; }
+.chat-message .t20cp-attack-vs-defense .t20cp-avd-miss { color: #9e1b1b; }
+.chat-message .t20cp-attack-vs-defense .t20cp-avd-unknown { opacity: 0.7; }
+.chat-message .t20cp-attack-vs-defense .t20cp-avd-critical { font-weight: bold; }
+.chat-message .t20cp-attack-vs-defense .t20cp-avd-note { margin: 0; font-style: italic; }

@@ -150,6 +150,35 @@ export function useTargetRecords(item) {
   return (contexts.get(item) ?? snapshot()).records;
 }
 
+/** @typedef {{id: string, delta: number}} DefenseAdjustment  Stable id (e.g. "cover") and the delta added to Defense. */
+
+const defenseAdjustments = new WeakMap();
+
+/**
+ * Records Defense adjustments of this use, per target TokenDocument UUID. Called before the original rollAttack.
+ * Repeated calls accumulate; the same id on the same target is kept once (the first one wins).
+ * @param {object} item  The per-use clone created by ItemT20#roll (T20:8545).
+ * @param {Map<string, DefenseAdjustment[]>} byTarget
+ */
+export function addDefenseAdjustments(item, byTarget) {
+  if (!item) return;
+  const store = defenseAdjustments.get(item) ?? new Map();
+  for (const [uuid, list] of byTarget) {
+    const current = store.get(uuid) ?? [];
+    for (const adj of list) if (!current.some((a) => a.id === adj.id)) current.push({ id: adj.id, delta: Number(adj.delta) || 0 });
+    store.set(uuid, current);
+  }
+  defenseAdjustments.set(item, store);
+}
+
+/**
+ * Defense adjustments of this use for one target. Read after the original rollAttack.
+ * @returns {DefenseAdjustment[]}  A copy; empty when there are none.
+ */
+export function defenseAdjustmentsFor(item, tokenUuid) {
+  return (defenseAdjustments.get(item)?.get(tokenUuid) ?? []).map((a) => ({ ...a }));
+}
+
 /**
  * Chat policy for a target's name: GM, owner of the token, or a mode that shows the name to everyone.
  * The name shown is always the recorded one; isOwner and displayName are read live (recorded if the token is gone).

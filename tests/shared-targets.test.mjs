@@ -2,7 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   USE_PURPOSES,
+  addDefenseAdjustments,
   canSeeTokenName,
+  defenseAdjustmentsFor,
   installUseTargets,
   registerTargetConsumer,
   targetRecord,
@@ -309,4 +311,16 @@ test("canSeeTokenName: GM, owner, or a public display mode", () => {
   assert.equal(canSeeTokenName({ isGM: false, isOwner: true, displayName: 0 }), true);
   for (const mode of [0, 10, 20, 40]) assert.equal(canSeeTokenName({ isGM: false, isOwner: false, displayName: mode }), false);
   for (const mode of [30, 50, "50"]) assert.equal(canSeeTokenName({ isGM: false, isOwner: false, displayName: mode }), true);
+});
+
+test("Defense adjustments: per target, accumulated without repeating an id, returned as a copy", () => {
+  const item = {};
+  addDefenseAdjustments(item, new Map([["A", [{ id: "cover", delta: 5 }]], ["B", [{ id: "x", delta: -2 }]]]));
+  addDefenseAdjustments(item, new Map([["A", [{ id: "cover", delta: 10 }, { id: "flank", delta: "2" }]]]));
+  assert.deepEqual(defenseAdjustmentsFor(item, "A"), [{ id: "cover", delta: 5 }, { id: "flank", delta: 2 }]);
+  assert.deepEqual(defenseAdjustmentsFor(item, "B"), [{ id: "x", delta: -2 }]);
+  assert.deepEqual(defenseAdjustmentsFor(item, "C"), []);
+  assert.deepEqual(defenseAdjustmentsFor({}, "A"), []);
+  defenseAdjustmentsFor(item, "A")[0].delta = 99;
+  assert.equal(defenseAdjustmentsFor(item, "A")[0].delta, 5);
 });

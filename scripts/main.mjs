@@ -17,6 +17,7 @@ import { installItemEffectiveStatsRule, registerItemEffectiveStatsSetting } from
 import { installCastingRestrictionsRule, registerCastingRestrictionsSettings } from "./rules/casting-restrictions.mjs";
 import { installNonProficiencyRule, registerNonProficiencySetting } from "./rules/non-proficiency-penalties.mjs";
 import { installSaveButtonRule, registerSaveButtonSetting } from "./rules/save-button.mjs";
+import { installAttackVsDefenseRule, registerAttackVsDefenseSetting } from "./rules/attack-vs-defense.mjs";
 
 /**
  * @type {{id: string, group: string, mode: import("./registry.mjs").PatchMode, state: import("./registry.mjs").PatchState,
@@ -69,6 +70,7 @@ Hooks.once("init", () => {
   registerCastingRestrictionsSettings();
   registerNonProficiencySetting();
   registerSaveButtonSetting();
+  registerAttackVsDefenseSetting();
   if (game.system.id === "tormenta20") {
     try {
       installManaLimitRule();
@@ -101,6 +103,12 @@ Hooks.once("init", () => {
       installSaveButtonRule();
     } catch (err) {
       console.error(`${MODULE_ID} | Failed to install the save button rule`, err);
+    }
+    // Also before casting-restrictions, for the same reason (it may be the first to call installUseTargets).
+    try {
+      installAttackVsDefenseRule();
+    } catch (err) {
+      console.error(`${MODULE_ID} | Failed to install the attack versus Defense rule`, err);
     }
     // After the other ItemT20#roll/displayCard wrappers (usage-effect-max): a blocked use never reaches them.
     try {

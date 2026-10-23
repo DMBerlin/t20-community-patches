@@ -465,6 +465,28 @@
         "desacredita": "Realizes the illusion is not real. The illusion keeps working; this creature may warn its allies as a free action, letting them test to disbelieve.",
         "evita": "A target that passes the test avoids the effect."
       }
+    },
+    "AttackVsDefense": {
+      "Setting": {
+        "Name": "Attack versus Defense",
+        "Hint": "Optional rule (chapter 5, \"Attack Test\" and \"Critical Hits\"): compares each item's attack test with the Defense of every target marked when rolling and shows on the card whether it hit or missed. A natural 20 always hits and a natural 1 always misses. A critical only counts on a hit: when the attack misses every target, the damage is not multiplied. Against a prone target, ranged attacks use Defense +5 instead of -5. Foes' Defense follows the system setting \"Show foes DC to players\". Without marked targets, nothing changes.",
+        "off": "Off",
+        "on": "Compare with the targets' Defense"
+      },
+      "Hit": "Hit",
+      "HitCritical": "Hit (critical)",
+      "Miss": "Miss",
+      "MissConcealment": "Miss (concealment)",
+      "Unknown": "Unknown Defense",
+      "Natural20": "natural 20",
+      "Natural1": "natural 1",
+      "Defense": "Defense {value}",
+      "Target": "Target {n}",
+      "CriticalCancelled": "No critical hit: the attack missed every target.",
+      "Reference": "Tormenta20 Jogo do Ano, ch. 5, \"Attack Test\" and \"Critical Hits\", p. 230-231"
+    },
+    "DefenseAdjustment": {
+      "prone-ranged": "prone: +5 against ranged attack"
     }
   }
 }

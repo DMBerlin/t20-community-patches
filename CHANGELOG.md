@@ -21,6 +21,7 @@ Não edite as seções de versão à mão.
 - Regra opcional "Penalidades por não proficiência": −5 no ataque com arma sem proficiência e penalidade de armadura sem proficiência em todas as perícias de Força e Destreza, com proficiências derivadas da classe inicial, de poderes e da aba Traços, só para personagens (#39).
 - `attribute-breakdown` (#72): ao passar o mouse sobre um atributo, a ficha mostra base, racial, bônus temporário e cada item, magia, poder ou efeito que compõe o valor. Afeta Tormenta20 1.6.5.
 - Regra opcional "Teste de resistência pelo card": botões para os alvos rolarem Fortitude, Reflexos ou Vontade contra a CD, com passou/falhou, o efeito do livro e o dano pela metade por alvo (#58).
+- Regra opcional "Ataque contra Defesa": o card do ataque mostra se acertou ou errou cada alvo marcado, o crítico só vale num acerto e Caído dá +5 na Defesa contra ataques à distância (#42).
 
 ### Fixed
 

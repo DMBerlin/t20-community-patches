@@ -85,6 +85,10 @@
         "Name": "Linked effects from another item",
         "Hint": "Usage effects that deliver an effect stored in another item (such as Arte Mágica and Esgrima Mágica on Inspiração) now add it to the chat card, without mixing changes."
       },
+      "usage-buff-templates": {
+        "Name": "Spell, power and item buffs",
+        "Hint": "Buffs such as Arma Mágica, Óleo de Arma Mágica, Duelo and Botas Aladas become chat card buttons. Once applied, they work on rolls by themselves, and the weapon buff asks for the chosen weapon."
+      },
       "temporary-usage-effect-expiry": {
         "Name": "Temporary usage effects expiry",
         "Hint": "Temporary usage effects expire at scene end, by rounds or by time advancement, like other effects."
@@ -491,6 +495,13 @@
     },
     "DefenseAdjustment": {
       "prone-ranged": "prone: +5 against ranged attack"
+    },
+    "UsageBuffTemplates": {
+      "Weapon": "Weapon",
+      "Wielded": "wielded",
+      "Apply": "Apply",
+      "Prompt": "Choose the weapon of {actor} that receives {effect}.",
+      "NoWeapon": "{actor} has no weapon to receive {effect}."
     }
   }
 }

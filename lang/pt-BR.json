@@ -85,6 +85,10 @@
         "Name": "Efeitos vinculados de outro item",
         "Hint": "Efeitos de uso que entregam um efeito guardado em outro item (como Arte Mágica e Esgrima Mágica na Inspiração) passam a incluí-lo no card, sem misturar as changes."
       },
+      "usage-buff-templates": {
+        "Name": "Buffs de magias, poderes e itens",
+        "Hint": "Buffs como Arma Mágica, Óleo de Arma Mágica, Duelo e Botas Aladas viram botão no card. Aplicados, valem sozinhos nas rolagens, e o de arma pede a arma escolhida."
+      },
       "temporary-usage-effect-expiry": {
         "Name": "Expiração de efeitos de uso temporários",
         "Hint": "Efeitos de uso temporários expiram no fim da cena, por rodadas ou pelo avanço do tempo, como os demais efeitos."
@@ -491,6 +495,13 @@
     },
     "DefenseAdjustment": {
       "prone-ranged": "caído: +5 contra ataque à distância"
+    },
+    "UsageBuffTemplates": {
+      "Weapon": "Arma",
+      "Wielded": "empunhada",
+      "Apply": "Aplicar",
+      "Prompt": "Escolha a arma de {actor} que recebe {effect}.",
+      "NoWeapon": "{actor} não tem arma para receber {effect}."
     }
   }
 }

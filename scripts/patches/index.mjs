@@ -30,6 +30,7 @@ import suppressedUsageEffects from "./suppressed-usage-effects.mjs";
 import threateningCritRange from "./threatening-crit-range.mjs";
 import temporaryUsageEffectExpiry from "./temporary-usage-effect-expiry.mjs";
 import usageEffectToggle from "./usage-effect-toggle.mjs";
+import usageBuffTemplates from "./usage-buff-templates.mjs";
 
 /**
  * Display groups, in the order they appear in the patch manager. i18n: T20CP.Groups.<id>.
@@ -60,4 +61,4 @@ export const GROUPS = ["conditions", "sheet-effects", "usage-effects", "items", 
  */
 
 /** @type {Patch[]} */
-export const PATCHES = [statusEffectsCompendium, encumberedStatusSync, ongoingDamageConditions, proneDefense, conditionSkillLists, deathThreshold, itemEffectsOnActorSheet, usageEffectToggle, conditionalPowers, modifiedFieldsFilter, fieldBonusesBreakdown, fieldBonusesTooltip, attributeBreakdown, suppressedUsageEffects, appendedUsageChanges, linkedUsageEffects, temporaryUsageEffectExpiry, abilityDialogCost, spellCostZero, armorPenaltyReduction, spellDcBonus, threateningCritRange, alchemicalDamageBonus, hideLegacyUpgrades, segmentedSceneSetting, restRecovery, menaceXpFraction, saveSkillBonus, sheetInitiativeToken, spellCompendiumData, enchantmentData, skillModifierAttributes];
+export const PATCHES = [statusEffectsCompendium, encumberedStatusSync, ongoingDamageConditions, proneDefense, conditionSkillLists, deathThreshold, itemEffectsOnActorSheet, usageEffectToggle, conditionalPowers, modifiedFieldsFilter, fieldBonusesBreakdown, fieldBonusesTooltip, attributeBreakdown, suppressedUsageEffects, appendedUsageChanges, linkedUsageEffects, usageBuffTemplates, temporaryUsageEffectExpiry, abilityDialogCost, spellCostZero, armorPenaltyReduction, spellDcBonus, threateningCritRange, alchemicalDamageBonus, hideLegacyUpgrades, segmentedSceneSetting, restRecovery, menaceXpFraction, saveSkillBonus, sheetInitiativeToken, spellCompendiumData, enchantmentData, skillModifierAttributes];

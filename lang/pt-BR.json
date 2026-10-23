@@ -124,6 +124,10 @@
       "spell-compendium-data": {
         "Name": "Dados de magias do compêndio",
         "Hint": "Corrige, sem gravar nada, aprimoramentos de magias que divergem do livro: truque de Curar Ferimentos (1d8 de dano de luz), Sono, Raio do Enfraquecimento, Arma Mágica e a marca de múltiplas aplicações (Físico/Mente Divina, Queda Suave e outras). Efeitos editados não são alterados."
+      },
+      "enchantment-data": {
+        "Name": "Dados de melhorias, materiais e encantos",
+        "Hint": "Guardião, Protetor, Relampejante, Sombrio, Mitral e Incandescente passam a valer para o personagem; Gelo Eterno, Adamante, Invulnerável, Delicada e Discreto seguem o livro; armadura pesada de Mitral aceita até 2 de Destreza e itens de Mitral ocupam 1 espaço a menos; o Manto da Resistência é criado ativo."
       }
     },
     "ItemEffects": {

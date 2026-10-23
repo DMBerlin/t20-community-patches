@@ -44,6 +44,7 @@ Não edite as seções de versão à mão.
 - `ongoing-damage-conditions` (#45): Em Chamas rola 1d6 de fogo e Sangrando rola o teste de Constituição (CD 15) e a perda de 1d6 PV no início do turno. Afeta Tormenta20 1.6.5.
 - `alchemical-damage-bonus` (#69): o bônus de dano alquímico entra no dano de itens alquímicos mesmo sem bônus de dano de magias. Afeta Tormenta20 1.6.5.
 - `field-bonuses-breakdown` (#70): o detalhamento de PV, PM, perícias e Defesa passa a bater com a ficha (bônus manuais por nível e total, fórmulas, Substituir/Multiplicar, efeitos com *, atributo limitado pela armadura pesada) e a Defesa lista Outros e condições pelo nome. Afeta Tormenta20 1.6.5.
+- `enchantment-data` (#43): Guardião, Protetor, Relampejante, Sombrio, Mitral, Incandescente, Gelo Eterno, Adamante, Invulnerável, Delicada, Discreto e Manto da Resistência passam a seguir o livro, inclusive a Destreza em armadura pesada de Mitral e os espaços. Afeta Tormenta20 1.6.5.
 
 ## v1.0.0 - 2026-10-19
 

@@ -29,6 +29,10 @@
         "Name": "Melhorias que reduzem a penalidade de armadura",
         "Hint": "Ajustada, Sob Medida e Mitral reduzem a penalidade de armadura (até 0), em vez de aumentá-la."
       },
+      "finesse-agile-weapons": {
+        "Name": "Acuidade com Arma em armas ágeis",
+        "Hint": "Acuidade com Arma e a regra opcional Armas Leves e Ágeis passam a usar Destreza no ataque e no dano \"Padrão\" de armas ágeis (Florete, Cimitarra, Katana, Chicote, Corrente de Espinhos), como já faziam com armas leves."
+      },
       "spell-dc-bonus": {
         "Name": "Bônus na CD de magia",
         "Hint": "A CD das magias passa a somar os efeitos de \"CD de Magias\" do personagem, o bônus de CD dos itens e efeitos de uso dos NPCs, e o Fortalecimento Arcano como bônus passivo (+1, ou +2 com magias de 4º círculo)."

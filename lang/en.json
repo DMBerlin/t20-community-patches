@@ -29,6 +29,10 @@
         "Name": "Upgrades that reduce armor penalty",
         "Hint": "Ajustada, Sob Medida and Mitral reduce the armor penalty (down to 0) instead of increasing it."
       },
+      "finesse-agile-weapons": {
+        "Name": "Weapon Finesse with agile weapons",
+        "Hint": "Acuidade com Arma and the optional rule Armas Leves e Ágeis now use Dexterity for attacks and \"Padrão\" damage with agile weapons (Florete, Cimitarra, Katana, Chicote, Corrente de Espinhos), as they already did with light weapons."
+      },
       "spell-dc-bonus": {
         "Name": "Spell DC bonuses",
         "Hint": "Spell DCs now include the character's \"Spell DC\" effects, the DC bonus of NPC items and usage effects, and Fortalecimento Arcano as a passive bonus (+1, or +2 with 4th-circle spells)."

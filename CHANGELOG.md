@@ -48,6 +48,7 @@ Não edite as seções de versão à mão.
 - Modelos de buff desativados de habilidades e itens (Arma Mágica, Duelo, Botas Aladas, Animar Objetos e outros) passam a ser oferecidos no card do chat, com um botão por modelo; buffs de arma pedem a arma e só valem para ela, e o placeholder +0 homônimo é ocultado (`usage-buff-templates`, #66). Afeta Tormenta20 1.6.5.
 - `finesse-agile-weapons` (#44): Acuidade com Arma passa a usar Destreza no ataque e no dano "Padrão" de armas ágeis, como Florete e Cimitarra. Afeta Tormenta20 1.6.5.
 - `engenhoqueiro-armor-penalty` (#41): Ofício (Engenhoqueiro) deixa de sofrer penalidade de armadura, inclusive em personagens já criados. Afeta Tormenta20 1.6.5.
+- `race-data` (#57): Minotauro, Pequeno e Rechonchudo (Hynne), Conhecimento das Rochas (Anão) e Sentidos Élficos (Elfo) passam a ser criados com os dados do livro básico, e a ficha marca as cópias antigas para serem adicionadas de novo. Afeta Tormenta20 1.6.5.
 
 ## v1.0.0 - 2026-10-19
 

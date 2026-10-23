@@ -17,6 +17,7 @@ import restRecovery from "./rest-recovery.mjs";
 import spellCostZero from "./spell-cost-zero.mjs";
 import spellCompendiumData from "./spell-compendium-data.mjs";
 import enchantmentData from "./enchantment-data.mjs";
+import raceData from "./race-data.mjs";
 import spellDcBonus from "./spell-dc-bonus.mjs";
 import fieldBonusesBreakdown from "./field-bonuses-breakdown.mjs";
 import fieldBonusesTooltip from "./field-bonuses-tooltip.mjs";
@@ -63,4 +64,4 @@ export const GROUPS = ["conditions", "sheet-effects", "usage-effects", "items", 
  */
 
 /** @type {Patch[]} */
-export const PATCHES = [statusEffectsCompendium, encumberedStatusSync, ongoingDamageConditions, proneDefense, conditionSkillLists, deathThreshold, itemEffectsOnActorSheet, usageEffectToggle, conditionalPowers, modifiedFieldsFilter, fieldBonusesBreakdown, fieldBonusesTooltip, attributeBreakdown, suppressedUsageEffects, appendedUsageChanges, linkedUsageEffects, usageBuffTemplates, temporaryUsageEffectExpiry, abilityDialogCost, spellCostZero, armorPenaltyReduction, finesseAgileWeapons, spellDcBonus, threateningCritRange, alchemicalDamageBonus, hideLegacyUpgrades, segmentedSceneSetting, restRecovery, menaceXpFraction, saveSkillBonus, sheetInitiativeToken, spellCompendiumData, enchantmentData, skillModifierAttributes, engenhoqueiroArmorPenalty];
+export const PATCHES = [statusEffectsCompendium, encumberedStatusSync, ongoingDamageConditions, proneDefense, conditionSkillLists, deathThreshold, itemEffectsOnActorSheet, usageEffectToggle, conditionalPowers, modifiedFieldsFilter, fieldBonusesBreakdown, fieldBonusesTooltip, attributeBreakdown, suppressedUsageEffects, appendedUsageChanges, linkedUsageEffects, usageBuffTemplates, temporaryUsageEffectExpiry, abilityDialogCost, spellCostZero, armorPenaltyReduction, finesseAgileWeapons, spellDcBonus, threateningCritRange, alchemicalDamageBonus, hideLegacyUpgrades, segmentedSceneSetting, restRecovery, menaceXpFraction, saveSkillBonus, sheetInitiativeToken, spellCompendiumData, enchantmentData, raceData, skillModifierAttributes, engenhoqueiroArmorPenalty];

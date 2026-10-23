@@ -32,7 +32,8 @@
     "styles/patch-manager.css",
     "styles/item-effective-stats.css",
     "styles/save-button.css",
-    "styles/attack-vs-defense.css"
+    "styles/attack-vs-defense.css",
+    "styles/race-data.css"
   ],
   "languages": [
     {

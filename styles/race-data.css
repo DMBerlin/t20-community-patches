@@ -1,0 +1,7 @@
+/* Correction "Dados de raças" (#57): old copy to remove and add again. */
+.t20cp-outdated {
+  color: var(--color-level-warning, #c08000);
+  cursor: help;
+  margin-left: 0.35em;
+  flex: 0 0 auto;
+}

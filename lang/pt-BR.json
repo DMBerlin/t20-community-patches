@@ -137,10 +137,17 @@
         "Name": "Dados de melhorias, materiais e encantos",
         "Hint": "Guardião, Protetor, Relampejante, Sombrio, Mitral e Incandescente passam a valer para o personagem; Gelo Eterno, Adamante, Invulnerável, Delicada e Discreto seguem o livro; armadura pesada de Mitral aceita até 2 de Destreza e itens de Mitral ocupam 1 espaço a menos; o Manto da Resistência é criado ativo."
       },
+      "race-data": {
+        "Name": "Dados de raças",
+        "Hint": "Ao criar a cópia no mundo, corrige raças e poderes raciais que divergem do livro básico: Minotauro (Con +1 em vez de Des +1), Pequeno e Rechonchudo do Hynne (Pequeno, 6m), Conhecimento das Rochas do Anão (visão no escuro) e Sentidos Élficos do Elfo (visão na penumbra). Só age em cópias do compêndio do sistema que ainda têm os dados originais. Personagens e itens já criados não mudam: na ficha, um ícone de alerta marca a cópia antiga, que deve ser removida e adicionada de novo para receber os dados corrigidos. Desligar a correção não desfaz as cópias já corrigidas."
+      },
       "engenhoqueiro-armor-penalty": {
         "Name": "Engenhoqueiro sem penalidade de armadura",
         "Hint": "Ofício (Engenhoqueiro) deixa de sofrer penalidade de armadura, como os outros Ofícios no livro básico. Vale para todos os personagens, inclusive os já criados, e nada é gravado: desligar a correção devolve o comportamento do sistema."
       }
+    },
+    "RaceData": {
+      "Outdated": "Cópia criada com os dados errados do compêndio do sistema. Remova e adicione de novo para receber os dados corrigidos (livro básico)."
     },
     "ItemEffects": {
       "DeleteTitle": "Excluir efeito do item",

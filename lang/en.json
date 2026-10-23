@@ -137,10 +137,17 @@
         "Name": "Upgrade, material and enchantment data",
         "Hint": "Guardião, Protetor, Relampejante, Sombrio, Mitral and Incandescente now apply to the character; Gelo Eterno, Adamante, Invulnerável, Delicada and Discreto follow the book; heavy Mitral armor allows up to 2 Dexterity and Mitral items take 1 less space; Manto da Resistência is created enabled."
       },
+      "race-data": {
+        "Name": "Race data",
+        "Hint": "When the copy is created in the world, corrects races and racial powers that diverge from the core rulebook: Minotauro (Con +1 instead of Dex +1), Hynne's Pequeno e Rechonchudo (Small, 6m), Anão's Conhecimento das Rochas (darkvision) and Elfo's Sentidos Élficos (low-light vision). Acts only on system compendium copies that still hold the original data. Characters and items already created are not changed: on the sheet, a warning icon marks the old copy, which must be removed and added again to receive the corrected data. Turning the fix off does not undo copies already corrected."
+      },
       "engenhoqueiro-armor-penalty": {
         "Name": "Engenhoqueiro without armor penalty",
         "Hint": "Ofício (Engenhoqueiro) no longer takes the armor penalty, like the other Ofícios in the core rulebook. Applies to every character, including those already created, and nothing is saved: turning the fix off restores the system behavior."
       }
+    },
+    "RaceData": {
+      "Outdated": "Copy created with the wrong data of the system compendium. Remove it and add it again to receive the corrected data (core rulebook)."
     },
     "ItemEffects": {
       "DeleteTitle": "Delete item effect",

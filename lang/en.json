@@ -148,6 +148,10 @@
       "engenhoqueiro-armor-penalty": {
         "Name": "Engenhoqueiro without armor penalty",
         "Hint": "Ofício (Engenhoqueiro) no longer takes the armor penalty, like the other Ofícios in the core rulebook. Applies to every character, including those already created, and nothing is saved: turning the fix off restores the system behavior."
+      },
+      "bestiary-creature-type": {
+        "Name": "Threat creature type",
+        "Hint": "When the copy is created in the world, Zumbi, Esqueleto, Esqueleto de Elite, Turba Zumbi, Falange, Aparição and Vampiro become Undead, and Finntroll Caçador, Finntroll Feitor, Cultista da Traição and Enxame Kobold become Monster, as in the core rulebook, keeping their subtype. Only copies from the system compendium that still hold the original type and subtype are changed. The statblock importer reads type, size and role in the rulebook spelling (\"Morto-vivo\"), case-insensitively, and only corrects what the original importer did not read. Threats already created are not changed, and turning the fix off does not undo copies already corrected."
       }
     },
     "PartnerCombatant": {

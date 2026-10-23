@@ -148,6 +148,10 @@
       "engenhoqueiro-armor-penalty": {
         "Name": "Engenhoqueiro sem penalidade de armadura",
         "Hint": "Ofício (Engenhoqueiro) deixa de sofrer penalidade de armadura, como os outros Ofícios no livro básico. Vale para todos os personagens, inclusive os já criados, e nada é gravado: desligar a correção devolve o comportamento do sistema."
+      },
+      "bestiary-creature-type": {
+        "Name": "Tipo de criatura das ameaças",
+        "Hint": "Ao criar a cópia no mundo, Zumbi, Esqueleto, Esqueleto de Elite, Turba Zumbi, Falange, Aparição e Vampiro passam a ser Morto-Vivo, e Finntroll Caçador, Finntroll Feitor, Cultista da Traição e Enxame Kobold passam a ser Monstro, como no livro básico, mantendo o subtipo. Só age em cópias vindas do compêndio do sistema que ainda têm o tipo e o subtipo originais. O importador de bloco de estatísticas passa a reconhecer tipo, tamanho e papel na grafia do livro (\"Morto-vivo\"), sem diferenciar maiúsculas, e só corrige o que o importador original não leu. Ameaças já criadas não mudam, e desligar a correção não desfaz as cópias já corrigidas."
       }
     },
     "PartnerCombatant": {

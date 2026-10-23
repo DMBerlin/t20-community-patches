@@ -50,6 +50,7 @@ Não edite as seções de versão à mão.
 - `engenhoqueiro-armor-penalty` (#41): Ofício (Engenhoqueiro) deixa de sofrer penalidade de armadura, inclusive em personagens já criados. Afeta Tormenta20 1.6.5.
 - `race-data` (#57): Minotauro, Pequeno e Rechonchudo (Hynne), Conhecimento das Rochas (Anão) e Sentidos Élficos (Elfo) passam a ser criados com os dados do livro básico, e a ficha marca as cópias antigas para serem adicionadas de novo. Afeta Tormenta20 1.6.5.
 - `partner-combatant` (#56): o parceiro Combatente passa a dar +2/+3/+4 no ataque, como no livro básico, e as cópias antigas são marcadas na ficha. Afeta Tormenta20 1.6.5.
+- `bestiary-creature-type` (#47): 7 mortos-vivos e 4 monstros do compêndio Ameaças passam a ser criados com o tipo do livro básico, e o importador de bloco de estatísticas reconhece "Morto-vivo" e as demais palavras do livro sem diferenciar maiúsculas. Afeta Tormenta20 1.6.5.
 
 ## v1.0.0 - 2026-10-19
 

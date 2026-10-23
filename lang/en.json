@@ -61,6 +61,10 @@
         "Name": "Effects worth 3 or 4 in the breakdown",
         "Hint": "Effects that add exactly 3 or 4 (for example Defesa +3) show up again in the breakdown shown when hovering the sheet values, and the breakdown total matches the sheet again."
       },
+      "field-bonuses-breakdown": {
+        "Name": "PV, PM, skill and Defesa breakdowns",
+        "Hint": "The breakdown shown when hovering PV, PM, skills and Defesa matches the sheet value: manual per-level bonuses are multiplied and the manual total is listed, formulas such as 2+1 are evaluated, Override and Multiply effects are shown as the system applies them, effects with * appear on every skill, the attribute capped by heavy armor is listed and, on the Defesa, each \"Other\" and condition effect is listed by name (conditions that do not stack are dimmed)."
+      },
       "field-bonuses-tooltip": {
         "Name": "Token and Defesa breakdowns",
         "Hint": "The breakdown shown when hovering the sheet values uses the unlinked token's own data (it showed the base actor's) and the Defesa breakdown lists the penalty of conditions (Desprevenido, Cego, Enredado…)."
@@ -399,7 +403,16 @@
       "UnknownSource": "Non-proficiency penalties: the system code changed ({methods}). Check whether Tormenta20 already applies these penalties, so they are not doubled."
     },
     "FieldBonuses": {
-      "Condition": "Condition"
+      "Condition": "Condition",
+      "ManualPerLevel": "Manual setting (per level)",
+      "ManualEven": "Manual setting (even level)",
+      "ManualOdd": "Manual setting (odd level)",
+      "ManualTotal": "Manual setting (total)",
+      "HeavyArmorLimit": "heavy armor cap",
+      "ManualOther": "Other (manual)",
+      "NotStacking": "doesn't stack",
+      "MinimumPV": "minimum 1 HP per level",
+      "Rounding": "Rounding"
     },
     "AttributeBreakdown": {
       "Base": "Base",

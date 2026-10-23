@@ -43,6 +43,14 @@ export function missingDefenseCondition(path, defesa) {
 }
 
 /**
+ * Whether the breakdown already lists the Defesa conditions one by one (field-bonuses-breakdown).
+ * @param {unknown} html
+ */
+export function hasConditionLines(html) {
+  return typeof html === "string" && html.includes('data-t20cp="condi"');
+}
+
+/**
  * The template root to give the system's helper: for a token actor, a copy whose actor has no _id and whose uuid is
  * the token actor's, so `game.actors.get` misses and `fromUuidSync` finds the sheet's own actor.
  * @param {object} root  options.data.root of the helper.
@@ -117,7 +125,8 @@ function apply() {
         args = options;
       }
       const html = original.call(this, path, args);
-      if (!bugs.noCondition) return html;
+      // field-bonuses-breakdown already listed the conditions by name.
+      if (!bugs.noCondition || hasConditionLines(html)) return html;
       try {
         const condi = missingDefenseCondition(path, sheetActor(root)?.system?.attributes?.defesa);
         return condi ? addTooltipLine(html, game.i18n.localize(CONDITION_KEY), condi) : html;

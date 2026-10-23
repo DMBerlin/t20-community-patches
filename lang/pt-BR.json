@@ -61,6 +61,10 @@
         "Name": "Efeitos de valor 3 ou 4 no detalhamento",
         "Hint": "Efeitos que somam exatamente 3 ou 4 (por exemplo Defesa +3) voltam a aparecer no detalhamento que surge ao passar o mouse sobre os valores da ficha, e o total do detalhamento volta a bater com a ficha."
       },
+      "field-bonuses-breakdown": {
+        "Name": "Detalhamento de PV, PM, perícias e Defesa",
+        "Hint": "O detalhamento que surge ao passar o mouse sobre PV, PM, perícias e Defesa passa a bater com o valor da ficha: bônus manuais por nível multiplicados e bônus total manual listado, fórmulas como 2+1 calculadas, efeitos Substituir e Multiplicar mostrados como o sistema os aplica, efeitos com * em todas as perícias, o atributo limitado pela armadura pesada e, na Defesa, cada efeito de \"Outros\" e de condição pelo nome (as condições que não acumulam aparecem atenuadas)."
+      },
       "field-bonuses-tooltip": {
         "Name": "Detalhamento de tokens e da Defesa",
         "Hint": "O detalhamento que surge ao passar o mouse sobre os valores da ficha passa a usar os dados do próprio token não vinculado (antes mostrava os do ator base) e a Defesa passa a listar a penalidade das condições (Desprevenido, Cego, Enredado…)."
@@ -399,7 +403,16 @@
       "UnknownSource": "Penalidades por não proficiência: o código do sistema mudou ({methods}). Confira se o Tormenta20 já aplica essas penalidades, para não dobrá-las."
     },
     "FieldBonuses": {
-      "Condition": "Condição"
+      "Condition": "Condição",
+      "ManualPerLevel": "Configuração manual (por nível)",
+      "ManualEven": "Configuração manual (nível par)",
+      "ManualOdd": "Configuração manual (nível ímpar)",
+      "ManualTotal": "Configuração manual (total)",
+      "HeavyArmorLimit": "limite da armadura pesada",
+      "ManualOther": "Outros (manual)",
+      "NotStacking": "não acumula",
+      "MinimumPV": "mínimo de 1 PV por nível",
+      "Rounding": "Arredondamento"
     },
     "AttributeBreakdown": {
       "Base": "Base",

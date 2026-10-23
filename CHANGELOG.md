@@ -41,6 +41,7 @@ Não edite as seções de versão à mão.
 - `prone-defense` (#40): a condição Caído soma −5 à Defesa em vez de trocar o bônus manual "Outros" da ficha por −5, que fazia a Defesa cair mais de 5 ou não cair. Afeta Tormenta20 1.6.5.
 - `ongoing-damage-conditions` (#45): Em Chamas rola 1d6 de fogo e Sangrando rola o teste de Constituição (CD 15) e a perda de 1d6 PV no início do turno. Afeta Tormenta20 1.6.5.
 - `alchemical-damage-bonus` (#69): o bônus de dano alquímico entra no dano de itens alquímicos mesmo sem bônus de dano de magias. Afeta Tormenta20 1.6.5.
+- `field-bonuses-breakdown` (#70): o detalhamento de PV, PM, perícias e Defesa passa a bater com a ficha (bônus manuais por nível e total, fórmulas, Substituir/Multiplicar, efeitos com *, atributo limitado pela armadura pesada) e a Defesa lista Outros e condições pelo nome. Afeta Tormenta20 1.6.5.
 
 ## v1.0.0 - 2026-10-19
 

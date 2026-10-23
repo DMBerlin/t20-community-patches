@@ -24,3 +24,6 @@
   flex: 0 0 8rem;
   width: 8rem;
 }
+
+/* field-bonuses-breakdown: Defesa conditions that do not stack, listed outside the total. */
+.fieldBonuses .t20cp-muted { opacity: 0.6; }

@@ -25,6 +25,7 @@ Não edite as seções de versão à mão.
 - Regra opcional "Perícias somente treinadas": avisa ou impede o teste de perícia somente treinada sem treino nos personagens, respeitando Eclético e Cultura Exótica (#62).
 - Regra opcional "Modificadores situacionais": o diálogo de ataque soma flanquear, investida, posição elevada, atirar em corpo a corpo e alcance dobrado, marca cobertura leve e atacante invisível por alvo na Defesa e aplica após a investida o efeito de −2 na Defesa, removido à mão (#59).
 - Regra opcional "Dano não letal": botão no card de dano, PV não letais na ficha e cura que os recupera primeiro, conforme o livro (#55).
+- Regra opcional "Magia arcana de armadura": ao lançar magia arcana vestindo armadura, rola Misticismo (CD 20 + PM) com penalidade de armadura, e a magia falha sem devolver os PM (#46).
 
 ### Changed
 

@@ -628,6 +628,47 @@
         "Sheet": "PV não letais: {nonlethal} · PV letais: {lethal}",
         "NoTokens": "Selecione um ou mais tokens para aplicar o dano não letal.",
         "Reference": "Tormenta20 Jogo do Ano, cap. 5, \"Ferimentos & Morte\", p. 236"
+      },
+    "ArcaneArmor": {
+      "Setting": {
+        "Name": "Magia arcana de armadura",
+        "Hint": "Regra opcional do livro (cap. 4, \"Armaduras e Magia Arcana\", p. 171): lançar uma magia arcana vestindo armadura exige um teste de Misticismo (CD 20 + PM da magia) com penalidade de armadura. Se falhar, a magia não funciona, mas os PM são gastos. Vale só para personagens. Bardos em armadura leve, Magia Discreta e itens com a dispensa não fazem o teste.",
+        "off": "Desligado",
+        "roll": "Rolar o teste"
+      },
+      "Flavor": "Misticismo: {spell} de armadura ({armor}), CD {dc}",
+      "Success": "Sucesso: a magia funciona.",
+      "Failure": "Falha: {spell} não funciona, mas os {cost} PM da magia são gastos.",
+      "FailureManual": "Falha: {spell} não funciona, mas os {cost} PM da magia são perdidos. O gasto automático de PM está desligado: desconte-os na ficha.",
+      "FailureFree": "Falha: {spell} não funciona.",
+      "Untrained": "{actor} não é treinado em Misticismo, uma perícia somente treinada: o teste não pode ser feito.",
+      "UntrainedHint": "Para usar {grants} no teste de armadura, ligue \"Aplicar Sempre\" no efeito.",
+      "GrantUsed": "Usou {grant} ({cost} PM).",
+      "GrantUsedManual": "Usou {grant}: desconte {cost} PM na ficha (gasto automático de PM desligado).",
+      "GrantUsedFree": "Usou {grant}.",
+      "GrantNoMana": "Sem PM para usar {grant}.",
+      "Ambiguous": "{spell}: fonte ambígua para a armadura arcana (o personagem tem classes com regras diferentes para armadura). O teste de Misticismo não foi feito; defina \"Conjuração (armadura arcana)\" na ficha da magia.",
+      "Reference": "Tormenta20 Jogo do Ano, cap. 4, \"Armaduras e Magia Arcana\", pág. 171",
+      "Dialog": {
+        "Label": "Armadura arcana",
+        "Value": "teste de Misticismo ao lançar ({armor}, penalidade {penalty}; CD 20 + custo). Magia Discreta dispensa.",
+        "Ambiguous": "fonte ambígua: defina a conjuração na ficha da magia."
+      },
+      "SpellField": {
+        "Label": "Conjuração (armadura arcana)",
+        "Hint": "Como esta magia é lançada, para a regra \"Magia arcana de armadura\". Automático deduz pelas classes do personagem (Arcanista: arcana; Bardo: arcana de bardo; Clérigo e Druida: sem teste).",
+        "auto": "Automático",
+        "arcane": "Arcana (Arcanista ou outra classe arcana)",
+        "bard": "Arcana de bardo",
+        "exempt": "Sem teste (divina, raça, poder ou item)"
+      },
+      "WaiverField": {
+        "Label": "Dispensa da armadura arcana",
+        "Hint": "Este item dispensa o teste de Misticismo da regra \"Magia arcana de armadura\" (por exemplo, Conjurador Encouraçado).",
+        "none": "Nenhuma",
+        "light": "Armaduras leves",
+        "all": "Todas as armaduras"
       }
+    }
   }
 }

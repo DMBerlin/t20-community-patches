@@ -628,6 +628,47 @@
         "Sheet": "Nonlethal HP: {nonlethal} · Lethal HP: {lethal}",
         "NoTokens": "Select one or more tokens to apply the nonlethal damage.",
         "Reference": "Tormenta20 Jogo do Ano, ch. 5, \"Wounds & Death\", p. 236"
+      },
+    "ArcaneArmor": {
+      "Setting": {
+        "Name": "Arcane spells in armor",
+        "Hint": "Optional book rule (ch. 4, \"Armaduras e Magia Arcana\", p. 171): casting an arcane spell while wearing armor requires a Mysticism test (DC 20 + the spell's PM) with the armor penalty. On a failure the spell does not work, but the PM are spent. Characters only. Bards in light armor, Magia Discreta and items with the waiver skip the test.",
+        "off": "Off",
+        "roll": "Roll the test"
+      },
+      "Flavor": "Mysticism: {spell} in armor ({armor}), DC {dc}",
+      "Success": "Success: the spell works.",
+      "Failure": "Failure: {spell} does not work, but its {cost} PM are spent.",
+      "FailureManual": "Failure: {spell} does not work, but its {cost} PM are lost. Automatic PM spending is off: deduct them on the sheet.",
+      "FailureFree": "Failure: {spell} does not work.",
+      "Untrained": "{actor} is not trained in Mysticism, a trained-only skill: the test cannot be made.",
+      "UntrainedHint": "To use {grants} in the armor test, turn on \"Aplicar Sempre\" in its effect.",
+      "GrantUsed": "Used {grant} ({cost} PM).",
+      "GrantUsedManual": "Used {grant}: deduct {cost} PM on the sheet (automatic PM spending is off).",
+      "GrantUsedFree": "Used {grant}.",
+      "GrantNoMana": "Not enough PM to use {grant}.",
+      "Ambiguous": "{spell}: ambiguous source for arcane armor (the character has classes with different armor rules). The Mysticism test was not made; set \"Casting (arcane armor)\" on the spell sheet.",
+      "Reference": "Tormenta20 Jogo do Ano, ch. 4, \"Armaduras e Magia Arcana\", p. 171",
+      "Dialog": {
+        "Label": "Arcane armor",
+        "Value": "Mysticism test on casting ({armor}, penalty {penalty}; DC 20 + cost). Magia Discreta waives it.",
+        "Ambiguous": "ambiguous source: set the casting on the spell sheet."
+      },
+      "SpellField": {
+        "Label": "Casting (arcane armor)",
+        "Hint": "How this spell is cast, for the \"Arcane spells in armor\" rule. Automatic infers it from the character's classes (Arcanista: arcane; Bardo: bard arcane; Clérigo and Druida: no test).",
+        "auto": "Automatic",
+        "arcane": "Arcane (Arcanista or another arcane class)",
+        "bard": "Bard arcane",
+        "exempt": "No test (divine, race, power or item)"
+      },
+      "WaiverField": {
+        "Label": "Arcane armor waiver",
+        "Hint": "This item waives the Mysticism test of the \"Arcane spells in armor\" rule (for example, Conjurador Encouraçado).",
+        "none": "None",
+        "light": "Light armor",
+        "all": "All armor"
       }
+    }
   }
 }

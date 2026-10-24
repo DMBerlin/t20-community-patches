@@ -11,6 +11,7 @@ import {
   CONCENTRATION_SETTING,
   SUSTAINED_SPELL_SETTING
 } from "./rules/casting-restrictions.mjs";
+import { ARCANE_ARMOR_SETTING } from "./rules/arcane-armor-casting.mjs";
 import { NON_PROFICIENCY_SETTING } from "./rules/non-proficiency-penalties.mjs";
 import { SAVE_BUTTON_SETTING } from "./rules/save-button.mjs";
 import { ATTACK_VS_DEFENSE_SETTING } from "./rules/attack-vs-defense.mjs";
@@ -40,6 +41,7 @@ export const RULE_SETTINGS = [
   { id: "source-stacking", keys: [SOURCE_STACKING_SETTING] },
   { id: "item-effective-stats", keys: [ITEM_EFFECTIVE_STATS_SETTING] },
   { id: "casting-restrictions", keys: [SUSTAINED_SPELL_SETTING, CASTING_CONDITION_SETTING, CONCENTRATION_SETTING] },
+  { id: "arcane-armor", keys: [ARCANE_ARMOR_SETTING] },
   { id: "non-proficiency", keys: [NON_PROFICIENCY_SETTING] },
   { id: "save-button", keys: [SAVE_BUTTON_SETTING] },
   { id: "attack-vs-defense", keys: [ATTACK_VS_DEFENSE_SETTING] },

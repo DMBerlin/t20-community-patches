@@ -17,6 +17,7 @@ import { installUsageEffectMaxRule, registerUsageEffectMaxSetting } from "./rule
 import { installSameAbilityRule, registerSameAbilitySetting } from "./rules/same-ability-stacking.mjs";
 import { installSourceStackingRule, registerSourceStackingSetting } from "./rules/source-stacking.mjs";
 import { installItemEffectiveStatsRule, registerItemEffectiveStatsSetting } from "./rules/item-effective-stats.mjs";
+import { installArcaneArmorRule, registerArcaneArmorSetting } from "./rules/arcane-armor-casting.mjs";
 import { installCastingRestrictionsRule, registerCastingRestrictionsSettings } from "./rules/casting-restrictions.mjs";
 import { installNonProficiencyRule, registerNonProficiencySetting } from "./rules/non-proficiency-penalties.mjs";
 import { installSaveButtonRule, registerSaveButtonSetting } from "./rules/save-button.mjs";
@@ -78,6 +79,7 @@ Hooks.once("init", () => {
   registerSameAbilitySetting();
   registerSourceStackingSetting();
   registerItemEffectiveStatsSetting();
+  registerArcaneArmorSetting();
   registerCastingRestrictionsSettings();
   registerNonProficiencySetting();
   registerSaveButtonSetting();
@@ -136,6 +138,13 @@ Hooks.once("init", () => {
       installSituationalModifiersRule();
     } catch (err) {
       console.error(`${MODULE_ID} | Failed to install the situational modifiers rule`, err);
+    }
+    // Before casting-restrictions: this displayCard wrapper sits inside that one, which only counts a cast through
+    // castCompleted (scripts/rules/cast-outcome.mjs), so a failed armor test never ends a sustained spell.
+    try {
+      installArcaneArmorRule();
+    } catch (err) {
+      console.error(`${MODULE_ID} | Failed to install the arcane armor rule`, err);
     }
     // After the other ItemT20#roll/displayCard wrappers (usage-effect-max): a blocked use never reaches them.
     try {

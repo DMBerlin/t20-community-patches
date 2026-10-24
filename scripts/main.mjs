@@ -21,6 +21,8 @@ import { installCastingRestrictionsRule, registerCastingRestrictionsSettings } f
 import { installNonProficiencyRule, registerNonProficiencySetting } from "./rules/non-proficiency-penalties.mjs";
 import { installSaveButtonRule, registerSaveButtonSetting } from "./rules/save-button.mjs";
 import { installAttackVsDefenseRule, registerAttackVsDefenseSetting } from "./rules/attack-vs-defense.mjs";
+import { installTrainedOnlyRule, registerTrainedOnlySetting } from "./rules/trained-only-skills.mjs";
+import { installManaQueue } from "./rules/mana-queue.mjs";
 
 /**
  * @type {{id: string, group: string, mode: import("./registry.mjs").PatchMode, state: import("./registry.mjs").PatchState,
@@ -75,7 +77,14 @@ Hooks.once("init", () => {
   registerNonProficiencySetting();
   registerSaveButtonSetting();
   registerAttackVsDefenseSetting();
+  registerTrainedOnlySetting();
   if (game.system.id === "tormenta20") {
+    // Transparent (only orders each actor's spendMana calls) and installed with every rule off.
+    try {
+      installManaQueue();
+    } catch (err) {
+      console.error(`${MODULE_ID} | Failed to install the mana queue`, err);
+    }
     try {
       installManaLimitRule();
     } catch (err) {
@@ -119,6 +128,12 @@ Hooks.once("init", () => {
       installCastingRestrictionsRule();
     } catch (err) {
       console.error(`${MODULE_ID} | Failed to install the casting restrictions rule`, err);
+    }
+    // After usage-effect-max and the patches that wrap rollPericia: a blocked test never reaches them.
+    try {
+      installTrainedOnlyRule();
+    } catch (err) {
+      console.error(`${MODULE_ID} | Failed to install the trained-only skills rule`, err);
     }
     // Last on purpose: its wrappers must sit outside those of the patches and the other rules.
     try {

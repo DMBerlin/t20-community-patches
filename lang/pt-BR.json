@@ -551,6 +551,22 @@
       "Apply": "Aplicar",
       "Prompt": "Escolha a arma de {actor} que recebe {effect}.",
       "NoWeapon": "{actor} não tem arma para receber {effect}."
+    },
+    "TrainedOnly": {
+      "Setting": {
+        "Name": "Perícias somente treinadas",
+        "Hint": "Regra opcional do livro (cap. 2, \"Treinamento e testes\", p. 114): perícias marcadas como \"treinada\" só podem ser usadas por quem é treinado nelas. Avisar deixa rolar e marca o card; Bloquear impede o teste, a não ser que o personagem use uma habilidade que conceda o treinamento para o teste (Eclético, Cultura Exótica). Vale só para personagens.",
+        "off": "Desligado",
+        "warn": "Avisar",
+        "block": "Bloquear"
+      },
+      "Untrained": "{actor} não é treinado em {skill}, uma perícia somente treinada.",
+      "Blocked": "Teste bloqueado ({reference}).",
+      "Warned": "Teste feito sem treinamento ({reference}).",
+      "MarkGrant": "Para fazer o teste, marque {grants}.",
+      "OpenDialog": "Abra o diálogo de uso e marque {grants}.",
+      "CardNote": "Sem treinamento em perícia somente treinada ({reference}).",
+      "Reference": "Tormenta20 Jogo do Ano, cap. 2, \"Treinamento e testes\", p. 114"
     }
   }
 }

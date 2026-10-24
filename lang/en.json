@@ -551,6 +551,22 @@
       "Apply": "Apply",
       "Prompt": "Choose the weapon of {actor} that receives {effect}.",
       "NoWeapon": "{actor} has no weapon to receive {effect}."
+    },
+    "TrainedOnly": {
+      "Setting": {
+        "Name": "Trained-only skills",
+        "Hint": "Optional book rule (chapter 2, \"Treinamento e testes\", p. 114): skills marked \"trained\" can only be used by characters trained in them. Warn lets the roll happen and marks the card; Block stops the test unless the character uses an ability that grants training for the test (Eclético, Cultura Exótica). Only characters are checked.",
+        "off": "Off",
+        "warn": "Warn",
+        "block": "Block"
+      },
+      "Untrained": "{actor} is not trained in {skill}, a trained-only skill.",
+      "Blocked": "Test blocked ({reference}).",
+      "Warned": "Test made without training ({reference}).",
+      "MarkGrant": "To make the test, check {grants}.",
+      "OpenDialog": "Open the usage dialog and check {grants}.",
+      "CardNote": "Untrained in a trained-only skill ({reference}).",
+      "Reference": "Tormenta20 Jogo do Ano, chapter 2, \"Treinamento e testes\", p. 114"
     }
   }
 }

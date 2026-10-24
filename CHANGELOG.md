@@ -23,6 +23,7 @@ Não edite as seções de versão à mão.
 - Regra opcional "Teste de resistência pelo card": botões para os alvos rolarem Fortitude, Reflexos ou Vontade contra a CD, com passou/falhou, o efeito do livro e o dano pela metade por alvo (#58).
 - Regra opcional "Ataque contra Defesa": o card do ataque mostra se acertou ou errou cada alvo marcado, o crítico só vale num acerto e Caído dá +5 na Defesa contra ataques à distância (#42).
 - Regra opcional "Perícias somente treinadas": avisa ou impede o teste de perícia somente treinada sem treino nos personagens, respeitando Eclético e Cultura Exótica (#62).
+- Regra opcional "Modificadores situacionais": o diálogo de ataque soma flanquear, investida, posição elevada, atirar em corpo a corpo e alcance dobrado, marca cobertura leve e atacante invisível por alvo na Defesa e aplica após a investida o efeito de −2 na Defesa, removido à mão (#59).
 
 ### Changed
 

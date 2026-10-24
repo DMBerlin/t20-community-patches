@@ -22,6 +22,10 @@ import { installNonProficiencyRule, registerNonProficiencySetting } from "./rule
 import { installSaveButtonRule, registerSaveButtonSetting } from "./rules/save-button.mjs";
 import { installAttackVsDefenseRule, registerAttackVsDefenseSetting } from "./rules/attack-vs-defense.mjs";
 import { installTrainedOnlyRule, registerTrainedOnlySetting } from "./rules/trained-only-skills.mjs";
+import {
+  installSituationalModifiersRule,
+  registerSituationalModifiersSetting
+} from "./rules/situational-modifiers.mjs";
 import { installManaQueue } from "./rules/mana-queue.mjs";
 
 /**
@@ -78,6 +82,7 @@ Hooks.once("init", () => {
   registerSaveButtonSetting();
   registerAttackVsDefenseSetting();
   registerTrainedOnlySetting();
+  registerSituationalModifiersSetting();
   if (game.system.id === "tormenta20") {
     // Transparent (only orders each actor's spendMana calls) and installed with every rule off.
     try {
@@ -122,6 +127,13 @@ Hooks.once("init", () => {
       installAttackVsDefenseRule();
     } catch (err) {
       console.error(`${MODULE_ID} | Failed to install the attack versus Defense rule`, err);
+    }
+    // Also before casting-restrictions; the order relative to attack-vs-defense does not matter (adjustments are
+    // registered before the original rollAttack and read after it).
+    try {
+      installSituationalModifiersRule();
+    } catch (err) {
+      console.error(`${MODULE_ID} | Failed to install the situational modifiers rule`, err);
     }
     // After the other ItemT20#roll/displayCard wrappers (usage-effect-max): a blocked use never reaches them.
     try {

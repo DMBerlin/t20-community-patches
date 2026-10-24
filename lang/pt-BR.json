@@ -543,7 +543,9 @@
       "Reference": "Tormenta20 Jogo do Ano, cap. 5, \"Teste de Ataque\" e \"Acertos Críticos\", p. 230-231"
     },
     "DefenseAdjustment": {
-      "prone-ranged": "caído: +5 contra ataque à distância"
+      "prone-ranged": "caído: +5 contra ataque à distância",
+      "cover": "cobertura leve: +5",
+      "invisible": "atacante invisível: −5"
     },
     "UsageBuffTemplates": {
       "Weapon": "Arma",
@@ -567,6 +569,52 @@
       "OpenDialog": "Abra o diálogo de uso e marque {grants}.",
       "CardNote": "Sem treinamento em perícia somente treinada ({reference}).",
       "Reference": "Tormenta20 Jogo do Ano, cap. 2, \"Treinamento e testes\", p. 114"
-    }
+    },
+    "SituationalModifiers": {
+        "Setting": {
+          "Name": "Modificadores situacionais",
+          "Hint": "Regra opcional do livro (cap. 5, Tabela 5-3, p. 239; \"Investida\", p. 235; \"Ataque à distância\", p. 233): o diálogo de ataque ganha caixas para flanquear, investida, posição elevada, atirar em combate corpo a corpo e alcance dobrado, que entram na rolagem com rótulo, e, por alvo, para cobertura leve e atacante invisível, que ajustam a Defesa do alvo na regra \"Ataque contra Defesa\" ou aparecem como nota no card. A investida aplica ao atacante o efeito −2 na Defesa, que deve ser apagado à mão no início do próximo turno. No teste de resistência de uma manobra, só \"posição elevada\" aparece.",
+          "off": "Desligado",
+          "on": "Aplicar a regra do livro"
+        },
+        "Section": "Situação de combate (Tabela 5-3)",
+        "AttackLegend": "Ataque",
+        "DefenseLegend": "Defesa do alvo",
+        "AnyTarget": "Qualquer alvo",
+        "TargetN": "Alvo {n}",
+        "Attack": {
+          "flank": "Flanqueando o alvo (+2)",
+          "charge": "Investida (+2)",
+          "elevated": "Em posição elevada (+2)",
+          "firingIntoMelee": "Atirando em combate corpo a corpo (−5)",
+          "longRange": "Além do alcance, até o dobro (−5)"
+        },
+        "Label": {
+          "flank": "Flanquear",
+          "charge": "Investida",
+          "elevated": "Posição elevada",
+          "firingIntoMelee": "Corpo a corpo",
+          "longRange": "Alcance dobrado"
+        },
+        "Defense": {
+          "cover": "Sob cobertura leve (+5 na Defesa)",
+          "invisible": "Não percebe você, que está invisível (−5 na Defesa)"
+        },
+        "Tooltip": {
+          "flank": "Só corpo a corpo: você e um aliado estão em lados opostos do alvo. Não vale à distância nem desarmado (a menos que tenha Briga ou Estilo Desarmado). Tormenta20 JdA, p. 239.",
+          "charge": "Só corpo a corpo: avance até o dobro do deslocamento (mínimo 3m) em linha reta e ataque. Você sofre −2 na Defesa até o seu próximo turno; o efeito \"Investida (guarda aberta)\" é aplicado e deve ser apagado à mão. Tormenta20 JdA, p. 235.",
+          "elevated": "Você está num ponto mais alto que o alvo. Tormenta20 JdA, Tabela 5-3, p. 239.",
+          "firingIntoMelee": "Só à distância: o alvo está dentro do alcance natural de algum inimigo (incluindo você). Disparo Preciso anula esta penalidade: desmarque. Tormenta20 JdA, p. 233.",
+          "longRange": "Só à distância: o alvo está além do alcance da arma, até o dobro. Tormenta20 JdA, p. 233.",
+          "cover": "Algo entre você e o alvo bloqueia o ataque (árvore, muralha, carroça, criatura maior): +5 na Defesa do alvo. Com cobertura total o alvo não pode ser atacado. Tormenta20 JdA, p. 239.",
+          "invisible": "O alvo não percebe você, que está invisível: −5 na Defesa do alvo. Desmarque nos alvos que percebem você. Tormenta20 JdA, Tabela 5-3, p. 239."
+        },
+        "NoteTitle": "Defesa do alvo (Tabela 5-3)",
+        "ChargeEffect": {
+          "Name": "Investida (guarda aberta)",
+          "Description": "−2 na Defesa até o seu próximo turno; remova este efeito no início do seu próximo turno (Tormenta20 Jogo do Ano, cap. 5, \"Investida\", p. 235)."
+        },
+        "Reference": "Tormenta20 Jogo do Ano, cap. 5, Tabela 5-3, p. 239"
+      }
   }
 }

@@ -543,7 +543,9 @@
       "Reference": "Tormenta20 Jogo do Ano, ch. 5, \"Attack Test\" and \"Critical Hits\", p. 230-231"
     },
     "DefenseAdjustment": {
-      "prone-ranged": "prone: +5 against ranged attack"
+      "prone-ranged": "prone: +5 against ranged attack",
+      "cover": "light cover: +5",
+      "invisible": "invisible attacker: −5"
     },
     "UsageBuffTemplates": {
       "Weapon": "Weapon",
@@ -567,6 +569,52 @@
       "OpenDialog": "Open the usage dialog and check {grants}.",
       "CardNote": "Untrained in a trained-only skill ({reference}).",
       "Reference": "Tormenta20 Jogo do Ano, chapter 2, \"Treinamento e testes\", p. 114"
-    }
+    },
+    "SituationalModifiers": {
+        "Setting": {
+          "Name": "Situational modifiers",
+          "Hint": "Optional book rule (ch. 5, Table 5-3, p. 239; \"Charge\", p. 235; \"Ranged attack\", p. 233): the attack dialog gets boxes for flanking, charge, higher ground, firing into melee and double range, which go into the roll with a label, and, per target, for light cover and invisible attacker, which adjust the target's Defense in the \"Attack versus Defense\" rule or appear as a note on the card. A charge gives the attacker a −2 Defense effect, which must be deleted by hand at the start of their next turn. In the resistance test of a maneuver, only \"higher ground\" is shown.",
+          "off": "Off",
+          "on": "Apply the book rule"
+        },
+        "Section": "Combat situation (Table 5-3)",
+        "AttackLegend": "Attack",
+        "DefenseLegend": "Target's Defense",
+        "AnyTarget": "Any target",
+        "TargetN": "Target {n}",
+        "Attack": {
+          "flank": "Flanking the target (+2)",
+          "charge": "Charge (+2)",
+          "elevated": "On higher ground (+2)",
+          "firingIntoMelee": "Firing into melee (−5)",
+          "longRange": "Beyond range, up to double (−5)"
+        },
+        "Label": {
+          "flank": "Flanking",
+          "charge": "Charge",
+          "elevated": "Higher ground",
+          "firingIntoMelee": "Into melee",
+          "longRange": "Double range"
+        },
+        "Defense": {
+          "cover": "Behind light cover (+5 Defense)",
+          "invisible": "Does not perceive you, invisible (−5 Defense)"
+        },
+        "Tooltip": {
+          "flank": "Melee only: you and an ally are on opposite sides of the target. Not ranged nor unarmed (unless you have Brawl or Unarmed Style). Tormenta20 JdA, p. 239.",
+          "charge": "Melee only: move up to twice your speed (at least 3m) in a straight line and attack. You take −2 Defense until your next turn; the \"Charge (guard down)\" effect is applied and must be deleted by hand. Tormenta20 JdA, p. 235.",
+          "elevated": "You are higher than the target. Tormenta20 JdA, Table 5-3, p. 239.",
+          "firingIntoMelee": "Ranged only: the target is within the natural reach of an enemy (including you). Precise Shot cancels this penalty: uncheck it. Tormenta20 JdA, p. 233.",
+          "longRange": "Ranged only: the target is beyond the weapon's range, up to double. Tormenta20 JdA, p. 233.",
+          "cover": "Something between you and the target blocks the attack (tree, wall, wagon, larger creature): +5 to the target's Defense. A target with total cover cannot be attacked. Tormenta20 JdA, p. 239.",
+          "invisible": "The target does not perceive you, invisible: −5 to the target's Defense. Uncheck it for targets that perceive you. Tormenta20 JdA, Table 5-3, p. 239."
+        },
+        "NoteTitle": "Target's Defense (Table 5-3)",
+        "ChargeEffect": {
+          "Name": "Charge (guard down)",
+          "Description": "−2 Defense until your next turn; delete this effect at the start of your next turn (Tormenta20 Jogo do Ano, ch. 5, \"Investida\", p. 235)."
+        },
+        "Reference": "Tormenta20 Jogo do Ano, ch. 5, Table 5-3, p. 239"
+      }
   }
 }

@@ -529,7 +529,7 @@ export function registerSourceStackingSetting() {
     name: "T20CP.SourceStacking.Setting.Name",
     hint: "T20CP.SourceStacking.Setting.Hint",
     scope: "world",
-    config: true,
+    config: false,
     type: String,
     choices: { off: "T20CP.SourceStacking.Setting.off", on: "T20CP.SourceStacking.Setting.on" },
     default: "off",

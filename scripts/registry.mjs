@@ -245,3 +245,211 @@ export function displayState(state, diagnosis) {
   if (state === "disabled" && diagnosis?.bug === "fixed" && diagnosis.confidence === "high") return "disabled-fixed";
   return state;
 }
+
+/**
+ * @typedef {"active"|"unneeded"|"attention"|"off"} StateCategory
+ */
+
+const CATEGORIES = {
+  active: ["applied", "forced", "applied-unverified", "applied-guarded", "suspected-fixed"],
+  unneeded: ["fixed", "disabled-fixed"],
+  attention: ["unverified", "error"],
+  off: ["disabled", "incompatible"]
+};
+const CATEGORY_OF = new Map(Object.entries(CATEGORIES).flatMap(([category, states]) => states.map((s) => [s, category])));
+
+/** Category order, as shown in the Center header. */
+export const STATE_CATEGORIES = ["active", "unneeded", "attention", "off"];
+
+/**
+ * Groups the display states in the four categories the GM sees. An unknown state needs attention.
+ * @param {string} state  Display state (see displayState).
+ * @returns {StateCategory}
+ */
+export function stateCategory(state) {
+  return /** @type {StateCategory} */ (CATEGORY_OF.get(state) ?? "attention");
+}
+
+/**
+ * Counts the display states by category.
+ * @param {string[]} states
+ * @returns {Record<StateCategory, number>}
+ */
+export function countCategories(states) {
+  const counts = Object.fromEntries(STATE_CATEGORIES.map((c) => [c, 0]));
+  for (const state of states) counts[stateCategory(state)]++;
+  return /** @type {Record<StateCategory, number>} */ (counts);
+}
+
+/**
+ * Mode saved for the switch and the "Apply always" box. A switch turned off ignores the box.
+ * @param {{enabled: boolean, always?: boolean}} controls
+ * @returns {PatchMode}
+ */
+export function modeFromControls({ enabled, always }) {
+  if (!enabled) return "off";
+  return always ? "force" : "auto";
+}
+
+/**
+ * Inverse of modeFromControls.
+ * @param {PatchMode} mode
+ * @returns {{enabled: boolean, always: boolean}}
+ */
+export function controlsFromMode(mode) {
+  return { enabled: mode !== "off", always: mode === "force" };
+}
+
+/**
+ * Whether saving needs a world reload: any patch mode change (apply() only runs on init) or a changed setting
+ * registered with `requiresReload`.
+ * @param {string[]} changedPatches                    Ids whose mode changed.
+ * @param {{requiresReload?: boolean}[]} changedSettings
+ * @returns {boolean}
+ */
+export function needsReload(changedPatches, changedSettings) {
+  return changedPatches.length > 0 || changedSettings.some((s) => !!s?.requiresReload);
+}
+
+/** Summary sections, in display order, and the notification keys of pickNotification each one gathers. */
+export const NOTIFICATION_SECTIONS = [
+  ["error", ["error"]],
+  ["regression", ["regression"]],
+  ["fixed", ["fixed", "disabled-fixed"]],
+  ["suspected-fixed", ["suspected-fixed"]],
+  ["unverified", ["unverified"]],
+  ["unverified-applied", ["applied-unverified", "applied-guarded"]],
+  ["incompatible", ["incompatible"]]
+];
+const SECTION_OF = new Map(NOTIFICATION_SECTIONS.flatMap(([section, keys]) => keys.map((k) => [k, section])));
+const LEVELS = ["info", "warn", "error"];
+const PERMANENT_KEYS = new Set(["error", "regression"]);
+
+/**
+ * @typedef {object} NotificationSummary
+ * @property {"info"|"warn"|"error"} level   The most severe level among the entries.
+ * @property {boolean} permanent              Only errors and regressions stay until dismissed.
+ * @property {{section: string, names: string[], more: number}[]} sections
+ * @property {string[]} ids                   Patches cited in the summary.
+ */
+
+/**
+ * Joins the notifications picked for several patches into one summary.
+ * @param {{id: string, name: string, key: string, level: "info"|"warn"|"error"}[]} entries
+ * @param {number} [maxNames=3]  Names listed per section; the rest is counted.
+ * @returns {NotificationSummary|null}  null when there is nothing to notify.
+ */
+export function summarizeNotifications(entries, maxNames = 3) {
+  const valid = (entries ?? []).filter((e) => e && SECTION_OF.has(e.key));
+  if (!valid.length) return null;
+  const sections = [];
+  for (const [section] of NOTIFICATION_SECTIONS) {
+    const names = valid.filter((e) => SECTION_OF.get(e.key) === section).map((e) => e.name);
+    if (names.length) sections.push({ section, names: names.slice(0, maxNames), more: Math.max(0, names.length - maxNames) });
+  }
+  const level = LEVELS[Math.max(...valid.map((e) => Math.max(0, LEVELS.indexOf(e.level))))];
+  return {
+    level: /** @type {"info"|"warn"|"error"} */ (level),
+    permanent: valid.some((e) => PERMANENT_KEYS.has(e.key)),
+    sections,
+    ids: valid.map((e) => e.id)
+  };
+}
+
+/**
+ * Text of a summary. `t(key, data)` is the localization function (game.i18n.format).
+ * @param {NotificationSummary} summary
+ * @param {string} system  For example "Tormenta20 1.6.5".
+ * @param {(key: string, data?: object) => string} t
+ * @returns {string}
+ */
+export function summaryMessage(summary, system, t) {
+  const separator = t("T20CP.Notifications.Separator");
+  const sections = summary.sections.map(({ section, names, more }) => {
+    const list = names.join(", ");
+    const shown = more ? t("T20CP.Notifications.More", { names: list, count: more }) : list;
+    return t(`T20CP.Notifications.Sections.${section}`, { names: shown });
+  });
+  return t("T20CP.Notifications.Summary", { system, sections: sections.join(separator) });
+}
+
+/**
+ * Gathers late diagnoses (lateProbe) into one summary, emitted when every pending probe settles or after `delay`,
+ * whichever comes first. A result settled after that is emitted on its own.
+ * @param {object} args
+ * @param {number} args.pending                                   Probes that will settle.
+ * @param {(entries: object[]) => void} args.emit                 Receives a non-empty batch of notification entries.
+ * @param {(fn: () => void, ms: number) => unknown} args.setTimer
+ * @param {(handle: unknown) => void} [args.clearTimer]
+ * @param {number} [args.delay=10000]
+ * @returns {{settle: (entry?: object|null) => void}}
+ */
+export function createLateSummary({ pending, emit, setTimer, clearTimer = () => {}, delay = 10000 }) {
+  let open = pending > 0;
+  let remaining = pending;
+  const batch = [];
+  let timer = null;
+  const flush = () => {
+    if (!open) return;
+    open = false;
+    if (timer !== null) clearTimer(timer);
+    if (batch.length) emit(batch.splice(0));
+  };
+  if (open) timer = setTimer(flush, delay);
+  return {
+    settle(entry) {
+      if (entry) {
+        if (open) batch.push(entry);
+        else emit([entry]);
+      }
+      remaining--;
+      if (remaining <= 0) flush();
+    }
+  };
+}
+
+/**
+ * URL of a new prefilled issue for a patch that needs attention. Only closed fields go in the URL: evidence and
+ * reason may hold arbitrary exception messages, so they never do.
+ * @param {object} args
+ * @param {string} [args.bugs]           The module's `bugs` URL.
+ * @param {{id: string, issue?: number}} args.patch
+ * @param {string} args.name             Localized patch name.
+ * @param {string} args.state            Display state.
+ * @param {PatchMode} args.mode
+ * @param {Diagnosis} [args.diagnosis]
+ * @param {{system?: string, foundry?: string, module?: string}} [args.versions]
+ * @returns {string|null}
+ */
+export function reportIssueUrl({ bugs, patch, name, state, mode, diagnosis, versions = {} }) {
+  if (!bugs || !patch?.id) return null;
+  const base = String(bugs).replace(/\/+$/, "");
+  const title = `[${patch.id}] ${state}`;
+  const lines = [
+    `**Correção:** ${name} (\`${patch.id}\`)`,
+    patch.issue ? `**Issue original:** #${patch.issue}` : null,
+    `**Tormenta20:** ${versions.system ?? "?"} · **Foundry:** ${versions.foundry ?? "?"} · **Módulo:** ${versions.module ?? "?"}`,
+    `**Modo:** ${mode} · **Estado:** ${state}`,
+    diagnosis && BUGS.has(diagnosis.bug)
+      ? `**Diagnóstico:** ${diagnosis.bug}/${diagnosis.confidence === "high" ? "high" : "low"}`
+      : null,
+    "",
+    "**O que aconteceu:**",
+    ""
+  ].filter((l) => l !== null);
+  return `${base}/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(lines.join("\n"))}`;
+}
+
+/**
+ * Where Tab moves the focus inside a focus-trapped container: the next or previous element, wrapping around at the
+ * ends, and back inside when the focus escaped.
+ * @param {number} count       Focusable elements in the container.
+ * @param {number} index       Index of the focused element, or -1 when the focus is outside.
+ * @param {boolean} backwards  Shift+Tab.
+ * @returns {number|null}      Null when there is nothing to focus.
+ */
+export function nextFocusIndex(count, index, backwards) {
+  if (count < 1) return null;
+  if (index < 0) return backwards ? count - 1 : 0;
+  return (index + (backwards ? count - 1 : 1)) % count;
+}

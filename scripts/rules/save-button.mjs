@@ -407,7 +407,7 @@ export function registerSaveButtonSetting() {
     name: "T20CP.SaveButton.Setting.Name",
     hint: "T20CP.SaveButton.Setting.Hint",
     scope: "world",
-    config: true,
+    config: false,
     type: String,
     choices: { off: "T20CP.SaveButton.Setting.off", on: "T20CP.SaveButton.Setting.on" },
     default: "on",

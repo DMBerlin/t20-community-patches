@@ -417,7 +417,7 @@ export function registerUsageEffectMaxSetting() {
     name: "T20CP.UsageEffectMax.Setting.Name",
     hint: "T20CP.UsageEffectMax.Setting.Hint",
     scope: "world",
-    config: true,
+    config: false,
     type: String,
     choices: {
       off: "T20CP.UsageEffectMax.Setting.off",

@@ -319,7 +319,7 @@ export function registerSameAbilitySetting() {
     name: "T20CP.SameAbility.Setting.Name",
     hint: "T20CP.SameAbility.Setting.Hint",
     scope: "world",
-    config: true,
+    config: false,
     type: String,
     choices: {
       off: "T20CP.SameAbility.Setting.off",

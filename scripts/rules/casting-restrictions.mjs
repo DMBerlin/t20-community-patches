@@ -600,7 +600,7 @@ export function registerCastingRestrictionsSettings() {
       name: `T20CP.CastingRestrictions.${prefix}.Setting.Name`,
       hint: `T20CP.CastingRestrictions.${prefix}.Setting.Hint`,
       scope: "world",
-      config: true,
+      config: false,
       type: String,
       choices: Object.fromEntries(modes.map((m) => [m, `T20CP.CastingRestrictions.${prefix}.Setting.${m}`])),
       default: "off"

@@ -270,7 +270,7 @@ export function registerAttackVsDefenseSetting() {
     name: "T20CP.AttackVsDefense.Setting.Name",
     hint: "T20CP.AttackVsDefense.Setting.Hint",
     scope: "world",
-    config: true,
+    config: false,
     type: String,
     choices: { off: "T20CP.AttackVsDefense.Setting.off", on: "T20CP.AttackVsDefense.Setting.on" },
     default: "off"

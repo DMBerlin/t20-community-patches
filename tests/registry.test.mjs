@@ -3,6 +3,15 @@ import assert from "node:assert/strict";
 import {
   APPLY_STATES,
   applyLateDiagnosis,
+  controlsFromMode,
+  countCategories,
+  createLateSummary,
+  modeFromControls,
+  needsReload,
+  reportIssueUrl,
+  stateCategory,
+  summarizeNotifications,
+  summaryMessage,
   isPatchApplied,
   displayState,
   normalizeDiagnosis,
@@ -13,7 +22,8 @@ import {
   pickNotification,
   readStatusRecord,
   runProbe,
-  statusRecord
+  statusRecord,
+  nextFocusIndex
 } from "../scripts/registry.mjs";
 
 const patch = { system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.5" } } };
@@ -212,4 +222,184 @@ test("isPatchApplied is true only for states that ran apply()", () => {
   }
   assert.equal(isPatchApplied([{ id: "q", state: "applied" }], "p"), false);
   assert.equal(isPatchApplied(undefined, "p"), false);
+});
+
+test("stateCategory: the 11 display states fall in the four categories; unknown needs attention", () => {
+  const expected = {
+    applied: "active",
+    forced: "active",
+    "applied-unverified": "active",
+    "applied-guarded": "active",
+    "suspected-fixed": "active",
+    fixed: "unneeded",
+    "disabled-fixed": "unneeded",
+    unverified: "attention",
+    error: "attention",
+    disabled: "off",
+    incompatible: "off"
+  };
+  for (const [state, category] of Object.entries(expected)) assert.equal(stateCategory(state), category, state);
+  assert.equal(stateCategory("something-new"), "attention");
+  assert.equal(stateCategory(undefined), "attention");
+  assert.deepEqual(countCategories(["applied", "fixed", "error", "applied"]), { active: 2, unneeded: 1, attention: 1, off: 0 });
+});
+
+test("modeFromControls and controlsFromMode follow the switch/box table", () => {
+  assert.equal(modeFromControls({ enabled: false, always: false }), "off");
+  assert.equal(modeFromControls({ enabled: false, always: true }), "off");
+  assert.equal(modeFromControls({ enabled: true, always: false }), "auto");
+  assert.equal(modeFromControls({ enabled: true, always: true }), "force");
+  for (const mode of ["auto", "off", "force"]) assert.equal(modeFromControls(controlsFromMode(mode)), mode);
+  assert.deepEqual(controlsFromMode("off"), { enabled: false, always: false });
+});
+
+test("needsReload: patch modes and requiresReload settings only", () => {
+  assert.equal(needsReload([], []), false);
+  assert.equal(needsReload([], [{ requiresReload: false }, {}]), false);
+  assert.equal(needsReload(["prone-defense"], []), true);
+  assert.equal(needsReload([], [{}, { requiresReload: true }]), true);
+});
+
+const note = (id, key, level = "warn") => ({ id, name: id.toUpperCase(), key, level });
+
+test("summarizeNotifications: each key falls in its section, in table order", () => {
+  const keys = {
+    error: "error",
+    regression: "regression",
+    fixed: "fixed",
+    "disabled-fixed": "fixed",
+    "suspected-fixed": "suspected-fixed",
+    unverified: "unverified",
+    "applied-unverified": "unverified-applied",
+    "applied-guarded": "unverified-applied",
+    incompatible: "incompatible"
+  };
+  for (const [key, section] of Object.entries(keys)) {
+    assert.deepEqual(summarizeNotifications([note("a", key)]).sections, [{ section, names: ["A"], more: 0 }], key);
+  }
+  const all = summarizeNotifications(Object.keys(keys).reverse().map((k, i) => note(`p${i}`, k)));
+  assert.deepEqual(
+    all.sections.map((s) => s.section),
+    ["error", "regression", "fixed", "suspected-fixed", "unverified", "unverified-applied", "incompatible"]
+  );
+  assert.equal(all.ids.length, 9);
+});
+
+test("summarizeNotifications: names, level and permanence", () => {
+  assert.equal(summarizeNotifications([]), null);
+  assert.equal(summarizeNotifications([note("a", "unknown-key")]), null);
+  const many = summarizeNotifications(["a", "b", "c", "d", "e"].map((id) => note(id, "fixed", "info")));
+  assert.deepEqual(many.sections, [{ section: "fixed", names: ["A", "B", "C"], more: 2 }]);
+  assert.equal(many.level, "info");
+  assert.equal(many.permanent, false);
+  const mixed = summarizeNotifications([note("a", "fixed", "info"), note("b", "unverified", "warn")]);
+  assert.equal(mixed.level, "warn");
+  assert.equal(mixed.permanent, false);
+  const failed = summarizeNotifications([note("a", "fixed", "info"), note("b", "error", "error")]);
+  assert.equal(failed.level, "error");
+  assert.equal(failed.permanent, true);
+  assert.equal(summarizeNotifications([note("a", "regression", "warn")]).permanent, true);
+});
+
+test("summaryMessage formats the sections with the localization function", () => {
+  const t = (key, data = {}) =>
+    ({
+      "T20CP.Notifications.Separator": " · ",
+      "T20CP.Notifications.More": `${data.names} +${data.count}`,
+      "T20CP.Notifications.Sections.fixed": `fixed: ${data.names}`,
+      "T20CP.Notifications.Sections.unverified": `unverified: ${data.names}`,
+      "T20CP.Notifications.Summary": `T20CP · ${data.system} — ${data.sections}.`
+    })[key];
+  const summary = summarizeNotifications([
+    note("a", "fixed", "info"),
+    note("b", "fixed", "info"),
+    note("c", "fixed", "info"),
+    note("d", "fixed", "info"),
+    note("e", "unverified")
+  ]);
+  assert.equal(summaryMessage(summary, "Tormenta20 1.6.6", t), "T20CP · Tormenta20 1.6.6 — fixed: A, B, C +1 · unverified: E.");
+});
+
+function fakeTimers() {
+  const timers = [];
+  return {
+    timers,
+    setTimer: (fn, ms) => timers.push({ fn, ms, cleared: false }) - 1,
+    clearTimer: (i) => (timers[i].cleared = true),
+    fire: () => timers.filter((t) => !t.cleared).forEach((t) => ((t.cleared = true), t.fn()))
+  };
+}
+
+test("createLateSummary: results before the deadline become one summary; later ones are emitted alone", () => {
+  const clock = fakeTimers();
+  const emitted = [];
+  const late = createLateSummary({ pending: 3, emit: (b) => emitted.push(b), ...clock });
+  assert.equal(clock.timers[0].ms, 10000);
+  late.settle({ id: "a" });
+  late.settle({ id: "b", key: "regression" });
+  assert.deepEqual(emitted, []);
+  clock.fire();
+  assert.deepEqual(emitted, [[{ id: "a" }, { id: "b", key: "regression" }]]);
+  late.settle({ id: "c", key: "regression" });
+  assert.deepEqual(emitted[1], [{ id: "c", key: "regression" }]);
+  assert.equal(emitted.length, 2);
+});
+
+test("createLateSummary: all settled before the deadline emits at once and clears the timer", () => {
+  const clock = fakeTimers();
+  const emitted = [];
+  const late = createLateSummary({ pending: 2, emit: (b) => emitted.push(b), ...clock });
+  late.settle({ id: "a" });
+  late.settle(null);
+  assert.deepEqual(emitted, [[{ id: "a" }]]);
+  assert.equal(clock.timers[0].cleared, true);
+  clock.fire();
+  assert.equal(emitted.length, 1);
+});
+
+test("createLateSummary: nothing to report emits nothing", () => {
+  const clock = fakeTimers();
+  const emitted = [];
+  const late = createLateSummary({ pending: 1, emit: (b) => emitted.push(b), ...clock });
+  late.settle(undefined);
+  clock.fire();
+  assert.deepEqual(emitted, []);
+  createLateSummary({ pending: 0, emit: (b) => emitted.push(b), ...clock });
+  assert.equal(clock.timers.length, 1);
+});
+
+test("reportIssueUrl: prefilled new issue with closed fields only", () => {
+  const args = {
+    bugs: "https://github.com/DMBerlin/t20-community-patches/issues/",
+    patch: { id: "prone-defense", issue: 40 },
+    name: "Caído",
+    state: "error",
+    mode: "auto",
+    diagnosis: { bug: "present", confidence: "high", evidence: "Ator Zoltrak do jogador Bianca" },
+    reason: "Cannot read Zoltrak of Bianca",
+    versions: { system: "1.6.6", foundry: "14.369", module: "1.1.0" }
+  };
+  const url = reportIssueUrl(args);
+  assert.ok(url.startsWith("https://github.com/DMBerlin/t20-community-patches/issues/new?title="));
+  const params = new URL(url).searchParams;
+  assert.equal(params.get("title"), "[prone-defense] error");
+  const body = params.get("body");
+  for (const text of ["Caído", "`prone-defense`", "#40", "1.6.6", "14.369", "1.1.0", "auto", "present/high"]) {
+    assert.ok(body.includes(text), text);
+  }
+  const decoded = decodeURIComponent(url);
+  assert.ok(!decoded.includes("Zoltrak"));
+  assert.ok(!decoded.includes("Bianca"));
+  assert.equal(reportIssueUrl({ ...args, bugs: undefined }), null);
+  assert.ok(!new URL(reportIssueUrl({ ...args, patch: { id: "x" } })).searchParams.get("body").includes("#"));
+});
+
+test("nextFocusIndex moves Tab inside a container, wraps at the ends and recovers an escaped focus", () => {
+  assert.equal(nextFocusIndex(3, 0, false), 1);
+  assert.equal(nextFocusIndex(3, 2, false), 0);
+  assert.equal(nextFocusIndex(3, 1, true), 0);
+  assert.equal(nextFocusIndex(3, 0, true), 2);
+  assert.equal(nextFocusIndex(3, -1, false), 0);
+  assert.equal(nextFocusIndex(3, -1, true), 2);
+  assert.equal(nextFocusIndex(0, -1, false), null);
 });

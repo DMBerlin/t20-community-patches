@@ -104,7 +104,7 @@ Seção: `Fixed`
 ### Plano de teste manual no Foundry
 
 1. <passo com dados concretos → resultado esperado>
-2. Desligue o patch em **Gerenciar correções**, recarregue e repita o passo 1: o comportamento oficial volta.
+2. Desligue o patch na **Central do T20CP**, recarregue e repita o passo 1: o comportamento oficial volta.
 
 ## Fora de escopo
 

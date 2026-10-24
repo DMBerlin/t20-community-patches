@@ -170,12 +170,12 @@
       "Button": "Configurar",
       "Hint": "Divide cada cena em segmentos. Com a regra ativa, encerrar um combate não encerra os efeitos de cena; o mestre avança os segmentos clicando nos círculos da lista de jogadores (o botão direito volta). Encerrar a cena zera o contador.",
       "Max": "Segmentos por cena",
-      "MaxHint": "0 ou vazio desativa a regra. Máximo: {limit} (ajustável em Configurar Ajustes → Tormenta20 Community Patches).",
+      "MaxHint": "0 ou vazio desativa a regra. Máximo: {limit} (ajustável na Central do T20CP → Regras opcionais).",
       "Value": "Segmento atual",
       "ValueHint": "Entre 0 e o número de segmentos.",
       "Save": "Salvar",
-      "OverLimit": "Cena Segmentada: {max} segmentos passam do limite de {limit}. Nada foi salvo. Use menos segmentos ou aumente o limite em Configurar Ajustes → Tormenta20 Community Patches.",
-      "StoredOverLimit": "Cena Segmentada: a configuração atual tem {max} segmentos, acima do limite de {limit}. A lista de jogadores desenha um círculo por segmento e pode ficar lenta. Reduza os segmentos (Configurar Ajustes → Tormenta20 → Cena Segmentada) ou aumente o limite em Configurar Ajustes → Tormenta20 Community Patches.",
+      "OverLimit": "Cena Segmentada: {max} segmentos passam do limite de {limit}. Nada foi salvo. Use menos segmentos ou aumente o limite na Central do T20CP → Regras opcionais.",
+      "StoredOverLimit": "Cena Segmentada: a configuração atual tem {max} segmentos, acima do limite de {limit}. A lista de jogadores desenha um círculo por segmento e pode ficar lenta. Reduza os segmentos (Configurar Ajustes → Tormenta20 → Cena Segmentada) ou aumente o limite na Central do T20CP → Regras opcionais.",
       "Limit": {
         "Name": "Limite de segmentos da Cena Segmentada",
         "Hint": "Número máximo de segmentos por cena aceito pelo formulário de Cena Segmentada. A lista de jogadores desenha um círculo por segmento em todos os clientes, então valores altos podem deixar a interface lenta."
@@ -185,27 +185,55 @@
       "Locked": "Truques não podem ser usados em conjunto com outros aprimoramentos."
     },
     "Notifications": {
-      "error": "Tormenta20 Community Patches: falha ao aplicar a correção \"{name}\" ({reason}). Veja o console (F12).",
-      "fixed": "Tormenta20 Community Patches: {reason} já corrige \"{name}\". A correção não foi aplicada nesta carga e a preferência foi mantida; pode desligá-la em Configurar Ajustes → Tormenta20 Community Patches → Gerenciar correções.",
-      "unverified": "Tormenta20 Community Patches: a correção \"{name}\" não foi aplicada nesta carga: o bug não foi confirmado em {reason}, uma versão não verificada. A preferência foi mantida; para aplicar mesmo assim, use Forçar em Configurar Ajustes → Tormenta20 Community Patches → Gerenciar correções.",
-      "applied-unverified": "Tormenta20 Community Patches: a correção \"{name}\" continua aplicada em {reason}, uma versão não verificada, porque o bug foi detectado.",
-      "incompatible": "Tormenta20 Community Patches: a correção \"{name}\" não se aplica a {reason}.",
-      "suspected-fixed": "Tormenta20 Community Patches: {reason} pode já corrigir \"{name}\", mas o teste não confirma a correção inteira. A correção continua ativa; verifique em Configurar Ajustes → Tormenta20 Community Patches → Gerenciar correções.",
-      "applied-guarded": "Tormenta20 Community Patches: a correção \"{name}\" continua ativa por precaução em {reason}, uma versão não verificada; ela só age quando o bug aparece.",
-      "disabled-fixed": "Tormenta20 Community Patches: {reason} já corrige \"{name}\". A correção está desligada e pode continuar assim (Configurar Ajustes → Tormenta20 Community Patches → Gerenciar correções).",
-      "regression": "Tormenta20 Community Patches: o bug de \"{name}\" voltou a ser detectado em {reason}, e a correção foi aplicada de novo. Confira em Configurar Ajustes → Tormenta20 Community Patches → Gerenciar correções."
+      "Summary": "T20CP · {system} — {sections}. Veja na Central do T20CP.",
+      "Separator": " · ",
+      "More": "{names} e mais {count}",
+      "Sections": {
+        "error": "falharam: {names}",
+        "regression": "voltaram a ser necessárias: {names}",
+        "fixed": "o Tormenta20 corrigiu: {names}",
+        "suspected-fixed": "talvez já corrigidas pelo Tormenta20 (seguem ativas): {names}",
+        "unverified": "não aplicadas nesta versão (bug não confirmado): {names}",
+        "unverified-applied": "aplicadas numa versão não verificada: {names}",
+        "incompatible": "indisponíveis nesta versão: {names}"
+      }
     },
     "Manager": {
-      "Name": "Correções",
-      "Label": "Gerenciar correções",
-      "Hint": "Define o modo de cada correção (Automático, Desligado ou Forçar) e mostra o estado e o diagnóstico dela nesta versão do Tormenta20.",
-      "Title": "Tormenta20 Community Patches",
-      "Intro": "Em Automático, cada correção é aplicada enquanto o bug existir e só deixa de ser aplicada quando há evidência forte de que o Tormenta20 o corrigiu; a preferência nunca muda sozinha. Desligado não aplica a correção, mas o diagnóstico continua aparecendo. Forçar aplica mesmo quando o diagnóstico diz o contrário. Alterações exigem recarregar o mundo.",
-      "Issue": "Abrir a issue no GitHub",
+      "Name": "Central do T20CP",
+      "Label": "Central do T20CP",
+      "Hint": "Correções de bugs do Tormenta20 e regras opcionais do módulo, numa só janela.",
+      "Title": "Central do T20CP",
+      "Tabs": {
+        "patches": "Correções",
+        "rules": "Regras opcionais"
+      },
+      "Count": {
+        "active": { "one": "{count} ativa", "other": "{count} ativas" },
+        "unneeded": { "one": "{count} desnecessária", "other": "{count} desnecessárias" },
+        "attention": { "one": "{count} pede atenção", "other": "{count} pedem atenção" },
+        "off": { "one": "{count} desligada", "other": "{count} desligadas" }
+      },
+      "PendingReload": "Recarregue o mundo para aplicar as mudanças.",
+      "Search": "Buscar correção",
+      "Filter": {
+        "all": "Todas",
+        "attention": "Atenção"
+      },
+      "Empty": "Nenhuma correção encontrada.",
+      "Changed": "Mudou neste carregamento",
+      "AlwaysTag": "sempre",
+      "Switch": "Ligada: aplicada enquanto o bug existir. Desligada: não aplicada.",
+      "Expand": "Mostrar detalhes",
+      "Always": "Aplicar sempre (ignorar o diagnóstico)",
+      "Details": "Detalhes técnicos",
+      "Report": "Reportar problema",
+      "Rules": {
+        "casting-restrictions": "Restrições ao lançar magias"
+      },
+      "NoRules": "Nenhuma regra opcional disponível.",
       "Save": "Salvar",
-      "PendingReload": "Há alterações salvas que só valem depois de recarregar o mundo (F5).",
-      "Mode": "Modo da correção",
-      "ForceTitle": "Forçar correções",
+      "SaveReload": "Salvar e recarregar",
+      "ForceTitle": "Aplicar sempre",
       "ForceContent": "Estas correções serão aplicadas mesmo que o diagnóstico indique que o Tormenta20 já corrigiu o bug. Se o sistema já corrigiu, o comportamento pode ficar duplicado (por exemplo, duas condições Sobrecarregado). Continuar?"
     },
     "Groups": {
@@ -227,7 +255,7 @@
       },
       "disabled": {
         "Label": "Desligada",
-        "Hint": "Correção desligada nesta tela."
+        "Hint": "Correção desligada na Central do T20CP."
       },
       "fixed": {
         "Label": "Corrigida no sistema — pode desmarcar",
@@ -235,7 +263,7 @@
       },
       "unverified": {
         "Label": "Versão não verificada",
-        "Hint": "O bug não foi confirmado em {reason}. A correção não foi aplicada nesta carga e a preferência foi mantida; use Forçar se o bug continuar."
+        "Hint": "O bug não foi confirmado em {reason}. A correção não foi aplicada nesta carga e a preferência foi mantida; marque \"Aplicar sempre\" se o bug continuar."
       },
       "incompatible": {
         "Label": "Incompatível",
@@ -261,11 +289,6 @@
         "Label": "Desligada · corrigida no sistema",
         "Hint": "{reason} já corrige o bug; a correção pode continuar desligada."
       }
-    },
-    "Modes": {
-      "auto": "Automático",
-      "off": "Desligado",
-      "force": "Forçar"
     },
     "Diagnosis": {
       "Line": "Diagnóstico: {bug}, confiança {confidence}{evidence}.",

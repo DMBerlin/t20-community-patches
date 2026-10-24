@@ -1,6 +1,20 @@
 import { MODULE_ID } from "./utils.mjs";
 import { normalizeMode, planModeMigration } from "./registry.mjs";
 import { PatchManager } from "./apps/patch-manager.mjs";
+import { MANA_LIMIT_SETTING } from "./rules/mana-limit.mjs";
+import { USAGE_EFFECT_MAX_SETTING } from "./rules/usage-effect-max.mjs";
+import { SAME_ABILITY_SETTING } from "./rules/same-ability-stacking.mjs";
+import { SOURCE_STACKING_SETTING } from "./rules/source-stacking.mjs";
+import { ITEM_EFFECTIVE_STATS_SETTING } from "./rules/item-effective-stats.mjs";
+import {
+  CASTING_CONDITION_SETTING,
+  CONCENTRATION_SETTING,
+  SUSTAINED_SPELL_SETTING
+} from "./rules/casting-restrictions.mjs";
+import { NON_PROFICIENCY_SETTING } from "./rules/non-proficiency-penalties.mjs";
+import { SAVE_BUTTON_SETTING } from "./rules/save-button.mjs";
+import { ATTACK_VS_DEFENSE_SETTING } from "./rules/attack-vs-defense.mjs";
+import { LIMIT_KEY as SEGMENTED_SCENE_LIMIT } from "./patches/segmented-scene-setting.mjs";
 
 export const SETTINGS = {
   /** {[patchId]: "auto"|"off"|"force"}. Booleans and missing ids are read through normalizeMode. */
@@ -8,6 +22,26 @@ export const SETTINGS = {
   /** {[patchId]: StatusRecord} seen by this user on the previous load, used to notify each GM once per change. */
   lastStatus: "lastStatus"
 };
+
+/**
+ * Module settings shown in the Center's "Optional rules" tab, in display order. They are registered with
+ * `config: false`, so they no longer appear in the core settings window. A rule with several settings shows them in
+ * its detail, under the label `T20CP.Center.Rules.<id>`. Only settings registered on this load are listed (the scene
+ * limit only exists while segmented-scene-setting applies its fix).
+ * @type {{id: string, keys: string[]}[]}
+ */
+export const RULE_SETTINGS = [
+  { id: "mana-limit", keys: [MANA_LIMIT_SETTING] },
+  { id: "usage-effect-max", keys: [USAGE_EFFECT_MAX_SETTING] },
+  { id: "same-ability-stacking", keys: [SAME_ABILITY_SETTING] },
+  { id: "source-stacking", keys: [SOURCE_STACKING_SETTING] },
+  { id: "item-effective-stats", keys: [ITEM_EFFECTIVE_STATS_SETTING] },
+  { id: "casting-restrictions", keys: [SUSTAINED_SPELL_SETTING, CASTING_CONDITION_SETTING, CONCENTRATION_SETTING] },
+  { id: "non-proficiency", keys: [NON_PROFICIENCY_SETTING] },
+  { id: "save-button", keys: [SAVE_BUTTON_SETTING] },
+  { id: "attack-vs-defense", keys: [ATTACK_VS_DEFENSE_SETTING] },
+  { id: "segmented-scene-limit", keys: [SEGMENTED_SCENE_LIMIT] }
+];
 
 /** Setting used by 0.1.0, one Boolean per patch. Kept hidden only to migrate its value. */
 const legacyKey = (id) => `patch.${id}`;

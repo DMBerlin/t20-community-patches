@@ -1,0 +1,10 @@
+<nav class="sheet-tabs tabs" role="tablist" aria-label="{{localize "T20CP.Manager.Title"}}">
+  {{#each tabs as |tab|}}
+  <button type="button" role="tab" id="t20cp-tab-{{tab.id}}" aria-controls="t20cp-panel-{{tab.id}}"
+    aria-selected="{{#if tab.active}}true{{else}}false{{/if}}" tabindex="{{#if tab.active}}0{{else}}-1{{/if}}"
+    data-action="tab" data-group="{{tab.group}}" data-tab="{{tab.id}}" {{#if tab.cssClass}}class="{{tab.cssClass}}"{{/if}}>
+    {{#if tab.icon}}<i class="{{tab.icon}}" inert></i>{{/if}}
+    <span>{{localize tab.label}}</span>
+  </button>
+  {{/each}}
+</nav>

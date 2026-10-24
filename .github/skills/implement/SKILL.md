@@ -160,7 +160,7 @@ make active        # o Foundry passa a carregar esta worktree; recarregue o mund
 
 Se o `module.json` mudou, reinicie o Foundry.
 
-Escreva `.work/manual-tests.md` a partir do plano de teste manual da issue, ajustado ao que foi implementado. Use passos numerados, dados concretos e o resultado esperado. O último passo é sempre: "desligar o patch em Gerenciar correções → o comportamento oficial volta".
+Escreva `.work/manual-tests.md` a partir do plano de teste manual da issue, ajustado ao que foi implementado. Use passos numerados, dados concretos e o resultado esperado. O último passo é sempre: "desligar o patch na Central do T20CP → o comportamento oficial volta".
 
 Se o Foundry estiver rodando com um mundo Tormenta20 ativo, ofereça rodar a skill `playtest`, que executa esse plano no Foundry sem intervenção humana e grava as evidências em `.work/playtest.md`.
 

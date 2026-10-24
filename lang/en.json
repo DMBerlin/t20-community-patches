@@ -170,12 +170,12 @@
       "Button": "Configure",
       "Hint": "Splits each scene into segments. While the rule is active, ending a combat does not end scene effects; the GM advances segments by clicking the circles in the players list (right click goes back). Ending the scene resets the counter.",
       "Max": "Segments per scene",
-      "MaxHint": "0 or empty disables the rule. Maximum: {limit} (adjustable in Configure Settings → Tormenta20 Community Patches).",
+      "MaxHint": "0 or empty disables the rule. Maximum: {limit} (adjustable in T20CP Center → Optional rules).",
       "Value": "Current segment",
       "ValueHint": "Between 0 and the number of segments.",
       "Save": "Save",
-      "OverLimit": "Segmented Scene: {max} segments exceed the limit of {limit}. Nothing was saved. Use fewer segments or raise the limit in Configure Settings → Tormenta20 Community Patches.",
-      "StoredOverLimit": "Segmented Scene: the current configuration has {max} segments, above the limit of {limit}. The players list draws one circle per segment and may become slow. Reduce the segments (Configure Settings → Tormenta20 → Segmented Scene) or raise the limit in Configure Settings → Tormenta20 Community Patches.",
+      "OverLimit": "Segmented Scene: {max} segments exceed the limit of {limit}. Nothing was saved. Use fewer segments or raise the limit in T20CP Center → Optional rules.",
+      "StoredOverLimit": "Segmented Scene: the current configuration has {max} segments, above the limit of {limit}. The players list draws one circle per segment and may become slow. Reduce the segments (Configure Settings → Tormenta20 → Segmented Scene) or raise the limit in T20CP Center → Optional rules.",
       "Limit": {
         "Name": "Segmented Scene segment limit",
         "Hint": "Maximum number of segments per scene accepted by the Segmented Scene form. The players list draws one circle per segment on every client, so high values may slow down the interface."
@@ -185,27 +185,55 @@
       "Locked": "Cantrips cannot be combined with other enhancements."
     },
     "Notifications": {
-      "error": "Tormenta20 Community Patches: failed to apply the patch \"{name}\" ({reason}). Check the console (F12).",
-      "fixed": "Tormenta20 Community Patches: {reason} already fixes \"{name}\". The patch was not applied on this load and your preference was kept; you can turn it off in Configure Settings → Tormenta20 Community Patches → Manage patches.",
-      "unverified": "Tormenta20 Community Patches: the patch \"{name}\" was not applied on this load: the bug could not be confirmed on {reason}, an unverified version. Your preference was kept; to apply it anyway, use Force in Configure Settings → Tormenta20 Community Patches → Manage patches.",
-      "applied-unverified": "Tormenta20 Community Patches: the patch \"{name}\" is still applied on {reason}, an unverified version, because the bug was detected.",
-      "incompatible": "Tormenta20 Community Patches: the patch \"{name}\" does not apply to {reason}.",
-      "suspected-fixed": "Tormenta20 Community Patches: {reason} may already fix \"{name}\", but the check does not confirm the whole fix. The patch stays active; review it in Configure Settings → Tormenta20 Community Patches → Manage patches.",
-      "applied-guarded": "Tormenta20 Community Patches: the patch \"{name}\" stays active as a precaution on {reason}, an unverified version; it only acts when the bug shows up.",
-      "disabled-fixed": "Tormenta20 Community Patches: {reason} already fixes \"{name}\". The patch is off and can stay that way (Configure Settings → Tormenta20 Community Patches → Manage patches).",
-      "regression": "Tormenta20 Community Patches: the bug fixed by \"{name}\" was detected again on {reason}, so the patch is applied again. Review it in Configure Settings → Tormenta20 Community Patches → Manage patches."
+      "Summary": "T20CP · {system} — {sections}. See the T20CP Center.",
+      "Separator": " · ",
+      "More": "{names} and {count} more",
+      "Sections": {
+        "error": "failed: {names}",
+        "regression": "needed again: {names}",
+        "fixed": "fixed by Tormenta20: {names}",
+        "suspected-fixed": "maybe already fixed by Tormenta20 (still active): {names}",
+        "unverified": "not applied on this version (bug not confirmed): {names}",
+        "unverified-applied": "applied on an unverified version: {names}",
+        "incompatible": "unavailable on this version: {names}"
+      }
     },
     "Manager": {
-      "Name": "Patches",
-      "Label": "Manage patches",
-      "Hint": "Sets the mode of each patch (Automatic, Off or Force) and shows its state and diagnosis on this Tormenta20 version.",
-      "Title": "Tormenta20 Community Patches",
-      "Intro": "In Automatic, each patch is applied while the bug exists and is only skipped when there is strong evidence that Tormenta20 fixed it; your preference never changes by itself. Off does not apply the patch, but the diagnosis is still shown. Force applies it even when the diagnosis says otherwise. Changes require reloading the world.",
-      "Issue": "Open the issue on GitHub",
+      "Name": "T20CP Center",
+      "Label": "T20CP Center",
+      "Hint": "Tormenta20 bug fixes and the module's optional rules, in one window.",
+      "Title": "T20CP Center",
+      "Tabs": {
+        "patches": "Patches",
+        "rules": "Optional rules"
+      },
+      "Count": {
+        "active": { "one": "{count} active", "other": "{count} active" },
+        "unneeded": { "one": "{count} not needed", "other": "{count} not needed" },
+        "attention": { "one": "{count} needs attention", "other": "{count} need attention" },
+        "off": { "one": "{count} off", "other": "{count} off" }
+      },
+      "PendingReload": "Reload the world to apply the changes.",
+      "Search": "Search patches",
+      "Filter": {
+        "all": "All",
+        "attention": "Attention"
+      },
+      "Empty": "No patch found.",
+      "Changed": "Changed on this load",
+      "AlwaysTag": "always",
+      "Switch": "On: applied while the bug exists. Off: not applied.",
+      "Expand": "Show details",
+      "Always": "Apply always (ignore the diagnosis)",
+      "Details": "Technical details",
+      "Report": "Report a problem",
+      "Rules": {
+        "casting-restrictions": "Spellcasting restrictions"
+      },
+      "NoRules": "No optional rule available.",
       "Save": "Save",
-      "PendingReload": "Some saved changes only take effect after reloading the world (F5).",
-      "Mode": "Patch mode",
-      "ForceTitle": "Force patches",
+      "SaveReload": "Save and reload",
+      "ForceTitle": "Apply always",
       "ForceContent": "These patches will be applied even if the diagnosis says Tormenta20 already fixed the bug. If the system did fix it, the behavior may be doubled (for example, two Encumbered conditions). Continue?"
     },
     "Groups": {
@@ -227,7 +255,7 @@
       },
       "disabled": {
         "Label": "Off",
-        "Hint": "Patch turned off in this window."
+        "Hint": "Patch turned off in the T20CP Center."
       },
       "fixed": {
         "Label": "Fixed in the system — can be turned off",
@@ -235,7 +263,7 @@
       },
       "unverified": {
         "Label": "Unverified version",
-        "Hint": "The bug could not be confirmed on {reason}. The patch was not applied on this load and your preference was kept; use Force if the bug persists."
+        "Hint": "The bug could not be confirmed on {reason}. The patch was not applied on this load and your preference was kept; check \"Apply always\" if the bug persists."
       },
       "incompatible": {
         "Label": "Incompatible",
@@ -261,11 +289,6 @@
         "Label": "Off · fixed in the system",
         "Hint": "{reason} already fixes the bug; the patch can stay off."
       }
-    },
-    "Modes": {
-      "auto": "Automatic",
-      "off": "Off",
-      "force": "Force"
     },
     "Diagnosis": {
       "Line": "Diagnosis: {bug}, {confidence} confidence{evidence}.",

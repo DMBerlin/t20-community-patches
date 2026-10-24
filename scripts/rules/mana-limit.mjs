@@ -274,7 +274,7 @@ export function registerManaLimitSetting() {
     name: "T20CP.ManaLimit.Setting.Name",
     hint: "T20CP.ManaLimit.Setting.Hint",
     scope: "world",
-    config: true,
+    config: false,
     type: String,
     choices: {
       off: "T20CP.ManaLimit.Setting.off",

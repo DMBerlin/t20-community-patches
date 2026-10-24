@@ -160,7 +160,7 @@ function apply() {
     name: "T20CP.SegmentedScene.Limit.Name",
     hint: "T20CP.SegmentedScene.Limit.Hint",
     scope: "world",
-    config: true,
+    config: false,
     type: new foundry.data.fields.NumberField({ required: true, nullable: false, integer: true, min: 1, initial: DEFAULT_LIMIT }),
     default: DEFAULT_LIMIT,
     onChange: warnIfOverLimit

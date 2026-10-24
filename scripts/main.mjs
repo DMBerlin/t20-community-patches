@@ -3,10 +3,13 @@ import { MODULE_ID } from "./utils.mjs";
 import {
   APPLY_STATES,
   applyLateDiagnosis,
+  createLateSummary,
   pickLateNotification,
   pickNotification,
   resolvePatchState,
-  statusRecord
+  statusRecord,
+  summarizeNotifications,
+  summaryMessage
 } from "./registry.mjs";
 import { SETTINGS, getPatchMode, migrateLegacySettings, registerSettings } from "./settings.mjs";
 import { installManaLimitRule, registerManaLimitSetting } from "./rules/mana-limit.mjs";
@@ -21,7 +24,8 @@ import { installAttackVsDefenseRule, registerAttackVsDefenseSetting } from "./ru
 
 /**
  * @type {{id: string, group: string, mode: import("./registry.mjs").PatchMode, state: import("./registry.mjs").PatchState,
- *   diagnosis?: import("./registry.mjs").Diagnosis, reason?: string}[]}
+ *   diagnosis?: import("./registry.mjs").Diagnosis, reason?: string, changed?: boolean}[]}
+ * `changed` marks the patches cited in a notification on this load.
  */
 const status = [];
 
@@ -127,16 +131,34 @@ Hooks.once("init", () => {
   game.modules.get(MODULE_ID).api = { status, groups: GROUPS };
 });
 
+/** Waits this long after "ready" for the late diagnoses before summarizing them. */
+const LATE_SUMMARY_DELAY = 10000;
+
 /**
- * Shows the notification picked for a patch, if any.
+ * A notification entry for the summary, or null.
  * @param {(typeof status)[number]} entry
  * @param {{key: string, level: "info"|"warn"|"error"} | null} notification
  */
-function notify(entry, notification) {
-  if (!notification) return;
-  const name = game.i18n.localize(`T20CP.Patches.${entry.id}.Name`);
-  const message = game.i18n.format(`T20CP.Notifications.${notification.key}`, { name, reason: entry.reason ?? "" });
-  ui.notifications[notification.level](message, { permanent: true });
+function noteFor(entry, notification) {
+  if (!notification) return null;
+  return { id: entry.id, name: game.i18n.localize(`T20CP.Patches.${entry.id}.Name`), ...notification };
+}
+
+/**
+ * Shows one notification that summarizes several patches and marks them as changed in the Center.
+ * @param {ReturnType<typeof noteFor>[]} notes
+ */
+function notify(notes) {
+  const summary = summarizeNotifications(notes);
+  if (!summary) return;
+  for (const id of summary.ids) {
+    const entry = status.find((s) => s.id === id);
+    if (entry) entry.changed = true;
+  }
+  const message = summaryMessage(summary, `${game.system.title} ${game.system.version}`, (key, data) =>
+    game.i18n.format(key, data)
+  );
+  ui.notifications[summary.level](message, { permanent: summary.permanent });
 }
 
 Hooks.once("ready", async () => {
@@ -156,17 +178,37 @@ Hooks.once("ready", async () => {
     console.error(`${MODULE_ID} | Failed to read the last patch status`, err);
   }
   const records = {};
+  const notes = [];
   for (const entry of status) {
     const record = statusRecord(entry, game.system.version);
     records[entry.id] = record;
     try {
-      notify(entry, pickNotification(record, previous[entry.id]));
+      notes.push(noteFor(entry, pickNotification(record, previous[entry.id])));
     } catch (err) {
-      console.error(`${MODULE_ID} | Failed to notify about ${entry.id}`, err);
+      console.error(`${MODULE_ID} | Failed to pick the notification for ${entry.id}`, err);
     }
   }
+  try {
+    notify(notes);
+  } catch (err) {
+    console.error(`${MODULE_ID} | Failed to notify about the patches`, err);
+  }
   await saveRecords(records);
-  for (const patch of PATCHES) runLateProbe(patch, records[patch.id], previous[patch.id]);
+  const probed = PATCHES.filter(hasLateProbe);
+  const late = createLateSummary({
+    pending: probed.length,
+    emit: (batch) => {
+      try {
+        notify(batch);
+      } catch (err) {
+        console.error(`${MODULE_ID} | Failed to notify about the late diagnoses`, err);
+      }
+    },
+    setTimer: (fn, ms) => setTimeout(fn, ms),
+    clearTimer: (handle) => clearTimeout(handle),
+    delay: LATE_SUMMARY_DELAY
+  });
+  for (const patch of probed) runLateProbe(patch, records[patch.id], previous[patch.id], late);
 });
 
 /** @param {Record<string, import("./registry.mjs").StatusRecord>} records */
@@ -180,14 +222,25 @@ async function saveRecords(records) {
 }
 
 /**
- * Runs an applied patch's lateProbe without blocking "ready", then updates its status and notifies about news.
+ * Whether a patch has a lateProbe to run on this load (only applied patches run it).
+ * @param {import("./patches/index.mjs").Patch} patch
+ */
+function hasLateProbe(patch) {
+  const entry = status.find((s) => s.id === patch.id);
+  return typeof patch.lateProbe === "function" && !!entry && APPLY_STATES.has(entry.state);
+}
+
+/**
+ * Runs an applied patch's lateProbe without blocking "ready", then updates its status and hands any news to the late
+ * summary. The summary is always settled, even when the probe fails or learns nothing.
  * @param {import("./patches/index.mjs").Patch} patch
  * @param {import("./registry.mjs").StatusRecord} [initial]  Record saved on "ready" for this load.
  * @param {unknown} [previous]                                 Record saved by the previous load.
+ * @param {{settle: (entry?: object|null) => void}} summary
  */
-function runLateProbe(patch, initial, previous) {
+function runLateProbe(patch, initial, previous, summary) {
   const entry = status.find((s) => s.id === patch.id);
-  if (typeof patch.lateProbe !== "function" || !entry || !APPLY_STATES.has(entry.state)) return;
+  let note = null;
   Promise.resolve()
     .then(() => patch.lateProbe())
     .then(async (late) => {
@@ -199,8 +252,9 @@ function runLateProbe(patch, initial, previous) {
       Object.assign(entry, next);
       console.log(`${MODULE_ID} | Late diagnosis: ${patch.id} (${entry.state}${describe(entry.diagnosis)})`);
       const record = statusRecord(entry, game.system.version);
-      notify(entry, pickLateNotification(record, initial, previous));
+      note = noteFor(entry, pickLateNotification(record, initial, previous));
       await saveRecords({ [patch.id]: record });
     })
-    .catch((err) => console.error(`${MODULE_ID} | Late diagnosis failed: ${patch.id}`, err));
+    .catch((err) => console.error(`${MODULE_ID} | Late diagnosis failed: ${patch.id}`, err))
+    .finally(() => summary.settle(note));
 }

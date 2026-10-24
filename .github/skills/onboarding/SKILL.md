@@ -102,7 +102,7 @@ Carregue sob demanda, quando a tarefa pedir:
 | publicar uma versão | a skill `release` |
 | entender um bug do sistema | trechos do bundle `tormenta20.mjs`, localizados por busca (`grep -n`), **nunca** o arquivo inteiro (mais de 20 mil linhas) |
 | confirmar uma API do Foundry | o arquivo do core encontrado por busca em `$FOUNDRY_CORE/client` ou `$FOUNDRY_CORE/common` |
-| mexer na interface do gerenciador | `scripts/apps/patch-manager.mjs`, `templates/patch-manager.hbs`, `styles/` |
+| mexer na interface do gerenciador | `scripts/apps/patch-manager.mjs` (Central do T20CP), `templates/patch-manager*.hbs`, `styles/` |
 | mexer em configurações ou migração | `scripts/settings.mjs` |
 | histórico de decisões de um patch | a issue dele (comentários) e o `git log --follow` do arquivo |
 

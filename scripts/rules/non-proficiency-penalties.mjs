@@ -556,7 +556,7 @@ export function registerNonProficiencySetting() {
     name: "T20CP.NonProficiency.Setting.Name",
     hint: "T20CP.NonProficiency.Setting.Hint",
     scope: "world",
-    config: true,
+    config: false,
     type: String,
     choices: { off: "T20CP.NonProficiency.Setting.off", on: "T20CP.NonProficiency.Setting.on" },
     default: "off",

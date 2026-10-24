@@ -1119,7 +1119,7 @@ export function registerItemEffectiveStatsSetting() {
     name: `${I18N}.Setting.Name`,
     hint: `${I18N}.Setting.Hint`,
     scope: "world",
-    config: true,
+    config: false,
     type: String,
     choices: Object.fromEntries(MODES.map((m) => [m, `${I18N}.Setting.${m}`])),
     default: DEFAULT_MODE,

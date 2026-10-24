@@ -23,6 +23,10 @@ Não edite as seções de versão à mão.
 - Regra opcional "Teste de resistência pelo card": botões para os alvos rolarem Fortitude, Reflexos ou Vontade contra a CD, com passou/falhou, o efeito do livro e o dano pela metade por alvo (#58).
 - Regra opcional "Ataque contra Defesa": o card do ataque mostra se acertou ou errou cada alvo marcado, o crítico só vale num acerto e Caído dá +5 na Defesa contra ataques à distância (#42).
 
+### Changed
+
+- A "Central do T20CP" substitui o gerenciador: uma linha por correção com interruptor e detalhes ao expandir, as regras opcionais numa aba própria e um único aviso por carregamento, com link para reportar problemas (#73).
+
 ### Fixed
 
 - `appended-usage-changes` (#23): a Inspiração Marcial soma o dano uma única vez e não vaza mais o bônus para os usos seguintes da Inspiração. Afeta Tormenta20 1.6.5.

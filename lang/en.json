@@ -615,6 +615,19 @@
           "Description": "−2 Defense until your next turn; delete this effect at the start of your next turn (Tormenta20 Jogo do Ano, ch. 5, \"Investida\", p. 235)."
         },
         "Reference": "Tormenta20 Jogo do Ano, ch. 5, Table 5-3, p. 239"
+      },
+    "NonlethalDamage": {
+        "Setting": {
+          "Name": "Nonlethal damage",
+          "Hint": "Core rulebook rule (ch. 5, \"Wounds & Death\", p. 236): a \"Nonlethal\" button next to the apply damage buttons makes 1x, 2x and ½ apply nonlethal damage. HP lost this way are kept in the sheet's \"Nonlethal\" field, count toward falling unconscious but not toward bleeding or dying, and healing recovers them first. With the rule off, healing still consumes the nonlethal HP already recorded.",
+          "off": "Off",
+          "on": "Apply the book's rule"
+        },
+        "Toggle": "Nonlethal",
+        "Tooltip": "Nonlethal damage: while this button is pressed, 1x, 2x and ½ apply the damage as nonlethal.",
+        "Sheet": "Nonlethal HP: {nonlethal} · Lethal HP: {lethal}",
+        "NoTokens": "Select one or more tokens to apply the nonlethal damage.",
+        "Reference": "Tormenta20 Jogo do Ano, ch. 5, \"Wounds & Death\", p. 236"
       }
   }
 }

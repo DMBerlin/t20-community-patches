@@ -27,6 +27,7 @@ import {
   registerSituationalModifiersSetting
 } from "./rules/situational-modifiers.mjs";
 import { installManaQueue } from "./rules/mana-queue.mjs";
+import { installNonlethalRule, registerNonlethalSetting } from "./rules/nonlethal-damage.mjs";
 
 /**
  * @type {{id: string, group: string, mode: import("./registry.mjs").PatchMode, state: import("./registry.mjs").PatchState,
@@ -83,6 +84,7 @@ Hooks.once("init", () => {
   registerAttackVsDefenseSetting();
   registerTrainedOnlySetting();
   registerSituationalModifiersSetting();
+  registerNonlethalSetting();
   if (game.system.id === "tormenta20") {
     // Transparent (only orders each actor's spendMana calls) and installed with every rule off.
     try {
@@ -146,6 +148,12 @@ Hooks.once("init", () => {
       installTrainedOnlyRule();
     } catch (err) {
       console.error(`${MODULE_ID} | Failed to install the trained-only skills rule`, err);
+    }
+    // After the patches: its prepareDerivedData wrappers sit outside death-threshold's and widen the floor it sets.
+    try {
+      installNonlethalRule();
+    } catch (err) {
+      console.error(`${MODULE_ID} | Failed to install the nonlethal damage rule`, err);
     }
     // Last on purpose: its wrappers must sit outside those of the patches and the other rules.
     try {

@@ -16,6 +16,7 @@ import { SAVE_BUTTON_SETTING } from "./rules/save-button.mjs";
 import { ATTACK_VS_DEFENSE_SETTING } from "./rules/attack-vs-defense.mjs";
 import { TRAINED_ONLY_SETTING } from "./rules/trained-only-skills.mjs";
 import { SITUATIONAL_SETTING } from "./rules/situational-modifiers.mjs";
+import { NONLETHAL_SETTING } from "./rules/nonlethal-damage.mjs";
 import { LIMIT_KEY as SEGMENTED_SCENE_LIMIT } from "./patches/segmented-scene-setting.mjs";
 
 export const SETTINGS = {
@@ -44,6 +45,7 @@ export const RULE_SETTINGS = [
   { id: "attack-vs-defense", keys: [ATTACK_VS_DEFENSE_SETTING] },
   { id: "situational-modifiers", keys: [SITUATIONAL_SETTING] },
   { id: "trained-only-skills", keys: [TRAINED_ONLY_SETTING] },
+  { id: "nonlethal-damage", keys: [NONLETHAL_SETTING] },
   { id: "segmented-scene-limit", keys: [SEGMENTED_SCENE_LIMIT] }
 ];
 

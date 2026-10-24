@@ -29,6 +29,7 @@ import {
 } from "./rules/situational-modifiers.mjs";
 import { installManaQueue } from "./rules/mana-queue.mjs";
 import { installNonlethalRule, registerNonlethalSetting } from "./rules/nonlethal-damage.mjs";
+import { installNonlethalAttackRule } from "./rules/nonlethal-attack.mjs";
 
 /**
  * @type {{id: string, group: string, mode: import("./registry.mjs").PatchMode, state: import("./registry.mjs").PatchState,
@@ -163,6 +164,12 @@ Hooks.once("init", () => {
       installNonlethalRule();
     } catch (err) {
       console.error(`${MODULE_ID} | Failed to install the nonlethal damage rule`, err);
+    }
+    // After situational-modifiers: both dialog hooks anchor on "Melhor/Pior de 2d20", and the later one ends up first.
+    try {
+      installNonlethalAttackRule();
+    } catch (err) {
+      console.error(`${MODULE_ID} | Failed to install the nonlethal attack choice`, err);
     }
     // Last on purpose: its wrappers must sit outside those of the patches and the other rules.
     try {

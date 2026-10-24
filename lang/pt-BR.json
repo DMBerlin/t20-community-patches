@@ -669,6 +669,32 @@
         "light": "Armaduras leves",
         "all": "Todas as armaduras"
       }
-    }
+    },
+      "NonlethalAttack": {
+        "Label": "Dano",
+        "Choice": {
+          "lethal": "Letal",
+          "nonlethal": "Não letal"
+        },
+        "FormulaLabel": {
+          "lethal": "Letal",
+          "nonlethal": "Não letal"
+        },
+        "Penalty": "{value} no ataque",
+        "Waived": "sem penalidade ({powers})",
+        "Waiver": {
+          "piedoso": "Ataque Piedoso",
+          "estilo": "Estilo Desarmado",
+          "paoCirco": "Pão e Circo"
+        },
+        "Field": {
+          "Label": "Dano natural",
+          "Hint": "Tipo de dano que a arma causa sem penalidade. Automático: não letal para o Ataque desarmado e para armas com o encanto Piedosa ativo; letal para as demais. Escolher o outro tipo no diálogo de uso custa −5 no ataque (Tormenta20 Jogo do Ano, p. 236).",
+          "auto": "Automático",
+          "lethal": "Letal",
+          "nonlethal": "Não letal"
+        },
+        "Reference": "Tormenta20 Jogo do Ano, cap. 5, \"Dano Não Letal\", p. 236"
+      }
   }
 }

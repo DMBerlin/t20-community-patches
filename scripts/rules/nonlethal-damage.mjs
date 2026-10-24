@@ -15,6 +15,7 @@
  *   a nonlethal loss is added to N. Healing consumes N even while the rule is off, so the counter never goes stale.
  * - prepareDerivedData: the floor applies to lethal HP only (min base − N).
  * - Sheet: a "Não letal" field under the HP.
+ * - The toggle starts pressed when the damage roll recorded a nonlethal choice (#74, nonlethal-attack.mjs).
  *
  * The functions of the lethal HP contract (#51) are exported from here: lethalSnapshot, rebaseSnapshot,
  * hpSnapshotOf, nonlethalOf and touchesLethalHp.
@@ -24,6 +25,8 @@ import { allActors } from "./source-stacking.mjs";
 
 export const NONLETHAL_SETTING = "nonlethalDamageRule";
 export const NONLETHAL_FLAG = "nonlethal";
+/** roll.options[MODULE_ID][ROLL_DATA_KEY] = {v, nonlethal}: the choice made when attacking (#74). */
+export const ROLL_DATA_KEY = "nonlethal";
 export const ACTOR_TYPES = Object.freeze(["character", "npc", "simple"]);
 export const TOGGLE_CLASS = "t20cp-nonlethal";
 export const FIELD_CLASS = "t20cp-nonlethal-field";
@@ -342,11 +345,16 @@ function rootOf(html) {
   return html?.[0] ?? html ?? null;
 }
 
-function createToggle() {
+/** Whether the damage roll recorded a nonlethal choice when attacking (#74). */
+export function recordedNonlethal(roll) {
+  return roll?.options?.[MODULE_ID]?.[ROLL_DATA_KEY]?.nonlethal === true;
+}
+
+function createToggle(pressed = false) {
   const button = document.createElement("button");
   button.type = "button";
   button.classList.add(TOGGLE_CLASS);
-  button.setAttribute("aria-pressed", "false");
+  button.setAttribute("aria-pressed", String(!!pressed && ruleEnabled()));
   button.title = t("Toggle");
   button.dataset.tooltip = `${t("Tooltip")} (${t("Reference")})`;
   button.innerHTML = '<i class="fa-solid fa-hand-fist" inert></i>';
@@ -406,7 +414,9 @@ export function onRenderChatMessage(message, html) {
     const containers = root.querySelectorAll(".roll.roll--dano .dice-btn.left");
     if (!containers.length) return;
     for (const container of containers) {
-      if (!container.querySelector(`button.${TOGGLE_CLASS}`)) container.append(createToggle());
+      if (container.querySelector(`button.${TOGGLE_CLASS}`)) continue;
+      const row = container.closest?.(".roll");
+      container.append(createToggle(recordedNonlethal(pickDamageRoll(message?.rolls, row?.dataset?.rollTitle))));
     }
     if (!listened.has(root)) {
       listened.add(root);

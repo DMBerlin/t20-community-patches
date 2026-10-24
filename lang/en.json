@@ -669,6 +669,32 @@
         "light": "Light armor",
         "all": "All armor"
       }
-    }
+    },
+      "NonlethalAttack": {
+        "Label": "Damage",
+        "Choice": {
+          "lethal": "Lethal",
+          "nonlethal": "Nonlethal"
+        },
+        "FormulaLabel": {
+          "lethal": "Lethal",
+          "nonlethal": "Nonlethal"
+        },
+        "Penalty": "{value} on the attack",
+        "Waived": "no penalty ({powers})",
+        "Waiver": {
+          "piedoso": "Ataque Piedoso",
+          "estilo": "Estilo Desarmado",
+          "paoCirco": "Pão e Circo"
+        },
+        "Field": {
+          "Label": "Natural damage",
+          "Hint": "Damage type the weapon deals without penalty. Automatic: nonlethal for the unarmed attack (Ataque desarmado) and for weapons with an active Piedosa enchantment; lethal for the others. Choosing the other type in the use dialog costs −5 on the attack (Tormenta20 Jogo do Ano, p. 236).",
+          "auto": "Automatic",
+          "lethal": "Lethal",
+          "nonlethal": "Nonlethal"
+        },
+        "Reference": "Tormenta20 Jogo do Ano, ch. 5, \"Dano Não Letal\", p. 236"
+      }
   }
 }

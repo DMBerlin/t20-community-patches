@@ -46,6 +46,11 @@ export function usePurposeOf(item) {
   return contexts.get(item)?.purpose ?? null;
 }
 
+/** Whether the item is the clone of an ItemT20#roll in progress (one per use). */
+export function inItemUse(item) {
+  return contexts.has(item);
+}
+
 /** @param {() => boolean} isOn */
 export function registerTargetConsumer(isOn) {
   consumers.add(isOn);

@@ -139,6 +139,10 @@
         "Name": "Desempate de Iniciativa",
         "Hint": "Quando dois combatentes tiram o mesmo resultado de Iniciativa, age primeiro quem tem o maior valor na perícia Iniciativa no momento da rolagem, como manda o livro. Se a perícia também empatar, age primeiro quem tem o maior valor no atributo da perícia (Destreza, por padrão). A ordem se mantém durante o combate. Antes, o empate era decidido ao acaso."
       },
+      "rd-exception-once": {
+        "Name": "RD com exceção uma vez por ataque",
+        "Hint": "A redução de dano com exceção (como 10/luz do Vampiro) é aplicada uma vez ao ataque, e não uma vez para cada tipo de dano. Penetrante também passa a reduzi-la."
+      },
       "skill-modifier-attributes": {
         "Name": "Bônus temporários de atributo nos modificadores globais",
         "Hint": "Modificadores globais de perícia, atributo, dano e cura que usam um atributo (como o @car da Aura Sagrada ou o @con de Trincado) passam a usar o atributo com os bônus temporários (itens, magias, poções), na ficha e nas rolagens, como o detalhamento já mostrava. PV e PM continuam ignorando esses bônus."

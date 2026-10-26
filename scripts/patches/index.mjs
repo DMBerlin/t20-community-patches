@@ -39,6 +39,7 @@ import usageBuffTemplates from "./usage-buff-templates.mjs";
 import initiativeTiebreak from "./initiative-tiebreak.mjs";
 import initialClass from "./initial-class.mjs";
 import racialAttributeChoice from "./racial-attribute-choice.mjs";
+import rdExceptionOnce from "./rd-exception-once.mjs";
 
 /**
  * Display groups, in the order they appear in the patch manager. i18n: T20CP.Groups.<id>.
@@ -69,4 +70,4 @@ export const GROUPS = ["conditions", "sheet-effects", "usage-effects", "items", 
  */
 
 /** @type {Patch[]} */
-export const PATCHES = [statusEffectsCompendium, encumberedStatusSync, ongoingDamageConditions, proneDefense, conditionSkillLists, deathThreshold, itemEffectsOnActorSheet, usageEffectToggle, conditionalPowers, modifiedFieldsFilter, fieldBonusesBreakdown, fieldBonusesTooltip, attributeBreakdown, suppressedUsageEffects, appendedUsageChanges, linkedUsageEffects, usageBuffTemplates, temporaryUsageEffectExpiry, abilityDialogCost, spellCostZero, armorPenaltyReduction, finesseAgileWeapons, spellDcBonus, threateningCritRange, alchemicalDamageBonus, hideLegacyUpgrades, segmentedSceneSetting, restRecovery, menaceXpFraction, saveSkillBonus, sheetInitiativeToken, spellCompendiumData, enchantmentData, raceData, partnerCombatant, skillModifierAttributes, engenhoqueiroArmorPenalty, bestiaryCreatureType, initiativeTiebreak, initialClass, racialAttributeChoice];
+export const PATCHES = [statusEffectsCompendium, encumberedStatusSync, ongoingDamageConditions, proneDefense, conditionSkillLists, deathThreshold, itemEffectsOnActorSheet, usageEffectToggle, conditionalPowers, modifiedFieldsFilter, fieldBonusesBreakdown, fieldBonusesTooltip, attributeBreakdown, suppressedUsageEffects, appendedUsageChanges, linkedUsageEffects, usageBuffTemplates, temporaryUsageEffectExpiry, abilityDialogCost, spellCostZero, armorPenaltyReduction, finesseAgileWeapons, spellDcBonus, threateningCritRange, alchemicalDamageBonus, hideLegacyUpgrades, segmentedSceneSetting, restRecovery, menaceXpFraction, saveSkillBonus, sheetInitiativeToken, spellCompendiumData, enchantmentData, raceData, partnerCombatant, skillModifierAttributes, engenhoqueiroArmorPenalty, bestiaryCreatureType, initiativeTiebreak, initialClass, racialAttributeChoice, rdExceptionOnce];

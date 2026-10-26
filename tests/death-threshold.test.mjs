@@ -1,12 +1,15 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import patch, {
+  allowsBelowThreshold,
   applyDeathThreshold,
   deathThreshold,
   diagnoseNpcSource,
-  diagnoseSamples
+  diagnoseSamples,
+  wrapDamageFloor
 } from "../scripts/patches/death-threshold.mjs";
 import { isSystemVersionAffected } from "../scripts/utils.mjs";
+import { withNonlethalCall } from "../scripts/rules/nonlethal-damage.mjs";
 
 test("deathThreshold uses -10 or minus half the maximum, whichever is lower", () => {
   const cases = [[8, -10], [12, -10], [19, -10], [20, -10], [21, -10], [22, -11], [30, -15], [0, -10], ["25", -12]];
@@ -104,4 +107,85 @@ test("diagnoseSamples learns nothing from invalid, missing or unexpected samples
 
 test("covers the verified system version", () => {
   assert.equal(isSystemVersionAffected("1.6.5", patch.system.affected), true);
+});
+
+test("allowsBelowThreshold needs the unbounded floor and an actor covered by the rule", () => {
+  assert.equal(allowsBelowThreshold({ floor: "unbounded", covered: true }), true);
+  assert.equal(allowsBelowThreshold({ floor: "clamp", covered: true }), false);
+  assert.equal(allowsBelowThreshold({ floor: "unbounded", covered: false }), false);
+  assert.equal(allowsBelowThreshold({ floor: undefined, covered: true }), false);
+});
+
+/** Mimics the system: clamps synchronously, then awaits the update. */
+function damageActor(value = 5) {
+  const actor = { system: { attributes: { pv: { value, min: -10, max: 20 } } } };
+  actor.applyDamage = async function (amount) {
+    const pv = this.system.attributes.pv;
+    const next = Math.max(pv.min, pv.value - amount);
+    await null;
+    pv.value = next;
+    return { self: this, next };
+  };
+  return actor;
+}
+
+test("wrapDamageFloor lets damage pass the threshold and restores pv.min before any await", async () => {
+  const actor = damageActor();
+  const original = actor.applyDamage;
+  actor.applyDamage = wrapDamageFloor(original, () => true);
+  const promise = actor.applyDamage(30);
+  assert.equal(actor.system.attributes.pv.min, -10);
+  const result = await promise;
+  assert.equal(actor.system.attributes.pv.value, -25);
+  assert.equal(result.self, actor);
+  assert.equal(result.next, -25);
+});
+
+test("wrapDamageFloor keeps the clamp when not allowed, when allows throws or without HP", async () => {
+  const kept = damageActor();
+  kept.applyDamage = wrapDamageFloor(kept.applyDamage, () => false);
+  await kept.applyDamage(30);
+  assert.equal(kept.system.attributes.pv.value, -10);
+
+  const throwing = damageActor();
+  throwing.applyDamage = wrapDamageFloor(throwing.applyDamage, () => { throw new Error("boom"); });
+  const warn = console.warn;
+  console.warn = () => {};
+  try {
+    await throwing.applyDamage(30);
+  } finally {
+    console.warn = warn;
+  }
+  assert.equal(throwing.system.attributes.pv.value, -10);
+
+  let calls = 0;
+  const noHp = { system: {} };
+  const wrapped = wrapDamageFloor(function (...args) { calls++; return [this, ...args]; }, () => true);
+  assert.deepEqual(wrapped.call(noHp, 1, 2), [noHp, 1, 2]);
+  assert.equal(calls, 1);
+});
+
+test("wrapDamageFloor restores pv.min and rethrows a synchronous error", () => {
+  const actor = { system: { attributes: { pv: { value: 5, min: -10 } } } };
+  const wrapped = wrapDamageFloor(function () {
+    assert.equal(this.system.attributes.pv.min, Number.NEGATIVE_INFINITY);
+    throw new Error("sync");
+  }, () => true);
+  assert.throws(() => wrapped.call(actor), /sync/);
+  assert.equal(actor.system.attributes.pv.min, -10);
+});
+
+test("wrapDamageFloor called through the nonlethal Proxy leaves the real pv.min untouched", async () => {
+  const actor = damageActor();
+  const original = actor.applyDamage;
+  let allowed = true;
+  actor.applyDamage = wrapDamageFloor(original, () => allowed);
+  const cancelled = wrapDamageFloor(function () { return null; }, () => allowed);
+  cancelled.call(withNonlethalCall(actor));
+  assert.equal(actor.system.attributes.pv.min, -10);
+  await actor.applyDamage.call(withNonlethalCall(actor), 3);
+  assert.equal(actor.system.attributes.pv.min, -10);
+  allowed = false;
+  await actor.applyDamage(30);
+  assert.equal(actor.system.attributes.pv.value, -10);
 });

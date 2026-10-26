@@ -9,8 +9,12 @@
  *
  * Fix: after each actor type prepares its derived data, pv.min is set to -max(10, floor(max / 2)). Nothing is
  * stored: pv.min is derived data.
+ *
+ * Setting "HP below the death threshold" (#51): independent of this patch's mode, damage may take actors covered by
+ * the "Zero HP states" rule below pv.min, which then marks them Dead. Installed by main.mjs, so the patch never
+ * imports the rule.
  */
-import { markWrapper, stripComments, unwrap } from "../utils.mjs";
+import { MODULE_ID, markWrapper, stripComments, unwrap } from "../utils.mjs";
 
 const LOG = "t20-community-patches | death-threshold:";
 export const DEATH_FLOOR = -10;
@@ -87,6 +91,66 @@ export function diagnoseSamples(samples, required) {
     return { bug: "fixed", confidence: "high", evidence: `minimum HP follows the rule for ${required.join(", ")}` };
   }
   return undefined;
+}
+
+/* -------------------------------------------- */
+/*  HP below the threshold (#51)                */
+/* -------------------------------------------- */
+
+export const DEATH_FLOOR_SETTING = "deathThresholdFloor";
+export const DEATH_FLOOR_MODES = ["unbounded", "clamp"];
+
+/** Registers the world setting. Runs on "init" whatever the patch state: the system's clamp always exists. */
+export function registerDeathThresholdFloorSetting() {
+  game.settings.register(MODULE_ID, DEATH_FLOOR_SETTING, {
+    name: "T20CP.Patches.death-threshold.Floor.Name",
+    hint: "T20CP.Patches.death-threshold.Floor.Hint",
+    scope: "world",
+    config: false,
+    type: String,
+    choices: Object.fromEntries(DEATH_FLOOR_MODES.map((m) => [m, `T20CP.Patches.death-threshold.Floor.${m}`])),
+    default: "unbounded"
+  });
+}
+
+/** Whether damage may take this actor below the death threshold. */
+export function allowsBelowThreshold({ floor, covered }) {
+  return floor === "unbounded" && covered === true;
+}
+
+/**
+ * Runs a damage method with pv.min lifted, so its synchronous clamp keeps values below the threshold.
+ * pv.min is derived data; it is restored as soon as the original returns its Promise, before any await resumes.
+ */
+export function wrapDamageFloor(original, allows) {
+  return markWrapper(function (...args) {
+    const pv = this?.system?.attributes?.pv;
+    let lifted = false;
+    let min;
+    try {
+      // Already lifted (the nonlethal Proxy reads -Infinity but writes to the real data): saving it would keep it.
+      if (pv && typeof pv === "object" && pv.min !== Number.NEGATIVE_INFINITY && allows(this)) {
+        min = pv.min;
+        pv.min = Number.NEGATIVE_INFINITY;
+        lifted = true;
+      }
+    } catch (err) {
+      console.warn(`${LOG} could not check the HP floor; keeping the system's clamp.`, err);
+    }
+    try {
+      return original.apply(this, args);
+    } finally {
+      if (lifted) pv.min = min;
+    }
+  }, original);
+}
+
+/** Wraps the system's damage methods. `allows` reads the settings on every call. */
+export function installDamageFloor(allows) {
+  const proto = CONFIG.Actor.documentClass.prototype;
+  for (const name of ["applyDamage", "applyDamageV2"]) {
+    if (typeof proto[name] === "function") proto[name] = wrapDamageFloor(proto[name], allows);
+  }
 }
 
 /* -------------------------------------------- */

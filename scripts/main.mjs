@@ -36,6 +36,13 @@ import {
   installCreatureTypeTraitsRule,
   registerCreatureTypeTraitsSetting
 } from "./rules/creature-type-traits.mjs";
+import { coversActor, installDyingStatesRule, registerDyingStatesSetting } from "./rules/dying-states.mjs";
+import {
+  DEATH_FLOOR_SETTING,
+  allowsBelowThreshold,
+  installDamageFloor,
+  registerDeathThresholdFloorSetting
+} from "./patches/death-threshold.mjs";
 
 /**
  * @type {{id: string, group: string, mode: import("./registry.mjs").PatchMode, state: import("./registry.mjs").PatchState,
@@ -97,6 +104,9 @@ Hooks.once("init", () => {
   registerNonlethalSetting();
   registerCombatManeuversSetting();
   registerCreatureTypeTraitsSetting();
+  registerDyingStatesSetting();
+  // Belongs to the death-threshold patch, but exists in every patch mode: the system's damage clamp always does.
+  registerDeathThresholdFloorSetting();
   if (game.system.id === "tormenta20") {
     // Transparent (only orders each actor's spendMana calls) and installed with every rule off.
     try {
@@ -192,6 +202,21 @@ Hooks.once("init", () => {
       installNonlethalAttackRule();
     } catch (err) {
       console.error(`${MODULE_ID} | Failed to install the nonlethal attack choice`, err);
+    }
+    try {
+      installDyingStatesRule();
+    } catch (err) {
+      console.error(`${MODULE_ID} | Failed to install the dying states rule`, err);
+    }
+    // Before creature-type-traits: its applyDamageV2 wrapper may await a dialog before calling the inner chain, so the
+    // floor must sit inside it to stay lifted while the system clamps synchronously.
+    try {
+      installDamageFloor((actor) => allowsBelowThreshold({
+        floor: game.settings.get(MODULE_ID, DEATH_FLOOR_SETTING),
+        covered: coversActor(actor)
+      }));
+    } catch (err) {
+      console.error(`${MODULE_ID} | Failed to install the death threshold floor`, err);
     }
     // After the patches and the other rules: its applyDamageV2 wrapper sits outside theirs and makes a single inner
     // call, so their floors and reductions see one HP change.

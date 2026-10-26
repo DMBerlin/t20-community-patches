@@ -30,6 +30,7 @@ Não edite as seções de versão à mão.
 - Regra opcional "Chance de falha por camuflagem": rola 1d10 junto com o ataque contra alvos com camuflagem (20% leve, 50% total; Cego e Invisível automáticos), mostra o resultado no card e cancela o crítico quando o ataque erra todos os alvos (#49).
 - Regra opcional "Manobras de combate": no diálogo de uso de um ataque corpo a corpo (ou pelo botão no card de ataque), resolve agarrar, derrubar, desarmar, empurrar, quebrar e atropelar como teste oposto, sem rolar dano (o alvo rola com a própria arma e efeitos), com tamanho e desempate do livro, indicando a condição a aplicar (#48).
 - Regra opcional "Traços de tipo de criatura": mortos-vivos e construtos ficam imunes a condições de cansaço, metabolismo e veneno, mortos-vivos se curam com trevas e sofrem dano de luz da cura, e construtos não recuperam PV por cura (#50).
+- Regra opcional "Estados de PV zero": com 0 PV ou menos aplica Inconsciente e Sangrando, estabiliza com cura, acorda acima de 0 e aplica Morto no limiar de morte; opcionalmente, o PV pode passar do limiar, e a criatura recebe Morto ao chegar a ele (#51).
 
 ### Changed
 

@@ -23,7 +23,13 @@
       },
       "death-threshold": {
         "Name": "PV mínimo (limiar de morte)",
-        "Hint": "O personagem morre em −10 PV ou em menos a metade dos PV máximos, o que for mais baixo. Vale para Personagens de Jogador, Ameaças e Personagens do Mestre."
+        "Hint": "O personagem morre em −10 PV ou em menos a metade dos PV máximos, o que for mais baixo. Vale para Personagens de Jogador, Ameaças e Personagens do Mestre.",
+        "Floor": {
+          "Name": "PV abaixo do limiar de morte",
+          "Hint": "Vale para as criaturas cobertas pela regra \"Estados de PV zero\". Permitir ultrapassar: o dano pode levar o PV abaixo do limiar (−10 ou −metade dos PV máximos, o que for mais baixo), e a criatura recebe Morto ao chegar ao limiar ou passar dele. Travar no limiar: o dano para no PV mínimo. Com \"Estados de PV zero\" desligada, o dano continua travado.",
+          "unbounded": "Permitir ultrapassar",
+          "clamp": "Travar no limiar"
+        }
       },
       "armor-penalty-reduction": {
         "Name": "Melhorias que reduzem a penalidade de armadura",
@@ -229,7 +235,8 @@
       "Report": "Reportar problema",
       "Rules": {
         "casting-restrictions": "Restrições ao lançar magias",
-        "combat-maneuvers": "Manobras de combate"
+        "combat-maneuvers": "Manobras de combate",
+        "dying-states": "Estados de PV zero"
       },
       "NoRules": "Nenhuma regra opcional disponível.",
       "Save": "Salvar",
@@ -869,6 +876,15 @@
         "trevas": "trevas"
       },
       "Reference": "Tormenta20 Jogo do Ano, cap. 7, \"Tipos de Criaturas\", p. 284"
+    },
+    "DyingStates": {
+      "Setting": {
+        "Name": "Estados de PV zero",
+        "Hint": "Regra opcional (capítulo 5, \"Ferimentos & Morte\"): com 0 PV ou menos, a criatura fica Inconsciente e Sangrando; qualquer cura de 1 PV ou mais tira o Sangrando, e voltar a 1 PV ou mais tira o Inconsciente; perder mais PV com 0 ou menos faz voltar a sangrar; no limiar de morte (−10 ou −metade dos PV máximos, o que for mais baixo) ela recebe Morto. Só as condições aplicadas por esta regra são removidas automaticamente. Dano não letal (se a regra correspondente estiver ligada) derruba, mas não faz sangrar nem morrer. O teste de Constituição do Sangrando não é rolado aqui.",
+        "off": "Desligado",
+        "characters": "Personagens de Jogador",
+        "all": "Todas as criaturas"
+      }
     }
   }
 }

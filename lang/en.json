@@ -23,7 +23,13 @@
       },
       "death-threshold": {
         "Name": "Minimum HP (death threshold)",
-        "Hint": "A character dies at −10 HP or at minus half their maximum HP, whichever is lower. Applies to player characters, threats and GM characters."
+        "Hint": "A character dies at −10 HP or at minus half their maximum HP, whichever is lower. Applies to player characters, threats and GM characters.",
+        "Floor": {
+          "Name": "HP below the death threshold",
+          "Hint": "Applies to creatures covered by the \"Zero HP states\" rule. Allow going below: damage may take HP below the threshold (−10 or minus half the maximum HP, whichever is lower), and the creature becomes Dead (Morto) on reaching or passing it. Clamp at the threshold: damage stops at the minimum HP. With \"Zero HP states\" off, damage stays clamped.",
+          "unbounded": "Allow going below",
+          "clamp": "Clamp at the threshold"
+        }
       },
       "armor-penalty-reduction": {
         "Name": "Upgrades that reduce armor penalty",
@@ -229,7 +235,8 @@
       "Report": "Report a problem",
       "Rules": {
         "casting-restrictions": "Spellcasting restrictions",
-        "combat-maneuvers": "Combat maneuvers"
+        "combat-maneuvers": "Combat maneuvers",
+        "dying-states": "Zero HP states"
       },
       "NoRules": "No optional rule available.",
       "Save": "Save",
@@ -869,6 +876,15 @@
         "trevas": "darkness"
       },
       "Reference": "Tormenta20 Jogo do Ano, cap. 7, \"Tipos de Criaturas\", p. 284"
+    },
+    "DyingStates": {
+      "Setting": {
+        "Name": "Zero HP states",
+        "Hint": "Optional rule (chapter 5, \"Ferimentos & Morte\"): at 0 HP or less, a creature becomes Unconscious (Inconsciente) and Bleeding (Sangrando); any healing of 1 HP or more removes Bleeding, and reaching 1 HP or more removes Unconscious; losing more HP at 0 or less makes it bleed again; at the death threshold (−10 or minus half the maximum HP, whichever is lower) it becomes Dead (Morto). Only conditions applied by this rule are removed automatically. Nonlethal damage (when that rule is on) knocks out, but does not cause bleeding or death. The Bleeding Constitution test is not rolled here.",
+        "off": "Off",
+        "characters": "Player characters",
+        "all": "All creatures"
+      }
     }
   }
 }

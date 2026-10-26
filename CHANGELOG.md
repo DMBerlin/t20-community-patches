@@ -28,6 +28,7 @@ Não edite as seções de versão à mão.
 - Regra opcional "Magia arcana de armadura": ao lançar magia arcana vestindo armadura, rola Misticismo (CD 20 + PM) com penalidade de armadura, e a magia falha sem devolver os PM (#46).
 - Dano não letal: escolha "Letal/Não letal" no diálogo de uso das armas, com −5 no ataque quando contraria o tipo natural da arma (salvo Ataque Piedoso, Estilo Desarmado e Pão e Circo) e o botão do card já na posição escolhida (#74).
 - Regra opcional "Chance de falha por camuflagem": rola 1d10 junto com o ataque contra alvos com camuflagem (20% leve, 50% total; Cego e Invisível automáticos), mostra o resultado no card e cancela o crítico quando o ataque erra todos os alvos (#49).
+- Regra opcional "Manobras de combate": no diálogo de uso de um ataque corpo a corpo (ou pelo botão no card de ataque), resolve agarrar, derrubar, desarmar, empurrar, quebrar e atropelar como teste oposto, sem rolar dano (o alvo rola com a própria arma e efeitos), com tamanho e desempate do livro, indicando a condição a aplicar (#48).
 
 ### Changed
 

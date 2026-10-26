@@ -244,3 +244,69 @@ input.t20cp-nonlethal-field {
 .chat-message .t20cp-miss-chance ul { margin: 0; padding-left: 1em; }
 .chat-message .t20cp-miss-chance .t20cp-miss { color: #9e1b1b; font-weight: bold; }
 .chat-message .t20cp-miss-chance .t20cp-hit { color: #1d6b22; font-weight: bold; }
+
+/* Optional rule "Manobras de combate" (#48). */
+/* The title sits in the system's chat-card header (same look as an item card) and toggles the details. */
+.t20cp-maneuver .t20cp-maneuver-title {
+  cursor: pointer;
+}
+
+.t20cp-maneuver-details {
+  margin: 5px 0;
+}
+
+.t20cp-maneuver-use .form-fields {
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.t20cp-maneuver-use .form-fields > label.checkbox {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+}
+
+.t20cp-maneuver-tests {
+  margin: 4px 0;
+  padding-left: 1.2em;
+}
+
+.t20cp-maneuver-hint {
+  margin: 2px 0;
+  font-size: var(--font-size-12, 12px);
+  font-style: italic;
+}
+
+.t20cp-maneuver-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  padding-top: 4px;
+  border-top: 1px solid var(--color-border-light-2, #999);
+}
+
+.t20cp-maneuver-button {
+  flex: 0 0 auto;
+  width: auto;
+  margin: 0;
+  padding: 0 6px;
+  line-height: 22px;
+  font-size: var(--font-size-12, 12px);
+}
+
+.t20cp-maneuver-state {
+  font-weight: bold;
+}
+
+.t20cp-maneuver-superseded > :not(.t20cp-maneuver-state) {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+
+.t20cp-maneuver-dialog .t20cp-maneuver-versatile[hidden],
+.t20cp-maneuver-dialog .hint[hidden] {
+  display: none;
+}

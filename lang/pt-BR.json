@@ -228,7 +228,8 @@
       "Details": "Detalhes técnicos",
       "Report": "Reportar problema",
       "Rules": {
-        "casting-restrictions": "Restrições ao lançar magias"
+        "casting-restrictions": "Restrições ao lançar magias",
+        "combat-maneuvers": "Manobras de combate"
       },
       "NoRules": "Nenhuma regra opcional disponível.",
       "Save": "Salvar",
@@ -731,6 +732,114 @@
           "nonlethal": "Não letal"
         },
         "Reference": "Tormenta20 Jogo do Ano, cap. 5, \"Dano Não Letal\", p. 236"
-      }
+      },
+    "CombatManeuvers": {
+      "Setting": {
+        "Name": "Manobras de combate",
+        "Hint": "Regra do livro (cap. 5, \"Manobras de Combate\", p. 234; \"Atropelar\", p. 233): no diálogo de uso de um ataque corpo a corpo, escolha a manobra (agarrar, derrubar, desarmar, empurrar, quebrar ou atropelar) contra o único alvo marcado. O teste de ataque vira o teste de manobra: o dano não é rolado e o card da manobra substitui o card de ataque. O dono do alvo (o mestre, para NPCs) clica em Resistir e rola o próprio teste com uma arma corpo a corpo (ou Luta); o módulo soma o tamanho, desempata pelo livro e cria o card de resultado. O resultado segue o modo de rolagem de quem resiste: em \"Pública\", todos veem os números do NPC; para escondê-los, resista em \"Rolagem do Mestre\". A condição (Caído, Agarrado) não é aplicada: aplique-a pelo HUD do token. Dois cliques quase simultâneos podem criar dois resultados; vale o mais antigo.",
+        "off": "Desligado",
+        "on": "Ligado"
+      },
+      "ButtonSetting": {
+        "Name": "Botão Manobra no chat",
+        "Hint": "Também mostra o botão Manobra no card de um ataque corpo a corpo já rolado, para declarar a manobra depois do ataque. Desligado, a manobra só é declarada no diálogo de uso.",
+        "off": "Desligado",
+        "on": "Ligado"
+      },
+      "Button": {
+        "Maneuver": "Manobra",
+        "Resist": "Resistir",
+        "Passage": "Dar passagem"
+      },
+      "Dialog": {
+        "Title": "Manobra de combate",
+        "ResistTitle": "Resistir à manobra",
+        "ResistPrompt": "Teste de manobra contra {kind}.",
+        "Kind": "Manobra",
+        "None": "Nenhuma",
+        "Versatile": "Arma versátil (+2)",
+        "Other": "Outros modificadores",
+        "OtherHint": "Equilibrada e os poderes de manobra (Derrubar Aprimorado, Lutador de Chão…) entram no diálogo de ataque; não os repita aqui.",
+        "Weapon": "Arma corpo a corpo",
+        "NoWeapon": "Luta (sem arma)",
+        "NoWeaponHint": "Com Luta (sem arma), os poderes de manobra e outros efeitos de ataque não entram no teste: some-os em Outros modificadores."
+      },
+      "Kind": {
+        "agarrar": "Agarrar",
+        "derrubar": "Derrubar",
+        "desarmar": "Desarmar",
+        "empurrar": "Empurrar",
+        "quebrar": "Quebrar",
+        "atropelar": "Atropelar"
+      },
+      "Card": {
+        "Title": "Manobra: {kind}",
+        "Attempt": "{attacker} tenta a manobra {kind} contra {target}.",
+        "Test": "Teste de {who}",
+        "With": "com {weapon}",
+        "Part": {
+          "attack": "ataque {value}",
+          "luta": "Luta {value}",
+          "size": "tamanho {value}",
+          "versatile": "versátil {value}",
+          "other": "outros {value}"
+        },
+        "NoDamage": "Manobra: o ataque não causa dano. Com \"Ataque contra Defesa\" ligada, o resultado contra a Defesa também não vale.",
+        "Concealed": "Falhou por camuflagem ({chance}%): {formula} = {total}, falha em 1 a {threshold}. Não há teste de resistência.",
+        "ConcealedShort": "Falhou por camuflagem. Não há teste de resistência.",
+        "Summary": "Teste de manobra: {total}",
+        "Versus": "{attacker} {attack} × {target} {defense}",
+        "Resolved": "Resolvida",
+        "Superseded": "Resultado substituído: vale o resultado mais antigo desta manobra.",
+        "Winner": "Vence {winner} por {margin}.",
+        "WinnerTie": "Empate nos totais: vence {winner}, com o maior bônus.",
+        "Margin5": "Venceu por 5 ou mais: também empurra o alvo 1 quadrado (1,5m).",
+        "Margin5Item": "Venceu por 5 ou mais: o item também é empurrado 1 quadrado (1,5m).",
+        "Target": "Alvo",
+        "Speaker": "Manobra de combate",
+        "ApplyByHud": "O módulo não aplica a condição: aplique pelo HUD do token."
+      },
+      "Outcome": {
+        "agarrar": {
+          "attacker": "{target} fica Agarrado. Lembrete: só com ataque desarmado ou arma natural; a mão fica ocupada e você anda metade do deslocamento.",
+          "defender": "{target} resiste: nada acontece."
+        },
+        "derrubar": {
+          "attacker": "{target} fica Caído.",
+          "defender": "{target} resiste: nada acontece."
+        },
+        "desarmar": {
+          "attacker": "O item que {target} segura cai no espaço dele.",
+          "defender": "{target} resiste: nada acontece."
+        },
+        "empurrar": {
+          "attacker": "{target} é empurrado {meters}m.",
+          "defender": "{target} resiste: nada acontece."
+        },
+        "quebrar": {
+          "attacker": "A manobra atinge o item que {target} segura: role o dano contra o item (objetos, p. 239).",
+          "defender": "{target} resiste: nada acontece."
+        },
+        "atropelar": {
+          "attacker": "{target} fica Caído, e o avanço continua.",
+          "defender": "{target} continua de pé e detém o avanço."
+        },
+        "reroll": "Empate nos totais e nos bônus: façam outro teste.",
+        "passage": "{target} dá passagem: o avanço continua, sem teste."
+      },
+      "Warn": {
+        "Concealed": "Esta manobra falhou por camuflagem: não há teste de resistência.",
+        "NoTarget": "Marque um alvo antes de usar a arma: a manobra usa o alvo marcado no início do ataque.",
+        "ManyTargets": "Marque só um alvo antes de usar a arma: a manobra é contra uma criatura.",
+        "SelfTarget": "O alvo da manobra não pode ser o próprio atacante.",
+        "NotOwner": "Só o dono do alvo ou o mestre pode fazer isso.",
+        "Resolved": "Esta manobra já foi resolvida.",
+        "Missing": "O alvo ou o atacante desta manobra não existe mais.",
+        "NoTest": "Este ator não tem arma corpo a corpo nem a perícia Luta para o teste de manobra.",
+        "Failed": "A manobra falhou. Veja o console.",
+        "Fallback": "{reason} A manobra foi ignorada e o ataque segue normalmente."
+      },
+      "Reference": "Tormenta20 Jogo do Ano, cap. 5, \"Manobras de Combate\", p. 234"
+    }
   }
 }

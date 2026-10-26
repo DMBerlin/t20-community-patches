@@ -110,6 +110,12 @@ export function concealmentOutcomes(checks, rollName, targetUuids) {
   return uuids.map((uuid) => finalOutcome(undefined, missedByConcealment(checks, rollName, uuid)));
 }
 
+/** The checks recorded in an attack roll by this rule (annotate), or [] when there are none. */
+export function concealmentChecksOf(roll) {
+  const data = roll?.options?.[MODULE_ID]?.[DATA_KEY];
+  return data?.v === DATA_VERSION && Array.isArray(data.checks) ? data.checks : [];
+}
+
 /**
  * Card label of a target, decided by each client at render time.
  * @returns {{name: string|null, index: number}}  name null → "Alvo {index}"
@@ -349,8 +355,8 @@ export function decorate(message, html) {
   if (!message?.isContentVisible || !html?.querySelectorAll) return;
   const containers = [...html.querySelectorAll(".roll[data-roll-title]")];
   for (const roll of message.rolls ?? []) {
-    const data = roll?.options?.[MODULE_ID]?.[DATA_KEY];
-    if (data?.v !== DATA_VERSION || !Array.isArray(data.checks) || !data.checks.length) continue;
+    if (!concealmentChecksOf(roll).length) continue;
+    const data = roll.options[MODULE_ID][DATA_KEY];
     const title = roll.options.title ?? "";
     if ([...html.querySelectorAll(`.${BLOCK_CLASS}`)].some((el) => el.dataset.rollTitle === title)) continue;
     const container = containers.find((el) => el.dataset.rollTitle === title);

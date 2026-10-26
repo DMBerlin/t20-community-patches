@@ -31,6 +31,7 @@ import { installConcealmentRule, registerConcealmentSetting } from "./rules/conc
 import { installManaQueue } from "./rules/mana-queue.mjs";
 import { installNonlethalRule, registerNonlethalSetting } from "./rules/nonlethal-damage.mjs";
 import { installNonlethalAttackRule } from "./rules/nonlethal-attack.mjs";
+import { installCombatManeuversRule, registerCombatManeuversSetting } from "./rules/combat-maneuvers.mjs";
 
 /**
  * @type {{id: string, group: string, mode: import("./registry.mjs").PatchMode, state: import("./registry.mjs").PatchState,
@@ -90,6 +91,7 @@ Hooks.once("init", () => {
   registerSituationalModifiersSetting();
   registerConcealmentSetting();
   registerNonlethalSetting();
+  registerCombatManeuversSetting();
   if (game.system.id === "tormenta20") {
     // Transparent (only orders each actor's spendMana calls) and installed with every rule off.
     try {
@@ -148,6 +150,12 @@ Hooks.once("init", () => {
       installConcealmentRule();
     } catch (err) {
       console.error(`${MODULE_ID} | Failed to install the concealment miss chance rule`, err);
+    }
+    // Also before casting-restrictions (use-target wrappers): its displayCard wrapper only records the frozen targets.
+    try {
+      installCombatManeuversRule();
+    } catch (err) {
+      console.error(`${MODULE_ID} | Failed to install the combat maneuvers rule`, err);
     }
     // Before casting-restrictions: this displayCard wrapper sits inside that one, which only counts a cast through
     // castCompleted (scripts/rules/cast-outcome.mjs), so a failed armor test never ends a sustained spell.

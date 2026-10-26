@@ -228,7 +228,8 @@
       "Details": "Technical details",
       "Report": "Report a problem",
       "Rules": {
-        "casting-restrictions": "Spellcasting restrictions"
+        "casting-restrictions": "Spellcasting restrictions",
+        "combat-maneuvers": "Combat maneuvers"
       },
       "NoRules": "No optional rule available.",
       "Save": "Save",
@@ -731,6 +732,114 @@
           "nonlethal": "Nonlethal"
         },
         "Reference": "Tormenta20 Jogo do Ano, ch. 5, \"Dano Não Letal\", p. 236"
-      }
+      },
+    "CombatManeuvers": {
+      "Setting": {
+        "Name": "Combat maneuvers",
+        "Hint": "Book rule (ch. 5, \"Combat Maneuvers\", p. 234; \"Overrun\", p. 233): in the use dialog of a melee attack, choose the maneuver (grapple, trip, disarm, shove, sunder or overrun) against the single targeted creature. The attack roll becomes the maneuver test: damage is not rolled and the maneuver card replaces the attack card. The target's owner (the GM, for NPCs) clicks Resist and rolls their own test with a melee weapon (or Fight); the module adds size, breaks ties by the book and creates the result card. The result follows the resister's roll mode: in \"Public\", everyone sees the NPC's numbers; to hide them, resist in \"GM Roll\". The condition (Prone, Grappled) is not applied: apply it from the token HUD. Two nearly simultaneous clicks may create two results; the oldest one counts.",
+        "off": "Off",
+        "on": "On"
+      },
+      "ButtonSetting": {
+        "Name": "Maneuver button in chat",
+        "Hint": "Also shows the Maneuver button on the card of a melee attack already rolled, to declare the maneuver after the attack. When off, the maneuver is declared only in the use dialog.",
+        "off": "Off",
+        "on": "On"
+      },
+      "Button": {
+        "Maneuver": "Maneuver",
+        "Resist": "Resist",
+        "Passage": "Let pass"
+      },
+      "Dialog": {
+        "Title": "Combat maneuver",
+        "ResistTitle": "Resist the maneuver",
+        "ResistPrompt": "Maneuver test against {kind}.",
+        "Kind": "Maneuver",
+        "None": "None",
+        "Versatile": "Versatile weapon (+2)",
+        "Other": "Other modifiers",
+        "OtherHint": "Balanced and the maneuver powers (Improved Trip, Ground Fighter…) go in the attack dialog; do not repeat them here.",
+        "Weapon": "Melee weapon",
+        "NoWeapon": "Fight (no weapon)",
+        "NoWeaponHint": "With Fight (no weapon), maneuver powers and other attack effects are not part of the test: add them in Other modifiers."
+      },
+      "Kind": {
+        "agarrar": "Grapple",
+        "derrubar": "Trip",
+        "desarmar": "Disarm",
+        "empurrar": "Shove",
+        "quebrar": "Sunder",
+        "atropelar": "Overrun"
+      },
+      "Card": {
+        "Title": "Maneuver: {kind}",
+        "Attempt": "{attacker} attempts {kind} against {target}.",
+        "Test": "{who}'s test",
+        "With": "with {weapon}",
+        "Part": {
+          "attack": "attack {value}",
+          "luta": "Fight {value}",
+          "size": "size {value}",
+          "versatile": "versatile {value}",
+          "other": "other {value}"
+        },
+        "NoDamage": "Maneuver: the attack deals no damage. With \"Attack versus Defense\" on, the result against Defense does not count either.",
+        "Concealed": "Failed due to concealment ({chance}%): {formula} = {total}, misses on 1 to {threshold}. There is no resistance test.",
+        "ConcealedShort": "Failed due to concealment. There is no resistance test.",
+        "Summary": "Maneuver test: {total}",
+        "Versus": "{attacker} {attack} × {target} {defense}",
+        "Resolved": "Resolved",
+        "Superseded": "Superseded result: the oldest result of this maneuver counts.",
+        "Winner": "{winner} wins by {margin}.",
+        "WinnerTie": "Tied totals: {winner} wins with the higher bonus.",
+        "Margin5": "Won by 5 or more: also pushes the target 1 square (1.5m).",
+        "Margin5Item": "Won by 5 or more: the item is also pushed 1 square (1.5m).",
+        "Target": "Target",
+        "Speaker": "Combat maneuver",
+        "ApplyByHud": "The module does not apply the condition: apply it from the token HUD."
+      },
+      "Outcome": {
+        "agarrar": {
+          "attacker": "{target} is Grappled. Reminder: only with an unarmed attack or natural weapon; your hand is busy and you move at half speed.",
+          "defender": "{target} resists: nothing happens."
+        },
+        "derrubar": {
+          "attacker": "{target} is Prone.",
+          "defender": "{target} resists: nothing happens."
+        },
+        "desarmar": {
+          "attacker": "The item {target} holds falls in their space.",
+          "defender": "{target} resists: nothing happens."
+        },
+        "empurrar": {
+          "attacker": "{target} is pushed {meters}m.",
+          "defender": "{target} resists: nothing happens."
+        },
+        "quebrar": {
+          "attacker": "The maneuver hits the item {target} holds: roll damage against the item (objects, p. 239).",
+          "defender": "{target} resists: nothing happens."
+        },
+        "atropelar": {
+          "attacker": "{target} is Prone, and the advance goes on.",
+          "defender": "{target} stays standing and stops the advance."
+        },
+        "reroll": "Tied totals and bonuses: roll again.",
+        "passage": "{target} lets you pass: the advance goes on, without a test."
+      },
+      "Warn": {
+        "Concealed": "This maneuver failed due to concealment: there is no resistance test.",
+        "NoTarget": "Target a token before using the weapon: the maneuver uses the target marked when the attack started.",
+        "ManyTargets": "Target only one token before using the weapon: a maneuver is against one creature.",
+        "SelfTarget": "The maneuver's target cannot be the attacker.",
+        "NotOwner": "Only the target's owner or the GM can do this.",
+        "Resolved": "This maneuver is already resolved.",
+        "Missing": "The target or the attacker of this maneuver no longer exists.",
+        "NoTest": "This actor has no melee weapon nor the Fight skill for the maneuver test.",
+        "Failed": "The maneuver failed. See the console.",
+        "Fallback": "{reason} The maneuver was ignored and the attack goes on as usual."
+      },
+      "Reference": "Tormenta20 Jogo do Ano, ch. 5, \"Combat Maneuvers\", p. 234"
+    }
   }
 }

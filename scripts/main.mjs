@@ -32,6 +32,10 @@ import { installManaQueue } from "./rules/mana-queue.mjs";
 import { installNonlethalRule, registerNonlethalSetting } from "./rules/nonlethal-damage.mjs";
 import { installNonlethalAttackRule } from "./rules/nonlethal-attack.mjs";
 import { installCombatManeuversRule, registerCombatManeuversSetting } from "./rules/combat-maneuvers.mjs";
+import {
+  installCreatureTypeTraitsRule,
+  registerCreatureTypeTraitsSetting
+} from "./rules/creature-type-traits.mjs";
 
 /**
  * @type {{id: string, group: string, mode: import("./registry.mjs").PatchMode, state: import("./registry.mjs").PatchState,
@@ -92,6 +96,7 @@ Hooks.once("init", () => {
   registerConcealmentSetting();
   registerNonlethalSetting();
   registerCombatManeuversSetting();
+  registerCreatureTypeTraitsSetting();
   if (game.system.id === "tormenta20") {
     // Transparent (only orders each actor's spendMana calls) and installed with every rule off.
     try {
@@ -187,6 +192,13 @@ Hooks.once("init", () => {
       installNonlethalAttackRule();
     } catch (err) {
       console.error(`${MODULE_ID} | Failed to install the nonlethal attack choice`, err);
+    }
+    // After the patches and the other rules: its applyDamageV2 wrapper sits outside theirs and makes a single inner
+    // call, so their floors and reductions see one HP change.
+    try {
+      installCreatureTypeTraitsRule();
+    } catch (err) {
+      console.error(`${MODULE_ID} | Failed to install the creature type traits rule`, err);
     }
     // Last on purpose: its wrappers must sit outside those of the patches and the other rules.
     try {

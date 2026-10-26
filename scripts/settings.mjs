@@ -19,6 +19,7 @@ import { CONCEALMENT_SETTING } from "./rules/concealment-miss-chance.mjs";
 import { TRAINED_ONLY_SETTING } from "./rules/trained-only-skills.mjs";
 import { SITUATIONAL_SETTING } from "./rules/situational-modifiers.mjs";
 import { NONLETHAL_SETTING } from "./rules/nonlethal-damage.mjs";
+import { CREATURE_TYPE_TRAITS_SETTING } from "./rules/creature-type-traits.mjs";
 import { COMBAT_MANEUVERS_BUTTON_SETTING, COMBAT_MANEUVERS_SETTING } from "./rules/combat-maneuvers.mjs";
 import { LIMIT_KEY as SEGMENTED_SCENE_LIMIT } from "./patches/segmented-scene-setting.mjs";
 
@@ -52,6 +53,7 @@ export const RULE_SETTINGS = [
   { id: "trained-only-skills", keys: [TRAINED_ONLY_SETTING] },
   { id: "nonlethal-damage", keys: [NONLETHAL_SETTING] },
   { id: "combat-maneuvers", keys: [COMBAT_MANEUVERS_SETTING, COMBAT_MANEUVERS_BUTTON_SETTING] },
+  { id: "creature-type-traits", keys: [CREATURE_TYPE_TRAITS_SETTING] },
   { id: "segmented-scene-limit", keys: [SEGMENTED_SCENE_LIMIT] }
 ];
 

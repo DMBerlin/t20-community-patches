@@ -840,6 +840,35 @@
         "Fallback": "{reason} The maneuver was ignored and the attack goes on as usual."
       },
       "Reference": "Tormenta20 Jogo do Ano, ch. 5, \"Combat Maneuvers\", p. 234"
+    },
+    "CreatureTypeTraits": {
+      "Setting": {
+        "Name": "Creature type traits",
+        "Hint": "Book rule (chapter 7, \"Tipos de Criaturas\", p. 284) for creatures whose Type is Undead or Construct (and characters with Natureza Esquelética): fatigue, metabolic and poison conditions (and darkness, for undead) are suppressed; darkness damage heals undead; \"Apply Healing\" with HP healing asks whether it is light damage (full or half) on an undead and recovers no HP on constructs.",
+        "off": "Off",
+        "on": "Apply the book traits"
+      },
+      "Immune": "{actor}: {condition} has no effect. {kind} are immune to {category} effects ({reference}).",
+      "ImmuneCondition": "{actor}: {condition} has no effect. {kind} are immune to this condition ({reference}).",
+      "ConstructNoHeal": "{actor}: constructs do not recover HP from healing effects ({reference}).",
+      "Dialog": {
+        "Title": "Healing an undead: {actor}",
+        "Content": "{actor} is undead. Magical light healing effects damage undead (a Will save against the effect's DC halves it). How should the {amount} HP of healing apply?",
+        "Full": "Light damage",
+        "Half": "Half (passed the Will save)",
+        "Heal": "Heal normally"
+      },
+      "Kind": {
+        "mor": "Undead",
+        "con": "Constructs"
+      },
+      "Category": {
+        "cansaco": "fatigue",
+        "metabolismo": "metabolic",
+        "veneno": "poison",
+        "trevas": "darkness"
+      },
+      "Reference": "Tormenta20 Jogo do Ano, cap. 7, \"Tipos de Criaturas\", p. 284"
     }
   }
 }

@@ -840,6 +840,35 @@
         "Fallback": "{reason} A manobra foi ignorada e o ataque segue normalmente."
       },
       "Reference": "Tormenta20 Jogo do Ano, cap. 5, \"Manobras de Combate\", p. 234"
+    },
+    "CreatureTypeTraits": {
+      "Setting": {
+        "Name": "Traços de tipo de criatura",
+        "Hint": "Regra do livro (cap. 7, \"Tipos de Criaturas\", p. 284) para criaturas com o Tipo Morto-vivo ou Construto (e personagens com Natureza Esquelética): condições de cansaço, metabolismo e veneno (e de trevas, para mortos-vivos) ficam suprimidas; dano de trevas cura mortos-vivos; \"Aplicar Cura\" com cura de PV pergunta se é dano de luz (inteiro ou metade) num morto-vivo e não recupera PV de construtos.",
+        "off": "Desligado",
+        "on": "Aplicar os traços do livro"
+      },
+      "Immune": "{actor}: {condition} não tem efeito. {kind} são imunes a efeitos de {category} ({reference}).",
+      "ImmuneCondition": "{actor}: {condition} não tem efeito. {kind} são imunes a esta condição ({reference}).",
+      "ConstructNoHeal": "{actor}: construtos não recuperam PV por efeitos de cura ({reference}).",
+      "Dialog": {
+        "Title": "Cura num morto-vivo: {actor}",
+        "Content": "{actor} é um morto-vivo. Efeitos mágicos de cura de luz causam dano a mortos-vivos (Vontade CD do efeito reduz à metade). Como aplicar os {amount} PV de cura?",
+        "Full": "Dano de luz",
+        "Half": "Metade (passou na Vontade)",
+        "Heal": "Curar normalmente"
+      },
+      "Kind": {
+        "mor": "Mortos-vivos",
+        "con": "Construtos"
+      },
+      "Category": {
+        "cansaco": "cansaço",
+        "metabolismo": "metabolismo",
+        "veneno": "veneno",
+        "trevas": "trevas"
+      },
+      "Reference": "Tormenta20 Jogo do Ano, cap. 7, \"Tipos de Criaturas\", p. 284"
     }
   }
 }

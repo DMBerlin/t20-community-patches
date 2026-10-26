@@ -623,6 +623,23 @@
       "CardNote": "Sem treinamento em perícia somente treinada ({reference}).",
       "Reference": "Tormenta20 Jogo do Ano, cap. 2, \"Treinamento e testes\", p. 114"
     },
+    "SkillPicker": {
+      "Setting": {
+        "Name": "Escolha de perícias",
+        "Hint": "Regra opcional: ao adicionar a um personagem Treinamento em Perícia, Versátil, Híbrido, Memória Póstuma, Conhecimento Enciclopédico ou Educação Privilegiada, pergunta em quais perícias ele se torna treinado e grava o treinamento como efeitos do poder. Remover o poder remove o treinamento.",
+        "off": "Desligado",
+        "on": "Perguntar ao adicionar o poder"
+      },
+      "Title": "{item}: escolha de perícias",
+      "Prompt": "Escolha {count} perícia(s) em que {actor} se torna treinado.",
+      "PromptRange": "Escolha de {min} a {max} perícias em que {actor} se torna treinado.",
+      "Confirm": "Confirmar",
+      "Cancelled": "{item}: nenhuma perícia foi escolhida. Marque o treinamento na ficha, no modo de edição.",
+      "NoSkills": "{item}: {actor} já é treinado (ou acabou de escolher, em outro poder do mesmo lote) todas as perícias que este poder permite escolher.",
+      "Stale": "{item}: uma perícia escolhida acabou de ficar treinada (outro usuário alterou a ficha). Escolha de novo.",
+      "Waiting": "{actor}: aguardando outra escolha de perícias deste personagem terminar.",
+      "Alternative": "{item}: {count} de {max} perícias escolhidas. Adicione à ficha o que você recebeu no lugar (por exemplo, um poder geral)."
+    },
     "SituationalModifiers": {
         "Setting": {
           "Name": "Modificadores situacionais",

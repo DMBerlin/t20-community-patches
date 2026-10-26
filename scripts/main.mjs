@@ -23,6 +23,7 @@ import { installNonProficiencyRule, registerNonProficiencySetting } from "./rule
 import { installSaveButtonRule, registerSaveButtonSetting } from "./rules/save-button.mjs";
 import { installAttackVsDefenseRule, registerAttackVsDefenseSetting } from "./rules/attack-vs-defense.mjs";
 import { installTrainedOnlyRule, registerTrainedOnlySetting } from "./rules/trained-only-skills.mjs";
+import { installSkillPickerRule, registerSkillPickerSetting } from "./rules/skill-picker.mjs";
 import {
   installSituationalModifiersRule,
   registerSituationalModifiersSetting
@@ -107,6 +108,7 @@ Hooks.once("init", () => {
   registerSaveButtonSetting();
   registerAttackVsDefenseSetting();
   registerTrainedOnlySetting();
+  registerSkillPickerSetting();
   registerSituationalModifiersSetting();
   registerConcealmentSetting();
   registerNonlethalSetting();
@@ -239,6 +241,12 @@ Hooks.once("init", () => {
       installEncounterXpRule();
     } catch (err) {
       console.error(`${MODULE_ID} | Failed to install the encounter rewards tool`, err);
+    }
+    // After the patches: its Item._preCreateOperation wrapper sits outside initial-class's (#54); either order chains.
+    try {
+      installSkillPickerRule();
+    } catch (err) {
+      console.error(`${MODULE_ID} | Failed to install the skill picker rule`, err);
     }
     // Last on purpose: its wrappers must sit outside those of the patches and the other rules.
     try {

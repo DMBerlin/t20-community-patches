@@ -623,6 +623,23 @@
       "CardNote": "Untrained in a trained-only skill ({reference}).",
       "Reference": "Tormenta20 Jogo do Ano, chapter 2, \"Treinamento e testes\", p. 114"
     },
+    "SkillPicker": {
+      "Setting": {
+        "Name": "Skill choice",
+        "Hint": "Optional rule: when Treinamento em Perícia, Versátil, Híbrido, Memória Póstuma, Conhecimento Enciclopédico or Educação Privilegiada is added to a character, asks which skills become trained and stores the training as effects of the power. Removing the power removes the training.",
+        "off": "Off",
+        "on": "Ask when the power is added"
+      },
+      "Title": "{item}: skill choice",
+      "Prompt": "Choose {count} skill(s) in which {actor} becomes trained.",
+      "PromptRange": "Choose {min} to {max} skills in which {actor} becomes trained.",
+      "Confirm": "Confirm",
+      "Cancelled": "{item}: no skill was chosen. Mark the training on the sheet, in edit mode.",
+      "NoSkills": "{item}: {actor} is already trained in (or has just chosen, in another power of the same batch) every skill this power can grant.",
+      "Stale": "{item}: a chosen skill has just become trained (another user changed the sheet). Choose again.",
+      "Waiting": "{actor}: waiting for another skill choice for this character to finish.",
+      "Alternative": "{item}: {count} of {max} skills chosen. Add what you received instead to the sheet (for example, a general power)."
+    },
     "SituationalModifiers": {
         "Setting": {
           "Name": "Situational modifiers",

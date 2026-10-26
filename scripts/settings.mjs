@@ -17,6 +17,7 @@ import { SAVE_BUTTON_SETTING } from "./rules/save-button.mjs";
 import { ATTACK_VS_DEFENSE_SETTING } from "./rules/attack-vs-defense.mjs";
 import { CONCEALMENT_SETTING } from "./rules/concealment-miss-chance.mjs";
 import { TRAINED_ONLY_SETTING } from "./rules/trained-only-skills.mjs";
+import { SKILL_PICKER_SETTING } from "./rules/skill-picker.mjs";
 import { SITUATIONAL_SETTING } from "./rules/situational-modifiers.mjs";
 import { NONLETHAL_SETTING } from "./rules/nonlethal-damage.mjs";
 import { CREATURE_TYPE_TRAITS_SETTING } from "./rules/creature-type-traits.mjs";
@@ -54,6 +55,7 @@ export const RULE_SETTINGS = [
   { id: "concealment-miss-chance", keys: [CONCEALMENT_SETTING] },
   { id: "situational-modifiers", keys: [SITUATIONAL_SETTING] },
   { id: "trained-only-skills", keys: [TRAINED_ONLY_SETTING] },
+  { id: "skill-picker", keys: [SKILL_PICKER_SETTING] },
   { id: "nonlethal-damage", keys: [NONLETHAL_SETTING] },
   { id: "combat-maneuvers", keys: [COMBAT_MANEUVERS_SETTING, COMBAT_MANEUVERS_BUTTON_SETTING] },
   { id: "creature-type-traits", keys: [CREATURE_TYPE_TRAITS_SETTING] },

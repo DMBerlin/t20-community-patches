@@ -32,6 +32,7 @@ Não edite as seções de versão à mão.
 - Regra opcional "Traços de tipo de criatura": mortos-vivos e construtos ficam imunes a condições de cansaço, metabolismo e veneno, mortos-vivos se curam com trevas e sofrem dano de luz da cura, e construtos não recuperam PV por cura (#50).
 - Regra opcional "Estados de PV zero": com 0 PV ou menos aplica Inconsciente e Sangrando, estabiliza com cura, acorda acima de 0 e aplica Morto no limiar de morte; opcionalmente, o PV pode passar do limiar, e a criatura recebe Morto ao chegar a ele (#51).
 - Regra opcional "Recompensas do encontro" (#52): ferramenta do GM ativo que distribui a XP de um encontro (ND × 1.000, livro p. 326) a partir do combate encerrado ou dos tokens selecionados, com a concessão marcada em cada ficha contra pagamento duplicado. Afeta Tormenta20 1.6.5.
+- Regra opcional "Escolha de perícias": Treinamento em Perícia, Versátil e outros poderes de perícia a sua escolha perguntam as perícias ao entrar no personagem e gravam o treinamento como efeito do poder (#60).
 
 ### Changed
 

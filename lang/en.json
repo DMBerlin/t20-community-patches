@@ -155,6 +155,10 @@
         "Name": "Race data",
         "Hint": "When the copy is created in the world, corrects races and racial powers that diverge from the core rulebook: Minotauro (Con +1 instead of Dex +1), Hynne's Pequeno e Rechonchudo (Small, 6m), Anão's Conhecimento das Rochas (darkvision) and Elfo's Sentidos Élficos (low-light vision). Acts only on system compendium copies that still hold the original data. Characters and items already created are not changed: on the sheet, a warning icon marks the old copy, which must be removed and added again to receive the corrected data. Turning the fix off does not undo copies already corrected."
       },
+      "racial-attribute-choice": {
+        "Name": "Dynamic racial attributes",
+        "Hint": "In the Atributos Dinâmicos dialog of Humano, Sereia/Tritão, Lefou and Osteon (+1 in three different attributes), replaces the free number inputs with +1 buttons: exactly three different attributes, the others locked once three are chosen, and Apply only with three choices. Closing without applying shows a warning. Races with another description and the open races mode keep the original dialog."
+      },
       "partner-combatant": {
         "Name": "Combatente partner",
         "Hint": "When the copy is created in the world, the Combatente partner's usage effects give +2, +3 and +4 to attack (Iniciante, Veterano and Mestre), as in the core rulebook and the item description, instead of +1, +2 and +3. Each effect changes only if it still holds the original system compendium data. Items already created are not changed: on the sheet, a warning icon marks the old copy, which must be removed and added again (or have its effects edited). Turning the fix off does not undo copies already corrected."
@@ -173,6 +177,11 @@
     },
     "RaceData": {
       "Outdated": "Copy created with the wrong data of the system compendium. Remove it and add it again to receive the corrected data (core rulebook)."
+    },
+    "RacialAttributes": {
+      "Toggle": "+1 to {attr}",
+      "Count": "Chosen: {count} of {max}",
+      "Skipped": "Racial attributes not applied: the race was created without the +1 to three attributes. Adjust the racial attributes on the sheet."
     },
     "ItemEffects": {
       "DeleteTitle": "Delete item effect",

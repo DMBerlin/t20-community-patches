@@ -1,0 +1,20 @@
+.attribute-config .t20cp-attr-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  min-height: 2rem;
+}
+.attribute-config .t20cp-attr-toggle.active {
+  background: var(--color-warm-2, #c9593f);
+  color: var(--color-light-1, #fff);
+  border-color: var(--color-warm-1, #ee9b3a);
+}
+.attribute-config .t20cp-attr-toggle:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.attribute-config .t20cp-attr-count {
+  text-align: center;
+  margin: 0.25rem 0 0;
+}

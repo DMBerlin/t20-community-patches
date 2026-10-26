@@ -68,6 +68,7 @@ Não edite as seções de versão à mão.
 - `bestiary-creature-type` (#47): 7 mortos-vivos e 4 monstros do compêndio Ameaças passam a ser criados com o tipo do livro básico, e o importador de bloco de estatísticas reconhece "Morto-vivo" e as demais palavras do livro sem diferenciar maiúsculas. Afeta Tormenta20 1.6.5.
 - `initiative-tiebreak` (#53): empates de Iniciativa seguem o valor da perícia Iniciativa e, se ela também empatar, o do atributo da perícia, no momento da rolagem, e a ordem se mantém durante o combate. Afeta Tormenta20 1.6.5.
 - `initial-class` (#54): a marca de classe inicial não pula mais de classe nem fica duplicada ao marcar, desmarcar, excluir ou copiar classes, e os PV do 1º nível saem da classe certa. Afeta Tormenta20 1.6.5.
+- `racial-attribute-choice` (#75): a janela de atributos de Humano, Sereia/Tritão, Lefou e Osteon passa a usar botões +1 em exatamente três atributos diferentes, em vez de campos livres, e avisa quando é fechada sem aplicar. Afeta Tormenta20 1.6.5.
 
 ## v1.0.0 - 2026-10-19
 

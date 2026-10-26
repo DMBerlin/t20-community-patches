@@ -34,6 +34,7 @@
     "styles/save-button.css",
     "styles/attack-vs-defense.css",
     "styles/race-data.css",
+    "styles/racial-attribute-choice.css",
     "styles/rewards.css"
   ],
   "languages": [

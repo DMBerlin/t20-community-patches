@@ -131,6 +131,10 @@
         "Name": "Iniciativa rolada pela ficha no combatente certo",
         "Hint": "Rolar Iniciativa pela ficha ou por macro grava o resultado no combatente daquele token, mesmo com vários tokens não vinculados do mesmo ator, e também quando o rótulo da perícia foi renomeado ou traduzido por outro módulo. Antes, o resultado ia para o primeiro token do mesmo ator e, com outro rótulo que não \"Iniciativa\", não ia para o tracker."
       },
+      "initial-class": {
+        "Name": "Classe inicial em multiclasse",
+        "Hint": "Mantém uma única classe inicial. Marcar, desmarcar ou excluir uma classe, ou trazer uma classe de outra ficha, não move nem duplica a marca, da qual dependem os PV do 1º nível."
+      },
       "initiative-tiebreak": {
         "Name": "Desempate de Iniciativa",
         "Hint": "Quando dois combatentes tiram o mesmo resultado de Iniciativa, age primeiro quem tem o maior valor na perícia Iniciativa no momento da rolagem, como manda o livro. Se a perícia também empatar, age primeiro quem tem o maior valor no atributo da perícia (Destreza, por padrão). A ordem se mantém durante o combate. Antes, o empate era decidido ao acaso."

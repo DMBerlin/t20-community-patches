@@ -131,6 +131,10 @@
         "Name": "Initiative rolled from the sheet goes to the right combatant",
         "Hint": "Rolling Initiative from the sheet or a macro writes the result to that token's combatant, even with several unlinked tokens of the same actor, and also when the skill label was renamed or translated by another module. Before, the result went to the first token of the same actor and, with a label other than \"Iniciativa\", never reached the tracker."
       },
+      "initial-class": {
+        "Name": "Initial class with multiclassing",
+        "Hint": "Keeps a single initial class. Marking, unmarking or deleting a class, or bringing a class from another sheet, no longer moves or duplicates the mark that decides 1st-level HP."
+      },
       "initiative-tiebreak": {
         "Name": "Initiative tie-break",
         "Hint": "When two combatants roll the same Initiative result, the one with the higher Initiative skill at the time of the roll acts first, as the rulebook says. If the skill also ties, the one with the higher value in the skill's attribute (Dexterity by default) acts first. The order holds for the whole combat. Before, the tie was decided at random."

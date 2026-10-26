@@ -131,6 +131,10 @@
         "Name": "Initiative rolled from the sheet goes to the right combatant",
         "Hint": "Rolling Initiative from the sheet or a macro writes the result to that token's combatant, even with several unlinked tokens of the same actor, and also when the skill label was renamed or translated by another module. Before, the result went to the first token of the same actor and, with a label other than \"Iniciativa\", never reached the tracker."
       },
+      "initiative-tiebreak": {
+        "Name": "Initiative tie-break",
+        "Hint": "When two combatants roll the same Initiative result, the one with the higher Initiative skill at the time of the roll acts first, as the rulebook says. If the skill also ties, the one with the higher value in the skill's attribute (Dexterity by default) acts first. The order holds for the whole combat. Before, the tie was decided at random."
+      },
       "skill-modifier-attributes": {
         "Name": "Temporary attribute bonuses in global modifiers",
         "Hint": "Global skill, attribute, damage and healing modifiers that use an attribute (such as the @car of Aura Sagrada or the @con of Trincado) now use the attribute with its temporary bonuses (items, spells, potions), on the sheet and on rolls, as the breakdown already showed. PV and PM still ignore those bonuses."
@@ -250,7 +254,8 @@
       "usage-effects": "Usage effects",
       "items": "Items and equipment",
       "settings": "System settings",
-      "actor": "Character"
+      "actor": "Character",
+      "combat": "Combat"
     },
     "States": {
       "applied": {

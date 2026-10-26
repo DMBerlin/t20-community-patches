@@ -92,6 +92,22 @@ export function stripComments(source) {
   return out;
 }
 
+/**
+ * FNV-1a of the source without comments and with collapsed whitespace, plus its length. Never runs the code.
+ * @param {string} source
+ * @returns {string|null}
+ */
+export function sourceFingerprint(source) {
+  if (typeof source !== "string") return null;
+  const text = stripComments(source).replace(/\s+/g, " ").trim();
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return `${hash.toString(16).padStart(8, "0")}:${text.length}`;
+}
+
 const signed = (n) => (n >= 0 ? `+${n}` : String(n));
 const escapeHTML = (text) =>
   String(text).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);

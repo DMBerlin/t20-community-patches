@@ -8,11 +8,13 @@
  * no class or power fills them, so the proficiencies are derived here (initial class, recognized powers, Traits tab)
  * on every use, without writing anything. Characters only: threats have no proficiencies recorded.
  */
-import { MODULE_ID, addTooltipLine, markWrapper, stripComments, unwrap } from "../utils.mjs";
+import { MODULE_ID, addTooltipLine, markWrapper, sourceFingerprint, unwrap } from "../utils.mjs";
 import { APPLY_STATES } from "../registry.mjs";
 import { isArmorPenaltyReducer, parseReduction, resolveDataRefs } from "../patches/armor-penalty-reduction.mjs";
 import { keyAbility } from "../patches/condition-skill-lists.mjs";
 import { allActors } from "./source-stacking.mjs";
+
+export { sourceFingerprint };
 
 export { keyAbility };
 
@@ -256,18 +258,6 @@ export function itemArmorPenalty({ base = 0, increase = 0, reduction = 0 } = {})
 export function skillExtraPenalty({ ability, appliesArmorPenalty = false, penalty = 0 }) {
   if (!penalty || appliesArmorPenalty || !PHYSICAL_ABILITIES.has(ability)) return 0;
   return penalty;
-}
-
-/** FNV-1a of the source without comments and with collapsed whitespace, plus its length. */
-export function sourceFingerprint(source) {
-  if (typeof source !== "string") return null;
-  const text = stripComments(source).replace(/\s+/g, " ").trim();
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < text.length; i++) {
-    hash ^= text.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193) >>> 0;
-  }
-  return `${hash.toString(16).padStart(8, "0")}:${text.length}`;
 }
 
 /** Recognizes the exact original code; anything else (official change, helper, other module's wrapper) is unknown. */

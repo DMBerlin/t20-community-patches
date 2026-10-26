@@ -34,6 +34,7 @@ import statusEffectsCompendium from "./status-effects-compendium.mjs";
 import suppressedUsageEffects from "./suppressed-usage-effects.mjs";
 import threateningCritRange from "./threatening-crit-range.mjs";
 import temporaryUsageEffectExpiry from "./temporary-usage-effect-expiry.mjs";
+import sustainedSpellCost from "./sustained-spell-cost.mjs";
 import usageEffectToggle from "./usage-effect-toggle.mjs";
 import usageBuffTemplates from "./usage-buff-templates.mjs";
 import initiativeTiebreak from "./initiative-tiebreak.mjs";
@@ -70,4 +71,4 @@ export const GROUPS = ["conditions", "sheet-effects", "usage-effects", "items", 
  */
 
 /** @type {Patch[]} */
-export const PATCHES = [statusEffectsCompendium, encumberedStatusSync, ongoingDamageConditions, proneDefense, conditionSkillLists, deathThreshold, itemEffectsOnActorSheet, usageEffectToggle, conditionalPowers, modifiedFieldsFilter, fieldBonusesBreakdown, fieldBonusesTooltip, attributeBreakdown, suppressedUsageEffects, appendedUsageChanges, linkedUsageEffects, usageBuffTemplates, temporaryUsageEffectExpiry, abilityDialogCost, spellCostZero, armorPenaltyReduction, finesseAgileWeapons, spellDcBonus, threateningCritRange, alchemicalDamageBonus, hideLegacyUpgrades, segmentedSceneSetting, restRecovery, menaceXpFraction, saveSkillBonus, sheetInitiativeToken, spellCompendiumData, enchantmentData, raceData, partnerCombatant, skillModifierAttributes, engenhoqueiroArmorPenalty, bestiaryCreatureType, initiativeTiebreak, initialClass, racialAttributeChoice, rdExceptionOnce];
+export const PATCHES = [statusEffectsCompendium, encumberedStatusSync, ongoingDamageConditions, proneDefense, conditionSkillLists, deathThreshold, itemEffectsOnActorSheet, usageEffectToggle, conditionalPowers, modifiedFieldsFilter, fieldBonusesBreakdown, fieldBonusesTooltip, attributeBreakdown, suppressedUsageEffects, appendedUsageChanges, linkedUsageEffects, usageBuffTemplates, temporaryUsageEffectExpiry, sustainedSpellCost, abilityDialogCost, spellCostZero, armorPenaltyReduction, finesseAgileWeapons, spellDcBonus, threateningCritRange, alchemicalDamageBonus, hideLegacyUpgrades, segmentedSceneSetting, restRecovery, menaceXpFraction, saveSkillBonus, sheetInitiativeToken, spellCompendiumData, enchantmentData, raceData, partnerCombatant, skillModifierAttributes, engenhoqueiroArmorPenalty, bestiaryCreatureType, initiativeTiebreak, initialClass, racialAttributeChoice, rdExceptionOnce];

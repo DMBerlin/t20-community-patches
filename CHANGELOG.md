@@ -70,6 +70,7 @@ Não edite as seções de versão à mão.
 - `initial-class` (#54): a marca de classe inicial não pula mais de classe nem fica duplicada ao marcar, desmarcar, excluir ou copiar classes, e os PV do 1º nível saem da classe certa. Afeta Tormenta20 1.6.5.
 - `racial-attribute-choice` (#75): a janela de atributos de Humano, Sereia/Tritão, Lefou e Osteon passa a usar botões +1 em exatamente três atributos diferentes, em vez de campos livres, e avisa quando é fechada sem aplicar. Afeta Tormenta20 1.6.5.
 - `rd-exception-once` (#64): a RD com exceção (como 10/luz) vale uma vez por ataque, e não por tipo de dano, e passa a ser reduzida por Penetrante. Afeta Tormenta20 1.6.5.
+- `sustained-spell-cost` (#61): magias sustentadas com mais de um efeito, como a Oração, geram um único "Sustentando", custam 1 PM por turno e não perdem um dos lados ao serem mantidas. Afeta Tormenta20 1.6.5.
 
 ## v1.0.0 - 2026-10-19
 

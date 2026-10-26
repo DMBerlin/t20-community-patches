@@ -103,6 +103,10 @@
         "Name": "Expiração de efeitos de uso temporários",
         "Hint": "Efeitos de uso temporários expiram no fim da cena, por rodadas ou pelo avanço do tempo, como os demais efeitos."
       },
+      "sustained-spell-cost": {
+        "Name": "Custo de sustentar por magia",
+        "Hint": "Uma magia sustentada com mais de um efeito, como a Oração, gera um único \"Sustentando\" e custa 1 PM por turno. Manter ou encerrar a magia vale para todos os efeitos dela."
+      },
       "ability-dialog-cost": {
         "Name": "Custo total no diálogo de uso",
         "Hint": "O \"Custo de Mana Total\" soma o custo base e os aprimoramentos marcados, sem contagem dupla. Só afeta a exibição."

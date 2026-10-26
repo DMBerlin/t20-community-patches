@@ -103,6 +103,10 @@
         "Name": "Temporary usage effects expiry",
         "Hint": "Temporary usage effects expire at scene end, by rounds or by time advancement, like other effects."
       },
+      "sustained-spell-cost": {
+        "Name": "Sustain cost per spell",
+        "Hint": "A sustained spell with more than one effect, such as Oração, creates a single \"Sustentando\" and costs 1 MP per turn. Keeping or ending the spell applies to all of its effects."
+      },
       "ability-dialog-cost": {
         "Name": "Total cost in the usage dialog",
         "Hint": "\"Total Mana Cost\" adds the base cost and the checked enhancements, without double counting. Display only."

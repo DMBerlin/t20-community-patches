@@ -672,7 +672,7 @@
     "NonlethalDamage": {
         "Setting": {
           "Name": "Dano não letal",
-          "Hint": "Regra do livro (cap. 5, \"Ferimentos & Morte\", p. 236): um botão \"Não letal\" ao lado dos botões de aplicar dano faz 1x, 2x e ½ aplicarem dano não letal. Os PV perdidos assim ficam no campo \"Não letal\" da ficha, contam para cair inconsciente, mas não para sangrar ou morrer, e a cura os recupera primeiro. Com a regra desligada, a cura continua consumindo os PV não letais já registrados.",
+          "Hint": "Regra do livro (cap. 5, \"Ferimentos & Morte\", p. 236): um botão \"Não letal\" ao lado dos botões de aplicar dano faz 1x, 2x e ½ aplicarem dano não letal. Os PV perdidos assim ficam no campo \"Não letal\" da ficha, contam para cair inconsciente, mas não para sangrar ou morrer, e a cura os recupera primeiro. Aumentar o campo na ficha aplica a diferença como dano não letal. Com a regra desligada, a cura continua consumindo os PV não letais já registrados.",
           "off": "Desligado",
           "on": "Aplicar a regra do livro"
         },

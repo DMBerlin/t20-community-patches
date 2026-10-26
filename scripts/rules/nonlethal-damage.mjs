@@ -142,6 +142,27 @@ export function isExplicitNonlethalEdit(sent, stored, shown = stored) {
 }
 
 /**
+ * HP to write when an explicit edit raises the nonlethal HP above the value shown: the increase is applied as
+ * nonlethal damage, so the field also works at full HP. Returns undefined to leave the HP as requested.
+ * @param {object} p
+ * @param {number} p.before          Stored HP.
+ * @param {number} p.stored          Stored flag (integer >= 0).
+ * @param {number} p.max             Prepared maximum before the update.
+ * @param {{found: boolean, value?: unknown}} p.hp     pv.value in the changes.
+ * @param {{found: boolean, value?: unknown}} p.flag   The flag in the changes.
+ * @param {boolean} p.enabled        The rule is on.
+ */
+export function hpForNonlethalEdit({ before, stored, max, hp, flag, enabled }) {
+  if (!enabled || !flag?.found) return undefined;
+  const shown = effectiveNonlethal(stored, before, max);
+  if (!isExplicitNonlethalEdit(flag.value, stored, shown)) return undefined;
+  const raise = Math.trunc(Number(flag.value)) - shown;
+  const base = hp?.found ? Number(hp.value) : Number(before);
+  if (!(raise > 0) || !Number.isFinite(base)) return undefined;
+  return base - raise;
+}
+
+/**
  * Flag to write in an update, or null to leave the update alone.
  * @param {object} p
  * @param {number} p.before          Stored HP.
@@ -292,20 +313,28 @@ export function onPreUpdateActor(actor, changes, options) {
     if (!ACTOR_TYPES.includes(actor?.type)) return;
     const pv = actor.system?.attributes?.pv;
     if (!pv) return;
-    const hp = readChange(changes, HP_PATH);
+    let hp = readChange(changes, HP_PATH);
     const flag = readChange(changes, FLAG_PATH);
     if (!hp.found && !flag.found) return;
     const before = actor._source?.system?.attributes?.pv?.value ?? pv.value;
+    const stored = nonlethalOf(actor);
+    const enabled = ruleEnabled();
+    const damaged = hpForNonlethalEdit({ before, stored, max: pv.max, hp, flag, enabled });
+    if (damaged !== undefined) {
+      deleteChange(changes, HP_PATH);
+      writeChange(changes, HP_PATH, damaged);
+      hp = { found: true, value: damaged };
+    }
     const maxChange = readChange(changes, MAX_PATH);
     const next = nonlethalForUpdate({
       before,
-      stored: nonlethalOf(actor),
+      stored,
       max: pv.max,
       maxAfter: maxChange.found ? maxChange.value : undefined,
       hp,
       flag,
       isNonlethal: options?.[MODULE_ID]?.nonlethal === true,
-      enabled: ruleEnabled()
+      enabled
     });
     if (next === null) return;
     deleteChange(changes, FLAG_PATH);

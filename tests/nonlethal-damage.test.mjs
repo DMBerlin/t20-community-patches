@@ -6,6 +6,7 @@ import {
   isExplicitNonlethalEdit,
   lethalHp,
   lethalSnapshot,
+  hpForNonlethalEdit,
   nonlethalForUpdate,
   nonlethalOf,
   onCaptureClick,
@@ -160,6 +161,18 @@ test("nonlethalForUpdate: explicit edits are limited to the missing HP", () => {
   assert.equal(nonlethalForUpdate({ ...base, hp: { found: true, value: 6 }, flag: { found: false }, isNonlethal: true, enabled: false }), null);
 });
 
+test("hpForNonlethalEdit: raising the field applies the increase as nonlethal damage", () => {
+  const base = { before: 10, stored: 0, max: 10, hp: { found: false }, enabled: true };
+  assert.equal(hpForNonlethalEdit({ ...base, flag: { found: true, value: 3 } }), 7);
+  assert.equal(hpForNonlethalEdit({ ...base, before: 8, stored: 2, flag: { found: true, value: 5 } }), 5);
+  assert.equal(hpForNonlethalEdit({ ...base, before: 8, hp: { found: true, value: 8 }, flag: { found: true, value: 3 } }), 5);
+  // Lowering, an unchanged field or the rule off leave the HP alone.
+  assert.equal(hpForNonlethalEdit({ ...base, before: 6, stored: 4, flag: { found: true, value: 1 } }), undefined);
+  assert.equal(hpForNonlethalEdit({ ...base, before: 6, stored: 4, flag: { found: true, value: 4 } }), undefined);
+  assert.equal(hpForNonlethalEdit({ ...base, flag: { found: true, value: 3 }, enabled: false }), undefined);
+  assert.equal(hpForNonlethalEdit({ ...base, flag: { found: false } }), undefined);
+});
+
 test("pickDamageRoll mirrors _onChatApplyDamage", () => {
   const a = { options: { title: "Dano" } };
   const b = { options: { title: "Dano", type: "damage" } };
@@ -292,6 +305,13 @@ test("preUpdateActor: full sheet submission heals N; a changed flag wins", () =>
   const edit = { system: { attributes: { pv: { value: 6, temp: 0 } } }, flags: { [MODULE]: { nonlethal: 2 } } };
   onPreUpdateActor(hookActor(), edit, {});
   assert.equal(edit.flags[MODULE].nonlethal, 2);
+}));
+
+test("preUpdateActor: filling the field at full HP lowers the HP and keeps N", () => withSetting("on", () => {
+  const sheet = { system: { attributes: { pv: { value: 10, temp: 0 } } }, flags: { [MODULE]: { nonlethal: 3 } } };
+  onPreUpdateActor(hookActor({ value: 10, nonlethal: 0 }), sheet, {});
+  assert.deepEqual(readChange(sheet, "system.attributes.pv.value"), { found: true, value: 7 });
+  assert.equal(sheet.flags[MODULE].nonlethal, 3);
 }));
 
 test("preUpdateActor: hazards and updates without HP are ignored", () => withSetting("on", () => {

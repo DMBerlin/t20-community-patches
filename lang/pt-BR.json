@@ -890,6 +890,100 @@
         "characters": "Personagens de Jogador",
         "all": "Todas as criaturas"
       }
+    },
+    "EncounterXp": {
+      "Setting": {
+        "Name": "Recompensas do encontro",
+        "Hint": "Ferramenta do mestre para distribuir a XP de um encontro (ND × 1.000 por desafio vencido, dividido pelos personagens; Tormenta20 Jogo do Ano, p. 326). Botão do mestre: botão nos controles de token. Botão e ao encerrar o combate: o diálogo também abre quando um combate termina. Só o GM ativo distribui. O tesouro não é gerado: o resumo indica onde rolar.",
+        "off": "Desligado",
+        "button": "Botão do mestre",
+        "combat": "Botão e ao encerrar o combate"
+      },
+      "Control": "Recompensas do encontro",
+      "Dialog": {
+        "Title": "Recompensas do encontro",
+        "Challenges": "Desafios",
+        "Characters": "Personagens",
+        "Options": "Opções",
+        "Won": "Vencido",
+        "Name": "Nome",
+        "Level": "Nível",
+        "Defeated": "Marcado como derrotado no combate",
+        "Special": "ND S ou S+: contado como 20 (Ameaças de Arton, p. 376). Ajuste se quiser.",
+        "Outcome": "Resultado",
+        "Outcomes": {
+          "victory": "Vitória (XP total)",
+          "draw": "Empate (metade)",
+          "defeat": "Derrota (um quarto)"
+        },
+        "Mode": "Cálculo",
+        "Modes": {
+          "creature": "Por criatura (padrão do livro)",
+          "encounter": "Pelo ND do encontro (Ameaças de Arton, p. 376)"
+        },
+        "Encounter": "ND do encontro",
+        "SkipIrrelevant": "Ignorar desafios irrelevantes (5 ou mais pontos abaixo do nível do grupo)",
+        "GroupLevel": "Nível do grupo",
+        "PublicSummary": "Mostrar o resumo aos jogadores",
+        "Preview": "Total: {total} XP. Cada personagem: {share} XP.",
+        "Confirm": "Distribuir",
+        "Overlap": "Algum desses desafios já foi premiado:",
+        "Resume": "Retomar",
+        "Repeat": "Conceder de novo mesmo assim",
+        "CompleteOnly": "Conceder só a quem ainda não recebeu esses desafios",
+        "Pending": "Distribuições incompletas (algum personagem ficou sem a XP):",
+        "Unlinked": "Token não vinculado: a XP vai para a ficha do token, não para a ficha do mundo, e se perde se o token for apagado.",
+        "ConfirmUnlinked": "Entendo que a XP dos tokens não vinculados fica só nesses tokens.",
+        "Locked": "Distribuição interrompida: o formulário está travado. \"Retomar\" concede a mesma XP só a quem ainda não a recebeu.",
+        "Private": "(resumo só para GMs)",
+        "Divergences": "XP divergente das marcas (provável gravação atrasada sobre uma concessão mais nova). Corrija a XP na ficha antes de conceder a esses personagens:",
+        "DivergenceLine": "{name}: XP {xp}; as marcas indicam {expected}.",
+        "AcceptDivergence": "Conceder mesmo assim a quem tem XP divergente (a XP atual vira a nova base)."
+      },
+      "Error": {
+        "outcome": "Resultado inválido.",
+        "recipients": "Marque pelo menos um personagem.",
+        "challenges": "Marque pelo menos um desafio vencido.",
+        "nd": "Corrija o ND dos desafios marcados (1/4, 1/2, 1 a 20, S ou S+).",
+        "zero": "Não há XP a distribuir (desafios irrelevantes ou valor arredondado para 0).",
+        "encounterNd": "ND do encontro inválido (1/4, 1/2, 1 a 20, S ou S+). Deixe vazio para usar o sugerido.",
+        "unlinked": "Confirme a XP para os tokens não vinculados ou desmarque-os."
+      },
+      "Chat": {
+        "Title": "Recompensas do encontro",
+        "GmTitle": "Recompensas do encontro: detalhes (só GMs)",
+        "Outcome": {
+          "victory": "Vitória.",
+          "draw": "Empate: metade da XP.",
+          "defeat": "Derrota: um quarto da XP."
+        },
+        "Line": "{name}: +{delta} XP ({before} → {after})",
+        "LevelUp": "pode subir de nível",
+        "Conflict": "a ficha mudou durante a gravação; esperado {target}, confira",
+        "Failed": "XP não gravada; retome pelo diálogo",
+        "Irrelevant": "irrelevante (0 XP)",
+        "TotalCreature": "Por criatura: {total} XP no total.",
+        "TotalEncounter": "Pelo ND do encontro ({nd}): {total} XP no total.",
+        "EncounterIrrelevant": "Pelo ND do encontro ({nd}): irrelevante para o grupo, 0 XP.",
+        "Repeat": "Distribuição repetida por escolha do mestre.",
+        "Treasure": "Tesouro: {text} Role na Tabela 8-1, linha do ND {nd} (Tormenta20 Jogo do Ano, pp. 327-329).",
+        "TreasureEmpty": "não informado.",
+        "Skipped": "Já tinham XP desses desafios (ignorados): {names}.",
+        "Diverged": "{name}: XP {xp} diverge das marcas (esperado {expected}); nada gravado. Corrija a ficha e retome."
+      },
+      "Warn": {
+        "NoSource": "Selecione tokens ou inicie um combate.",
+        "NoChallenges": "Não há ameaças nem perigos na seleção.",
+        "Block": {
+          "notGm": "Só o mestre pode distribuir recompensas.",
+          "notActiveGm": "Só o GM ativo ({name}) distribui recompensas. O que faltou fica em \"Distribuições incompletas\".",
+          "off": "A ferramenta Recompensas do encontro está desligada.",
+          "disabled": "A experiência está desativada nas configurações do sistema (avanço por marcos)."
+        },
+        "Pending": "Ficaram sem a XP: {names}. Use \"Retomar\".",
+        "Missing": "Concessão não encontrada nas fichas.",
+        "Diverged": "Recompensas do encontro: a XP de {name} ({xp}) diverge das marcas (esperado {expected}). Uma gravação atrasada pode ter sobrescrito XP. Confira a ficha."
+      }
     }
   }
 }

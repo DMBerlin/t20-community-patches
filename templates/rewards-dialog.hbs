@@ -1,0 +1,119 @@
+<div class="t20cp-rewards-body scrollable">
+  {{#if pending.length}}
+  <div class="notification warning">
+    <p>{{localize "T20CP.EncounterXp.Dialog.Pending"}}</p>
+    <ul>
+      {{#each pending}}
+      <li>{{date}}: {{share}} XP ({{names}}){{#if private}} <em>{{localize "T20CP.EncounterXp.Dialog.Private"}}</em>{{/if}}
+        <button type="button" data-action="resume" data-id="{{id}}"><i class="fa-solid fa-rotate-right"></i> {{localize "T20CP.EncounterXp.Dialog.Resume"}}</button>
+      </li>
+      {{/each}}
+    </ul>
+  </div>
+  {{/if}}
+
+  {{#if divergences.length}}
+  <div class="notification error">
+    <p>{{localize "T20CP.EncounterXp.Dialog.Divergences"}}</p>
+    <ul>
+      {{#each divergences}}
+      <li>{{localize "T20CP.EncounterXp.Dialog.DivergenceLine" name=name xp=xp expected=expected}}</li>
+      {{/each}}
+    </ul>
+    <label><input type="checkbox" name="acceptDivergence" {{checked acceptDivergence}}> {{localize "T20CP.EncounterXp.Dialog.AcceptDivergence"}}</label>
+  </div>
+  {{/if}}
+
+  {{#if hasChallenges}}
+  {{#if locked}}<p class="notification warning">{{localize "T20CP.EncounterXp.Dialog.Locked"}}</p>{{/if}}
+  <fieldset class="t20cp-rewards-form" {{#if frozen}}disabled{{/if}}>
+  {{#if overlap.length}}
+  <div class="notification warning">
+    <p>{{localize "T20CP.EncounterXp.Dialog.Overlap"}}</p>
+    <ul>
+      {{#each overlap}}
+      <li>{{date}}: {{share}} XP ({{names}})</li>
+      {{/each}}
+    </ul>
+    <label><input type="checkbox" name="completeOnly" {{checked options.completeOnly}}> {{localize "T20CP.EncounterXp.Dialog.CompleteOnly"}}</label>
+    <label><input type="checkbox" name="repeat" {{checked options.repeat}}> {{localize "T20CP.EncounterXp.Dialog.Repeat"}}</label>
+  </div>
+  {{/if}}
+
+  <fieldset>
+    <legend>{{localize "T20CP.EncounterXp.Dialog.Challenges"}}</legend>
+    <table class="t20cp-rewards-table">
+      <thead><tr><th>{{localize "T20CP.EncounterXp.Dialog.Won"}}</th><th>{{localize "T20CP.EncounterXp.Dialog.Name"}}</th><th>ND</th><th>XP</th></tr></thead>
+      <tbody>
+        {{#each challenges}}
+        <tr class="{{#if invalid}}t20cp-invalid{{/if}}">
+          <td><input type="checkbox" name="challenges.{{index}}.won" {{checked won}}></td>
+          <td>{{name}}{{#if defeated}} <i class="fa-solid fa-skull" data-tooltip="{{localize "T20CP.EncounterXp.Dialog.Defeated"}}"></i>{{/if}}</td>
+          <td><input type="text" name="challenges.{{index}}.nd" value="{{ndLabel}}" size="3">
+            {{#if special}}<i class="fa-solid fa-triangle-exclamation" data-tooltip="{{localize "T20CP.EncounterXp.Dialog.Special"}}"></i>{{/if}}</td>
+          <td>{{xp}}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </fieldset>
+
+  <fieldset>
+    <legend>{{localize "T20CP.EncounterXp.Dialog.Characters"}}</legend>
+    <table class="t20cp-rewards-table">
+      <thead><tr><th></th><th>{{localize "T20CP.EncounterXp.Dialog.Name"}}</th><th>{{localize "T20CP.EncounterXp.Dialog.Level"}}</th><th>XP</th></tr></thead>
+      <tbody>
+        {{#each recipients}}
+        <tr>
+          <td><input type="checkbox" name="recipients.{{index}}.selected" {{checked selected}}></td>
+          <td>{{name}}{{#if unlinked}} <i class="fa-solid fa-link-slash" data-tooltip="{{localize "T20CP.EncounterXp.Dialog.Unlinked"}}"></i>{{/if}}{{#if levelUp}} <i class="fa-solid fa-arrow-up" data-tooltip="{{localize "T20CP.EncounterXp.Chat.LevelUp"}}"></i>{{/if}}</td>
+          <td>{{level}}</td>
+          <td>{{xp}}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+    {{#if hasUnlinked}}
+    <label class="notification warning"><input type="checkbox" name="confirmUnlinked" {{checked options.confirmUnlinked}}> {{localize "T20CP.EncounterXp.Dialog.ConfirmUnlinked"}}</label>
+    {{/if}}
+  </fieldset>
+
+  <fieldset>
+    <legend>{{localize "T20CP.EncounterXp.Dialog.Options"}}</legend>
+    <div class="form-group">
+      <label>{{localize "T20CP.EncounterXp.Dialog.Outcome"}}</label>
+      <select name="outcome">{{selectOptions outcomes selected=options.outcome localize=true}}</select>
+    </div>
+    <div class="form-group">
+      <label>{{localize "T20CP.EncounterXp.Dialog.Mode"}}</label>
+      <select name="mode">{{selectOptions modes selected=options.mode localize=true}}</select>
+    </div>
+    {{#if (eq options.mode "encounter")}}
+    <div class="form-group">
+      <label>{{localize "T20CP.EncounterXp.Dialog.Encounter"}}</label>
+      <input type="text" name="encounter" value="{{options.encounter}}" placeholder="{{options.encounterSuggested}}" size="3">
+    </div>
+    {{/if}}
+    <div class="form-group">
+      <label>{{localize "T20CP.EncounterXp.Dialog.SkipIrrelevant"}}</label>
+      <input type="checkbox" name="skipIrrelevant" {{checked options.skipIrrelevant}}>
+    </div>
+    <div class="form-group">
+      <label>{{localize "T20CP.EncounterXp.Dialog.GroupLevel"}}</label>
+      <input type="number" name="level" value="{{options.level}}" min="1" max="20" step="1">
+    </div>
+    <div class="form-group">
+      <label>{{localize "T20CP.EncounterXp.Dialog.PublicSummary"}}</label>
+      <input type="checkbox" name="publicSummary" {{checked options.publicSummary}}>
+    </div>
+  </fieldset>
+
+  </fieldset>
+
+  {{#if error}}
+  <p class="notification error">{{error}}</p>
+  {{else}}
+  <p class="t20cp-rewards-preview">{{localize "T20CP.EncounterXp.Dialog.Preview" total=award.total share=award.share}}</p>
+  {{/if}}
+  {{/if}}
+</div>

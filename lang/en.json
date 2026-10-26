@@ -890,6 +890,100 @@
         "characters": "Player characters",
         "all": "All creatures"
       }
+    },
+    "EncounterXp": {
+      "Setting": {
+        "Name": "Encounter rewards",
+        "Hint": "GM tool to award encounter XP (CR × 1,000 per defeated challenge, split among the characters; Tormenta20 Jogo do Ano, p. 326). GM button: a button in the token controls. Button and on combat end: the dialog also opens when a combat ends. Only the active GM awards. Treasure is not generated: the summary says where to roll it.",
+        "off": "Off",
+        "button": "GM button",
+        "combat": "Button and on combat end"
+      },
+      "Control": "Encounter rewards",
+      "Dialog": {
+        "Title": "Encounter rewards",
+        "Challenges": "Challenges",
+        "Characters": "Characters",
+        "Options": "Options",
+        "Won": "Defeated",
+        "Name": "Name",
+        "Level": "Level",
+        "Defeated": "Marked as defeated in combat",
+        "Special": "CR S or S+: counted as 20 (Ameaças de Arton, p. 376). Adjust if you wish.",
+        "Outcome": "Outcome",
+        "Outcomes": {
+          "victory": "Victory (full XP)",
+          "draw": "Draw (half)",
+          "defeat": "Defeat (a quarter)"
+        },
+        "Mode": "Calculation",
+        "Modes": {
+          "creature": "Per creature (book default)",
+          "encounter": "By encounter CR (Ameaças de Arton, p. 376)"
+        },
+        "Encounter": "Encounter CR",
+        "SkipIrrelevant": "Skip irrelevant challenges (5 or more below the group level)",
+        "GroupLevel": "Group level",
+        "PublicSummary": "Show the summary to players",
+        "Preview": "Total: {total} XP. Each character: {share} XP.",
+        "Confirm": "Award",
+        "Overlap": "Some of these challenges were already awarded:",
+        "Resume": "Resume",
+        "Repeat": "Award again anyway",
+        "CompleteOnly": "Award only those who have not received these challenges yet",
+        "Pending": "Incomplete distributions (some character did not get the XP):",
+        "Unlinked": "Unlinked token: the XP goes to the token sheet, not to the world actor, and is lost if the token is deleted.",
+        "ConfirmUnlinked": "I understand that the XP of unlinked tokens stays only on those tokens.",
+        "Locked": "Award interrupted: the form is locked. \"Resume\" grants the same XP only to those who did not get it yet.",
+        "Private": "(summary for GMs only)",
+        "Divergences": "XP disagrees with the records (probably a late write over a newer award). Fix the XP on the sheet before awarding these characters:",
+        "DivergenceLine": "{name}: XP {xp}; the records point to {expected}.",
+        "AcceptDivergence": "Award anyway to characters with diverging XP (the current XP becomes the new base)."
+      },
+      "Error": {
+        "outcome": "Invalid outcome.",
+        "recipients": "Select at least one character.",
+        "challenges": "Select at least one defeated challenge.",
+        "nd": "Fix the CR of the selected challenges (1/4, 1/2, 1 to 20, S or S+).",
+        "zero": "There is no XP to award (irrelevant challenges or a share rounded to 0).",
+        "encounterNd": "Invalid encounter CR (1/4, 1/2, 1 to 20, S or S+). Leave it empty to use the suggested one.",
+        "unlinked": "Confirm the XP for unlinked tokens or untick them."
+      },
+      "Chat": {
+        "Title": "Encounter rewards",
+        "GmTitle": "Encounter rewards: details (GMs only)",
+        "Outcome": {
+          "victory": "Victory.",
+          "draw": "Draw: half the XP.",
+          "defeat": "Defeat: a quarter of the XP."
+        },
+        "Line": "{name}: +{delta} XP ({before} → {after})",
+        "LevelUp": "can level up",
+        "Conflict": "the sheet changed while saving; expected {target}, please check",
+        "Failed": "XP not saved; resume from the dialog",
+        "Irrelevant": "irrelevant (0 XP)",
+        "TotalCreature": "Per creature: {total} XP total.",
+        "TotalEncounter": "By encounter CR ({nd}): {total} XP total.",
+        "EncounterIrrelevant": "By encounter CR ({nd}): irrelevant for the group, 0 XP.",
+        "Repeat": "Distribution repeated by the GM's choice.",
+        "Treasure": "Treasure: {text} Roll on Table 8-1, CR {nd} row (Tormenta20 Jogo do Ano, pp. 327-329).",
+        "TreasureEmpty": "not set.",
+        "Skipped": "Already had XP for these challenges (skipped): {names}.",
+        "Diverged": "{name}: XP {xp} disagrees with the records (expected {expected}); nothing written. Fix the sheet and resume."
+      },
+      "Warn": {
+        "NoSource": "Select tokens or start a combat.",
+        "NoChallenges": "There are no threats or hazards in the selection.",
+        "Block": {
+          "notGm": "Only the GM can award rewards.",
+          "notActiveGm": "Only the active GM ({name}) awards rewards. What is missing stays under \"Incomplete distributions\".",
+          "off": "The Encounter rewards tool is off.",
+          "disabled": "Experience is disabled in the system settings (milestone advancement)."
+        },
+        "Pending": "Still without the XP: {names}. Use \"Resume\".",
+        "Missing": "Award not found on the sheets.",
+        "Diverged": "Encounter rewards: {name}'s XP ({xp}) disagrees with the records (expected {expected}). A late write may have overwritten XP. Check the sheet."
+      }
     }
   }
 }

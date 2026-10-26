@@ -1,0 +1,20 @@
+.t20cp-rewards .t20cp-rewards-body {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.t20cp-rewards .t20cp-rewards-table td,
+.t20cp-rewards .t20cp-rewards-table th {
+  padding: 2px 4px;
+  text-align: left;
+}
+.t20cp-rewards .t20cp-invalid input[type="text"] {
+  outline: 1px solid var(--color-level-error, #b22222);
+}
+.t20cp-rewards .t20cp-rewards-preview {
+  font-weight: bold;
+}
+.t20cp-rewards .t20cp-rewards-form {
+  border: none;
+  margin: 0;
+  padding: 0;
+}

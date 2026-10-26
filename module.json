@@ -33,7 +33,8 @@
     "styles/item-effective-stats.css",
     "styles/save-button.css",
     "styles/attack-vs-defense.css",
-    "styles/race-data.css"
+    "styles/race-data.css",
+    "styles/rewards.css"
   ],
   "languages": [
     {

@@ -36,6 +36,14 @@ import {
   installCreatureTypeTraitsRule,
   registerCreatureTypeTraitsSetting
 } from "./rules/creature-type-traits.mjs";
+import {
+  installEncounterXpRule,
+  listDivergences,
+  listPending,
+  openRewards,
+  registerEncounterXpSetting,
+  resumeRewards
+} from "./rules/encounter-xp.mjs";
 import { coversActor, installDyingStatesRule, registerDyingStatesSetting } from "./rules/dying-states.mjs";
 import {
   DEATH_FLOOR_SETTING,
@@ -105,6 +113,7 @@ Hooks.once("init", () => {
   registerCombatManeuversSetting();
   registerCreatureTypeTraitsSetting();
   registerDyingStatesSetting();
+  registerEncounterXpSetting();
   // Belongs to the death-threshold patch, but exists in every patch mode: the system's damage clamp always does.
   registerDeathThresholdFloorSetting();
   if (game.system.id === "tormenta20") {
@@ -225,6 +234,12 @@ Hooks.once("init", () => {
     } catch (err) {
       console.error(`${MODULE_ID} | Failed to install the creature type traits rule`, err);
     }
+    // Hooks only (scene controls, combat end, user connection, actor updates): no wrapper to order.
+    try {
+      installEncounterXpRule();
+    } catch (err) {
+      console.error(`${MODULE_ID} | Failed to install the encounter rewards tool`, err);
+    }
     // Last on purpose: its wrappers must sit outside those of the patches and the other rules.
     try {
       installItemEffectiveStatsRule();
@@ -233,7 +248,11 @@ Hooks.once("init", () => {
     }
   }
 
-  game.modules.get(MODULE_ID).api = { status, groups: GROUPS };
+  game.modules.get(MODULE_ID).api = {
+    status,
+    groups: GROUPS,
+    rewards: { open: openRewards, pending: listPending, resume: resumeRewards, divergences: listDivergences }
+  };
 });
 
 /** Waits this long after "ready" for the late diagnoses before summarizing them. */

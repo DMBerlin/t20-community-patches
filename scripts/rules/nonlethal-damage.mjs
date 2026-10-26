@@ -30,6 +30,7 @@ export const ROLL_DATA_KEY = "nonlethal";
 export const ACTOR_TYPES = Object.freeze(["character", "npc", "simple"]);
 export const TOGGLE_CLASS = "t20cp-nonlethal";
 export const FIELD_CLASS = "t20cp-nonlethal-field";
+const FOOTER_CLASS = "t20cp-nonlethal-footer";
 
 const FLAG_PATH = `flags.${MODULE_ID}.${NONLETHAL_FLAG}`;
 const HP_PATH = "system.attributes.pv.value";
@@ -449,6 +450,7 @@ export function onRenderActorSheet(sheet, html) {
     input.placeholder = t("Toggle");
     input.dataset.tooltip = t("Sheet", { nonlethal: n, lethal: Number(pv.value) + n });
     input.disabled = !sheet.isEditable;
+    footer.classList.add(FOOTER_CLASS);
     footer.append(input);
   } catch (err) {
     console.error(`${LOG} failed to add the sheet field`, err);

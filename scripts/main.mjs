@@ -27,6 +27,7 @@ import {
   installSituationalModifiersRule,
   registerSituationalModifiersSetting
 } from "./rules/situational-modifiers.mjs";
+import { installConcealmentRule, registerConcealmentSetting } from "./rules/concealment-miss-chance.mjs";
 import { installManaQueue } from "./rules/mana-queue.mjs";
 import { installNonlethalRule, registerNonlethalSetting } from "./rules/nonlethal-damage.mjs";
 import { installNonlethalAttackRule } from "./rules/nonlethal-attack.mjs";
@@ -87,6 +88,7 @@ Hooks.once("init", () => {
   registerAttackVsDefenseSetting();
   registerTrainedOnlySetting();
   registerSituationalModifiersSetting();
+  registerConcealmentSetting();
   registerNonlethalSetting();
   if (game.system.id === "tormenta20") {
     // Transparent (only orders each actor's spendMana calls) and installed with every rule off.
@@ -139,6 +141,13 @@ Hooks.once("init", () => {
       installSituationalModifiersRule();
     } catch (err) {
       console.error(`${MODULE_ID} | Failed to install the situational modifiers rule`, err);
+    }
+    // Also before casting-restrictions (use-target wrappers). Its rollAttack wrapper composes with attack-vs-defense in
+    // either order: the d10 are published before the original rollAttack and the critical is only ever cancelled.
+    try {
+      installConcealmentRule();
+    } catch (err) {
+      console.error(`${MODULE_ID} | Failed to install the concealment miss chance rule`, err);
     }
     // Before casting-restrictions: this displayCard wrapper sits inside that one, which only counts a cast through
     // castCompleted (scripts/rules/cast-outcome.mjs), so a failed armor test never ends a sustained spell.

@@ -542,6 +542,42 @@
       "CriticalCancelled": "No critical hit: the attack missed every target.",
       "Reference": "Tormenta20 Jogo do Ano, ch. 5, \"Attack Test\" and \"Critical Hits\", p. 230-231"
     },
+    "Concealment": {
+      "Setting": {
+        "Name": "Concealment miss chance",
+        "Hint": "Optional rule (chapter 5, \"Situações Especiais\", p. 238-239): light concealment gives a 20% miss chance and total concealment 50%, rolled on 1d10 together with the attack's d20. The attack dialog gets the \"Target concealment\" field, and the card shows the 1d10 and the verdict for each target marked when the use started. Blind on the attacker and Invisible on the target are detected as total concealment. If the d20 threatens a critical and the attack misses every target by concealment, the critical is cancelled.",
+        "off": "Off",
+        "on": "Roll the miss chance"
+      },
+      "Dialog": {
+        "Label": "Target concealment",
+        "auto": "Automatic",
+        "light": "Light concealment (20%)",
+        "total": "Total concealment (50%)",
+        "scent": "Scent (total concealment becomes 20%)",
+        "none": "Ignore concealment",
+        "Hint": "Darkvision only ignores the total concealment of non-magical darkness, not invisibility.",
+        "Preview": "{target}: {chance}% ({reasons})",
+        "PreviewNone": "Automatic: no concealment detected on the targets."
+      },
+      "Reason": {
+        "blind": "blind attacker",
+        "invisible": "invisible target",
+        "light": "light concealment",
+        "total": "total concealment",
+        "scent": "scent"
+      },
+      "Card": {
+        "Title": "Miss chance",
+        "Target": "Target {n}",
+        "NoTarget": "No target",
+        "Line": "{chance}% ({reasons}) · {formula}: {total} (miss on {range})",
+        "Miss": "Missed by concealment",
+        "Hit": "Got past the concealment",
+        "CriticalCancelled": "No critical hit: the attack missed every target.",
+        "Reference": "Tormenta20 Jogo do Ano, ch. 5, \"Situações Especiais\", p. 238-239"
+      }
+    },
     "DefenseAdjustment": {
       "prone-ranged": "prone: +5 against ranged attack",
       "cover": "light cover: +5",

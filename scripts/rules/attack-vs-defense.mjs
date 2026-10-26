@@ -141,10 +141,10 @@ function readDefense(token) {
 }
 
 /**
- * Compares every attack roll of the clone with the targets and records the result in the roll.
+ * Compares every attack roll written by this call (not the ones in before) with the targets and records the result.
  * Exported for tests.
  */
-export function annotate(item, records, tokens) {
+export function annotate(item, records, tokens, before = {}) {
   const rolled = item.system?.rolled;
   if (!rolled) return;
   // getAttackToHit always reads the FIRST attack roll (find, T20:8151) and rollAttack does not pass r: every attack
@@ -164,6 +164,8 @@ export function annotate(item, records, tokens) {
   for (const r of item.system.rolls ?? []) {
     if (r?.type !== "ataque") continue;
     const roll = rolled[r.name];
+    // Not written by this call (a cancelled attack leaves the previous roll): never touch it.
+    if (roll === before[r.name]) continue;
     const die = roll?.terms?.[0];
     if (!roll?.options || roll.options.type !== "attack" || die?.faces !== 20) continue;
     // The original threat, as the system computes it (T20:9093), whatever another wrapper already did to _critical.
@@ -297,10 +299,11 @@ export function installAttackVsDefenseRule() {
     } catch (err) {
       console.error(`${MODULE_ID} | attack-vs-defense: failed to read the targets`, err);
     }
+    const before = { ...(this.system?.rolled ?? {}) };
     const result = await rollAttack.apply(this, args);
     if (records.length) {
       try {
-        annotate(this, records, tokens);
+        annotate(this, records, tokens, before);
       } catch (err) {
         console.error(`${MODULE_ID} | attack-vs-defense: failed to compare the attack`, err);
       }

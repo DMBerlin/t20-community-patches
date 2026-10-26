@@ -542,6 +542,42 @@
       "CriticalCancelled": "Sem acerto crítico: o ataque errou todos os alvos.",
       "Reference": "Tormenta20 Jogo do Ano, cap. 5, \"Teste de Ataque\" e \"Acertos Críticos\", p. 230-231"
     },
+    "Concealment": {
+      "Setting": {
+        "Name": "Chance de falha por camuflagem",
+        "Hint": "Regra opcional (capítulo 5, \"Situações Especiais\", p. 238-239): camuflagem leve dá 20% de chance de falha e camuflagem total, 50%, rolada em 1d10 junto com o d20 do ataque. O diálogo de ataque ganha o campo \"Camuflagem do alvo\", e o card mostra o 1d10 e o veredito para cada alvo marcado no início do uso. Cego no atacante e Invisível no alvo são detectados como camuflagem total. Se o d20 ameaça crítico e o ataque erra todos os alvos por camuflagem, o crítico é cancelado.",
+        "off": "Desligado",
+        "on": "Rolar a chance de falha"
+      },
+      "Dialog": {
+        "Label": "Camuflagem do alvo",
+        "auto": "Automático",
+        "light": "Camuflagem leve (20%)",
+        "total": "Camuflagem total (50%)",
+        "scent": "Faro (camuflagem total vira 20%)",
+        "none": "Ignorar camuflagem",
+        "Hint": "Visão no escuro só ignora a camuflagem total da escuridão não mágica, não a invisibilidade.",
+        "Preview": "{target}: {chance}% ({reasons})",
+        "PreviewNone": "Automático: nenhuma camuflagem detectada nos alvos."
+      },
+      "Reason": {
+        "blind": "atacante cego",
+        "invisible": "alvo invisível",
+        "light": "camuflagem leve",
+        "total": "camuflagem total",
+        "scent": "faro"
+      },
+      "Card": {
+        "Title": "Chance de falha",
+        "Target": "Alvo {n}",
+        "NoTarget": "Sem alvo",
+        "Line": "{chance}% ({reasons}) · {formula}: {total} (falha em {range})",
+        "Miss": "Errou por camuflagem",
+        "Hit": "Passou pela camuflagem",
+        "CriticalCancelled": "Sem acerto crítico: o ataque errou todos os alvos.",
+        "Reference": "Tormenta20 Jogo do Ano, cap. 5, \"Situações Especiais\", p. 238-239"
+      }
+    },
     "DefenseAdjustment": {
       "prone-ranged": "caído: +5 contra ataque à distância",
       "cover": "cobertura leve: +5",

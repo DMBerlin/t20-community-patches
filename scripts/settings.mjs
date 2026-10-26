@@ -15,6 +15,7 @@ import { ARCANE_ARMOR_SETTING } from "./rules/arcane-armor-casting.mjs";
 import { NON_PROFICIENCY_SETTING } from "./rules/non-proficiency-penalties.mjs";
 import { SAVE_BUTTON_SETTING } from "./rules/save-button.mjs";
 import { ATTACK_VS_DEFENSE_SETTING } from "./rules/attack-vs-defense.mjs";
+import { CONCEALMENT_SETTING } from "./rules/concealment-miss-chance.mjs";
 import { TRAINED_ONLY_SETTING } from "./rules/trained-only-skills.mjs";
 import { SITUATIONAL_SETTING } from "./rules/situational-modifiers.mjs";
 import { NONLETHAL_SETTING } from "./rules/nonlethal-damage.mjs";
@@ -45,6 +46,7 @@ export const RULE_SETTINGS = [
   { id: "non-proficiency", keys: [NON_PROFICIENCY_SETTING] },
   { id: "save-button", keys: [SAVE_BUTTON_SETTING] },
   { id: "attack-vs-defense", keys: [ATTACK_VS_DEFENSE_SETTING] },
+  { id: "concealment-miss-chance", keys: [CONCEALMENT_SETTING] },
   { id: "situational-modifiers", keys: [SITUATIONAL_SETTING] },
   { id: "trained-only-skills", keys: [TRAINED_ONLY_SETTING] },
   { id: "nonlethal-damage", keys: [NONLETHAL_SETTING] },

@@ -235,3 +235,12 @@ input.t20cp-nonlethal-field {
   flex: 0 0 auto;
   text-align: center;
 }
+
+/* Optional rule "Chance de falha por camuflagem" (#49). */
+.chat-message .t20cp-miss-chance { margin: 2px 0 4px; padding-top: 2px; border-top: 1px solid var(--color-border-light-2, #999); font-size: var(--font-size-12, 12px); }
+.chat-message .t20cp-miss-chance p { margin: 0; }
+.chat-message .t20cp-miss-chance .t20cp-miss-chance-title { font-weight: bold; }
+.chat-message .t20cp-miss-chance .t20cp-miss-chance-note { font-style: italic; }
+.chat-message .t20cp-miss-chance ul { margin: 0; padding-left: 1em; }
+.chat-message .t20cp-miss-chance .t20cp-miss { color: #9e1b1b; font-weight: bold; }
+.chat-message .t20cp-miss-chance .t20cp-hit { color: #1d6b22; font-weight: bold; }

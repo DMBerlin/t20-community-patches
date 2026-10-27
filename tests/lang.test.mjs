@@ -15,3 +15,13 @@ test("locale files parse and have the same keys", () => {
   const en = keys(load("en")).sort();
   assert.deepEqual(en, pt);
 });
+
+test("every optional rule with several settings has a group title in the Center", () => {
+  const source = readFileSync(new URL("../scripts/settings.mjs", import.meta.url), "utf8");
+  const ids = [...source.matchAll(/\{ id: "([\w-]+)", keys: \[([^\]]*)\] \}/g)]
+    .filter(([, , list]) => list.split(",").length > 1)
+    .map(([, id]) => id);
+  assert.ok(ids.length > 1);
+  const rules = load("pt-BR").T20CP.Manager.Rules;
+  for (const id of ids) assert.ok(rules[id], id);
+});

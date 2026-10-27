@@ -585,6 +585,21 @@ test("both rules: the cancelled critical notice appears once on the card, in bot
   }
 });
 
+test("both rules: in hide mode a player sees no cancelled critical notice from either rule", async () => {
+  for (const order of ORDERS) {
+    const { item, env } = await combined(order, [makeToken("A", { defense: 5, statuses: ["invisivel"] })], [2]);
+    env.settings[`${MODULE}.attackVsDefenseVisibility`] = "hide";
+    game.user.isGM = false;
+    const { root, total } = card();
+    const msg = new env.ChatMessageT20();
+    Object.assign(msg, { isContentVisible: true, html: root, rolls: [{ ...item.system.rolled.Ataque, options: { ...item.system.rolled.Ataque.options, title: "Ataque" } }] });
+    await msg.renderHTML();
+    assert.doesNotMatch(root.textContent, /Sem acerto crítico/, order.join());
+    assert.equal(root.querySelectorAll(".t20cp-attack-vs-defense").length, 0, order.join());
+    assert.equal(total.classList.contains("critical"), false, order.join());
+  }
+});
+
 /* -------------------------------------------- */
 /*  Card                                        */
 /* -------------------------------------------- */

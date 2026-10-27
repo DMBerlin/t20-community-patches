@@ -14,7 +14,7 @@ import {
 import { ARCANE_ARMOR_SETTING } from "./rules/arcane-armor-casting.mjs";
 import { NON_PROFICIENCY_SETTING } from "./rules/non-proficiency-penalties.mjs";
 import { SAVE_BUTTON_SETTING } from "./rules/save-button.mjs";
-import { ATTACK_VS_DEFENSE_SETTING } from "./rules/attack-vs-defense.mjs";
+import { ATTACK_VS_DEFENSE_SETTING, ATTACK_VS_DEFENSE_VISIBILITY_SETTING } from "./rules/attack-vs-defense.mjs";
 import { CONCEALMENT_SETTING } from "./rules/concealment-miss-chance.mjs";
 import { TRAINED_ONLY_SETTING } from "./rules/trained-only-skills.mjs";
 import { SKILL_PICKER_SETTING } from "./rules/skill-picker.mjs";
@@ -51,7 +51,7 @@ export const RULE_SETTINGS = [
   { id: "arcane-armor", keys: [ARCANE_ARMOR_SETTING] },
   { id: "non-proficiency", keys: [NON_PROFICIENCY_SETTING] },
   { id: "save-button", keys: [SAVE_BUTTON_SETTING] },
-  { id: "attack-vs-defense", keys: [ATTACK_VS_DEFENSE_SETTING] },
+  { id: "attack-vs-defense", keys: [ATTACK_VS_DEFENSE_SETTING, ATTACK_VS_DEFENSE_VISIBILITY_SETTING] },
   { id: "concealment-miss-chance", keys: [CONCEALMENT_SETTING] },
   { id: "situational-modifiers", keys: [SITUATIONAL_SETTING] },
   { id: "trained-only-skills", keys: [TRAINED_ONLY_SETTING] },

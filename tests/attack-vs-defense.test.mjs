@@ -6,10 +6,13 @@ import {
   buildTargetResult,
   canSeeDefense,
   combineWithConcealment,
+  decorate,
   describeTarget,
   effectiveDefense,
   installAttackVsDefenseRule,
-  resolveAttack
+  registerAttackVsDefenseSetting,
+  resolveAttack,
+  resultVisibility
 } from "../scripts/rules/attack-vs-defense.mjs";
 import { finalOutcome, keepCritical, setConcealmentChecks } from "../scripts/rules/shared/attack-outcome.mjs";
 import { USE_PURPOSES, addDefenseAdjustments, withUsePurpose } from "../scripts/rules/shared/targets.mjs";
@@ -90,6 +93,25 @@ test("canSeeDefense: GM, observer, character target or showFoeDc", () => {
   assert.equal(canSeeDefense({ ...base, isObserver: true }), true);
 });
 
+test("resultVisibility: GM sees all; players follow show, announce or hide", () => {
+  const combos = [];
+  for (const isObserver of [false, true])
+    for (const actorType of ["npc", "character", null])
+      for (const showFoeDc of [false, true]) combos.push({ isGM: false, isObserver, actorType, showFoeDc });
+  for (const mode of ["show", "announce", "hide"]) {
+    assert.deepEqual(resultVisibility({ ...combos[0], isGM: true, mode }), { verdict: true, defense: true }, mode);
+  }
+  for (const c of combos) {
+    assert.deepEqual(resultVisibility({ ...c, mode: "hide" }), { verdict: false, defense: false });
+    assert.deepEqual(resultVisibility({ ...c, mode: "show" }), { verdict: true, defense: canSeeDefense(c) });
+    assert.deepEqual(resultVisibility({ ...c, mode: "nope" }), resultVisibility({ ...c, mode: "show" }));
+  }
+  const foe = { isGM: false, isObserver: false, actorType: "npc", showFoeDc: true, mode: "announce" };
+  assert.deepEqual(resultVisibility(foe), { verdict: true, defense: false });
+  assert.deepEqual(resultVisibility({ ...foe, isObserver: true }), { verdict: true, defense: true });
+  assert.deepEqual(resultVisibility({ ...foe, actorType: "character" }), { verdict: true, defense: true });
+});
+
 /* -------------------------------------------- */
 /*  Foundry mocks                               */
 /* -------------------------------------------- */
@@ -121,7 +143,12 @@ class FakeElement {
     return this._text + this.children.map((child) => child.textContent).join("");
   }
   append(...nodes) {
+    for (const node of nodes) node.parent = this;
     this.children.push(...nodes);
+  }
+  remove() {
+    const siblings = this.parent?.children ?? [];
+    if (siblings.includes(this)) siblings.splice(siblings.indexOf(this), 1);
   }
   matches(selector) {
     const [, cls, attr] = selector.match(/^\.([\w-]+)(?:\[data-([\w-]+)\])?$/) ?? [];
@@ -165,8 +192,12 @@ function makeToken(id, { name = id, defense = 15, type = "npc", prone = false, o
   return { actor, document: { uuid: `Scene.s.Token.${id}`, name, displayName, actor, isOwner: false } };
 }
 
-function setup({ rule = "on", lang = "pt-BR", isGM = true, showFoeDc = true, before } = {}) {
-  const settings = { [`${MODULE}.attackVsDefenseRule`]: rule, "tormenta20.showFoeDc": showFoeDc };
+function setup({ rule = "on", lang = "pt-BR", isGM = true, showFoeDc = true, visibility = "show", before } = {}) {
+  const settings = {
+    [`${MODULE}.attackVsDefenseRule`]: rule,
+    [`${MODULE}.attackVsDefenseVisibility`]: visibility,
+    "tormenta20.showFoeDc": showFoeDc
+  };
   const strings = LANG[lang];
   const docs = new Map();
   const seen = [];
@@ -500,6 +531,25 @@ test("renderHTML: one block per roll, idempotent, and a cancelled critical loses
   assert.match(text, /Orc Combatente: Errou · Defesa 17/);
 });
 
+test("renderHTML: in hide mode a player sees no block, and a cancelled critical still loses its highlight; the GM sees all", async () => {
+  const env = setup({ isGM: false, visibility: "hide" });
+  const data = { v: 1, kind: "melee", threat: true, critical: false, targets: [recorded()] };
+  const player = card();
+  const msg = message(env, data);
+  msg.html = player.root;
+  await msg.renderHTML();
+  assert.equal(player.container.querySelector(".t20cp-attack-vs-defense"), null);
+  assert.doesNotMatch(player.root.textContent, /Sem acerto crítico/);
+  assert.deepEqual([player.total.classList.contains("critical"), player.total.classList.contains("failure")], [false, true]);
+
+  game.user.isGM = true;
+  const gm = card();
+  const gmMsg = message(env, data);
+  gmMsg.html = gm.root;
+  await gmMsg.renderHTML();
+  assert.match(gm.container.querySelector(".t20cp-attack-vs-defense").textContent, /Sem acerto crítico.*Orc Combatente: Errou · Defesa 17/);
+});
+
 test("renderHTML: a kept critical keeps the highlight; hidden content and messages without data are not decorated", async () => {
   const env = setup();
   const kept = card();
@@ -554,6 +604,14 @@ test("describeTarget: the Defense number follows showFoeDc for foes, with GM, ob
   env.settings["tormenta20.showFoeDc"] = true;
   game.user.isGM = false;
   assert.equal(describeTarget(recorded(), 0).text, "Errou · Defesa 17");
+  assert.equal(describeTarget(recorded(), 0).visible, true);
+  env.settings[`${MODULE}.attackVsDefenseVisibility`] = "announce";
+  assert.equal(describeTarget(recorded(), 0).text, "Errou");
+  assert.equal(describeTarget(recorded({ actorType: "character" }), 0).text, "Errou · Defesa 17");
+  env.settings[`${MODULE}.attackVsDefenseVisibility`] = "hide";
+  assert.equal(describeTarget(recorded(), 0).visible, false);
+  game.user.isGM = true;
+  assert.deepEqual(describeTarget(recorded(), 0), { name: "Orc Combatente", text: "Errou · Defesa 17", visible: true });
 });
 
 test("describeTarget: adjustment labels come from the shared namespace, in the user's language", () => {
@@ -574,4 +632,53 @@ test("buildTargetResult: records only the frozen identity and the computed resul
     { kind: "melee", total: 12, natural: 7, threat: false }
   );
   assert.deepEqual(result, { uuid: "u", name: "N", actorType: "npc", displayName: 30, defense: 12, adjustments: [], outcome: "hit", critical: false, automatic: null });
+});
+
+test("changing the visibility setting rebuilds the block in place on every displayed copy, without reposting", async () => {
+  const env = setup({ isGM: false, visibility: "show" });
+  const registered = {};
+  const data = { v: 1, kind: "melee", threat: true, critical: false, targets: [recorded()] };
+  const copy = () => {
+    const c = card();
+    c.root.className = "message";
+    c.root.dataset.messageId = "a";
+    return c;
+  };
+  // The same card in the log and in a popout; "old" is not displayed anywhere.
+  const copies = [copy(), copy()];
+  const msg = message(env, data);
+  msg.id = "a";
+  for (const c of copies) decorate(msg, c.root);
+  const old = message(env, data);
+  old.id = "old";
+  game.messages = { contents: [old, msg, { id: "b", rolls: [{ options: {} }] }, { id: "c" }] };
+  game.settings.register = (scope, key, config) => (registered[key] = config);
+  const queried = [];
+  globalThis.document.querySelectorAll = (sel) => {
+    const id = sel.match(/data-message-id="(\w+)"/)[1];
+    queried.push(id);
+    return id === "a" ? copies.map((c) => c.root) : [];
+  };
+  const reposted = [];
+  globalThis.ui = { chat: { updateMessage: (m) => reposted.push(m.id) } };
+  registerAttackVsDefenseSetting();
+  assert.deepEqual(Object.keys(registered.attackVsDefenseVisibility.choices), ["show", "announce", "hide"]);
+  assert.equal(registered.attackVsDefenseVisibility.default, "show");
+  const block = (c) => c.container.querySelectorAll(".t20cp-attack-vs-defense");
+
+  env.settings[`${MODULE}.attackVsDefenseVisibility`] = "announce";
+  registered.attackVsDefenseVisibility.onChange("announce");
+  for (const c of copies) {
+    assert.equal(block(c).length, 1);
+    assert.match(block(c)[0].textContent, /Orc Combatente: Errou$/);
+  }
+  env.settings[`${MODULE}.attackVsDefenseVisibility`] = "hide";
+  registered.attackVsDefenseVisibility.onChange("hide");
+  for (const c of copies) assert.equal(block(c).length, 0);
+  env.settings[`${MODULE}.attackVsDefenseVisibility`] = "show";
+  registered.attackVsDefenseVisibility.onChange("show");
+  for (const c of copies) assert.match(block(c)[0].textContent, /Errou · Defesa 17$/);
+  assert.deepEqual([...new Set(queried)], ["old", "a"]);
+  assert.deepEqual(reposted, []);
+  delete globalThis.ui;
 });

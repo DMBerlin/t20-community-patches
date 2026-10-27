@@ -22,6 +22,8 @@ import {
 import { finalOutcome, getConcealmentChecks, keepCritical, missedByConcealment } from "./shared/attack-outcome.mjs";
 
 export const ATTACK_VS_DEFENSE_SETTING = "attackVsDefenseRule";
+export const ATTACK_VS_DEFENSE_VISIBILITY_SETTING = "attackVsDefenseVisibility";
+export const VISIBILITY_MODES = ["show", "announce", "hide"];
 export const DATA_KEY = "attackVsDefense";
 const DATA_VERSION = 1;
 const PRONE = "caido";
@@ -86,6 +88,20 @@ export function canSeeDefense({ isGM, isObserver, actorType, showFoeDc }) {
 }
 
 /**
+ * What the current user sees of one target's result. GMs see everything; for players, the mode chosen by the GM:
+ * show (verdict, and the number per canSeeDefense), announce (verdict; number only for observers and character
+ * targets) or hide (nothing). An unknown mode behaves like "show".
+ * @param {{mode: string, isGM: boolean, isObserver: boolean, actorType: string|null, showFoeDc: boolean}} params
+ * @returns {{verdict: boolean, defense: boolean}}
+ */
+export function resultVisibility({ mode, isGM, isObserver, actorType, showFoeDc }) {
+  if (isGM) return { verdict: true, defense: true };
+  if (mode === "hide") return { verdict: false, defense: false };
+  if (mode === "announce") return { verdict: true, defense: !!(isObserver || actorType === "character") };
+  return { verdict: true, defense: canSeeDefense({ isGM, isObserver, actorType, showFoeDc }) };
+}
+
+/**
  * Combines the Defense result of one target with the concealment check of #49 (shared finalOutcome: concealment
  * wins, p. 238). A target missed by concealment never shows a hit or a critical.
  * @param {{outcome: string, critical: boolean}} result  From buildTargetResult.
@@ -124,6 +140,33 @@ function isOn() {
     return game.settings.get(MODULE_ID, ATTACK_VS_DEFENSE_SETTING) === "on";
   } catch {
     return false;
+  }
+}
+
+function visibilityMode() {
+  try {
+    return game.settings.get(MODULE_ID, ATTACK_VS_DEFENSE_VISIBILITY_SETTING);
+  } catch {
+    return "show";
+  }
+}
+
+/**
+ * The visibility setting changed: rebuilds the result block in place on every displayed copy of the cards that carry
+ * a result of this rule (log, notifications, popout tab, single-message popouts). Cards not rendered yet read the mode
+ * when they are. ChatLog#updateMessage is not used: it posts a card missing from a log's batch out of order.
+ */
+function redrawDecorated() {
+  try {
+    for (const message of game.messages?.contents ?? []) {
+      if (!(message.rolls ?? []).some((r) => r?.options?.[MODULE_ID]?.[DATA_KEY])) continue;
+      for (const el of document.querySelectorAll(`.message[data-message-id="${message.id}"]`)) {
+        for (const box of el.querySelectorAll(".t20cp-attack-vs-defense")) box.remove();
+        decorate(message, el);
+      }
+    }
+  } catch (err) {
+    console.error(`${MODULE_ID} | attack-vs-defense: failed to redraw the chat`, err);
   }
 }
 
@@ -189,7 +232,7 @@ function label(key, data) {
 
 /**
  * Text of one target line for the current user. Exported for tests.
- * @returns {{name: string, text: string}}
+ * @returns {{name: string, text: string, visible: boolean}}
  */
 export function describeTarget(target, index) {
   let live = null;
@@ -220,10 +263,9 @@ export function describeTarget(target, index) {
     const key = `T20CP.DefenseAdjustment.${id}`;
     parts.push(game.i18n.has(key) ? game.i18n.localize(key) : String(id));
   }
-  if (Number.isFinite(target.defense) && canSeeDefense({ isGM, isObserver, actorType: target.actorType, showFoeDc })) {
-    parts.push(label("Defense", { value: target.defense }));
-  }
-  return { name, text: parts.join(" · ") };
+  const view = resultVisibility({ mode: visibilityMode(), isGM, isObserver, actorType: target.actorType, showFoeDc });
+  if (Number.isFinite(target.defense) && view.defense) parts.push(label("Defense", { value: target.defense }));
+  return { name, text: parts.join(" · "), visible: view.verdict };
 }
 
 /** Adds the result block under each annotated attack roll of the card. Idempotent. Exported for tests. */
@@ -241,6 +283,9 @@ export function decorate(message, html) {
       total?.classList.remove("success", "critical");
       total?.classList.add("failure");
     }
+    const lines = data.targets.map((target, index) => describeTarget(target, index));
+    // Hide mode, for players: the cancelled critical keeps losing its highlight, but nothing of the rule is shown.
+    if (!lines.some((line) => line.visible)) continue;
     const box = document.createElement("div");
     box.className = "t20cp-attack-vs-defense";
     box.dataset.tooltip = label("Reference");
@@ -252,7 +297,7 @@ export function decorate(message, html) {
     }
     const list = document.createElement("ul");
     data.targets.forEach((target, index) => {
-      const { name, text } = describeTarget(target, index);
+      const { name, text } = lines[index];
       const li = document.createElement("li");
       li.classList.add(`t20cp-avd-${["hit", "miss"].includes(target.outcome) ? target.outcome : "unknown"}`);
       if (target.critical) li.classList.add("t20cp-avd-critical");
@@ -276,6 +321,16 @@ export function registerAttackVsDefenseSetting() {
     type: String,
     choices: { off: "T20CP.AttackVsDefense.Setting.off", on: "T20CP.AttackVsDefense.Setting.on" },
     default: "off"
+  });
+  game.settings.register(MODULE_ID, ATTACK_VS_DEFENSE_VISIBILITY_SETTING, {
+    name: "T20CP.AttackVsDefense.Visibility.Name",
+    hint: "T20CP.AttackVsDefense.Visibility.Hint",
+    scope: "world",
+    config: false,
+    type: String,
+    choices: Object.fromEntries(VISIBILITY_MODES.map((m) => [m, `T20CP.AttackVsDefense.Visibility.${m}`])),
+    default: "show",
+    onChange: () => redrawDecorated()
   });
 }
 

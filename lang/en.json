@@ -267,6 +267,7 @@
       "Details": "Technical details",
       "Report": "Report a problem",
       "Rules": {
+        "attack-vs-defense": "Attack versus Defense",
         "casting-restrictions": "Spellcasting restrictions",
         "combat-maneuvers": "Combat maneuvers",
         "dying-states": "Zero HP states"
@@ -566,6 +567,13 @@
       }
     },
     "AttackVsDefense": {
+      "Visibility": {
+        "Name": "Result for players",
+        "Hint": "What players see of the result on the attack card; the GM always sees everything. Show: \"Hit\"/\"Miss\" and the Defense of foes per the system setting \"Show foes DC to players\". Announce: only \"Hit\"/\"Miss\", without the Defense number of foes. Hide: nothing; the GM narrates the result. Observers of the target actor see the Defense in Show and Announce, since they already see its sheet. The result is stored in the message, so a player inspecting the data through the console can still find it.",
+        "show": "Show",
+        "announce": "Announce",
+        "hide": "Hide"
+      },
       "Setting": {
         "Name": "Attack versus Defense",
         "Hint": "Optional rule (chapter 5, \"Attack Test\" and \"Critical Hits\"): compares each item's attack test with the Defense of every target marked when rolling and shows on the card whether it hit or missed. A natural 20 always hits and a natural 1 always misses. A critical only counts on a hit: when the attack misses every target, the damage is not multiplied. Against a prone target, ranged attacks use Defense +5 instead of -5. Foes' Defense follows the system setting \"Show foes DC to players\". Without marked targets, nothing changes.",

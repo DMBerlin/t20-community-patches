@@ -9,6 +9,10 @@
         "Name": "Sobrecarregado ao adicionar ou remover itens",
         "Hint": "Atualiza Sobrecarregado assim que itens entram ou saem da ficha, sem duplicar a condição."
       },
+      "petrified-damage-reduction": {
+        "Name": "Redução de dano de Petrificado",
+        "Hint": "Petrificado passa a dar RD 8, somada à RD que o personagem já tem. Várias cópias da condição contam como uma."
+      },
       "ongoing-damage-conditions": {
         "Name": "Dano por turno de Em Chamas e Sangrando",
         "Hint": "No início do turno, quem está Em Chamas rola 1d6 de dano de fogo no chat. Quem está Sangrando faz um teste de Constituição (CD 15): se passar, a condição sai; se falhar, rola a perda de 1d6 PV. O dano é aplicado pelo chat, como no dano contínuo do sistema. Antes, essas condições nunca causavam dano."

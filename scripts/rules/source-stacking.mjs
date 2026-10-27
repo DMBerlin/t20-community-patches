@@ -353,6 +353,31 @@ function fieldKind(actor, key, type) {
   return undefined;
 }
 
+const exclusions = new Set();
+
+/**
+ * Registers a predicate that keeps a change out of the source dispute (for example, a condition's own reduction
+ * handled by a patch). Registering the same function twice has no effect.
+ * @param {(effect: object, change: object) => boolean} predicate
+ * @returns {() => void}  Unregisters the predicate.
+ */
+export function registerStackingExclusion(predicate) {
+  exclusions.add(predicate);
+  return () => exclusions.delete(predicate);
+}
+
+/** Whether a registered predicate keeps the change out of the plan; a predicate that throws excludes nothing. */
+export function isStackingExcluded(effect, change) {
+  for (const predicate of exclusions) {
+    try {
+      if (predicate(effect, change)) return true;
+    } catch {
+      // A broken predicate must not hide a change from the rule.
+    }
+  }
+  return false;
+}
+
 function buildPlan(actor, phase) {
   const rollData = actor.getRollData();
   const entries = [];
@@ -374,6 +399,7 @@ function buildPlan(actor, phase) {
     };
     for (const change of effect.system?.changes ?? []) {
       if (!change?.key || (change.type !== "add" && change.type !== "subtract")) continue;
+      if (isStackingExcluded(effect, change)) continue;
       if (isArmorExempt({ itemType: info.itemType, tipo: info.tipo, key: change.key })) continue;
       if (!effect.shouldApplyChange(change, { phase, replacementData })) continue;
       entries.push({ ...info, ref: change, key: change.key, amount: changeAmount(change, resolve, kindOf(change.key, change.type)) });

@@ -6,9 +6,11 @@ import {
   changeAmount,
   installSourceStackingRule,
   isArmorExempt,
+  isStackingExcluded,
   keyLabel,
   newSuppressions,
   planSuppression,
+  registerStackingExclusion,
   reportSignature,
   sourceCategory
 } from "../scripts/rules/source-stacking.mjs";
@@ -490,4 +492,40 @@ test("integration: changes by other users keep the known suppressions up to date
   await toggle(true, "u2");
   await toggle(false, "u2");
   assert.equal(infos.length, 2, "other users' changes are not notified here");
+});
+
+test("registerStackingExclusion: idempotent, removable; a throwing predicate excludes nothing", () => {
+  const calls = [];
+  const broken = () => {
+    calls.push("broken");
+    throw new Error("bad");
+  };
+  const mine = (effect, change) => (calls.push("mine"), change.value === "8");
+  const offBroken = registerStackingExclusion(broken);
+  const offMine = registerStackingExclusion(mine);
+  registerStackingExclusion(mine);
+  try {
+    assert.equal(isStackingExcluded({}, { value: "8" }), true);
+    assert.deepEqual(calls, ["broken", "mine"], "registered once; the others are still consulted");
+    assert.equal(isStackingExcluded({}, { value: "2" }), false);
+  } finally {
+    offBroken();
+    offMine();
+  }
+  assert.equal(isStackingExcluded({}, { value: "8" }), false);
+});
+
+test("integration: an excluded change neither competes nor is suppressed", () => {
+  const { Actor } = setupFoundry();
+  const spell = { [MODULE]: { source: "magia" } };
+  const actor = new Actor("guerreiro");
+  actor.addEffect("a", { name: "A", time: 1, flags: spell, changes: [{ key: DEFENSE_KEY, value: "5" }] });
+  actor.addEffect("b", { name: "B", time: 2, flags: spell, changes: [{ key: DEFENSE_KEY, value: "2" }] });
+  const off = registerStackingExclusion((effect) => effect.id === "b");
+  try {
+    assert.equal(actor.prepare().totals[DEFENSE_KEY], 7);
+  } finally {
+    off();
+  }
+  assert.equal(actor.prepare().totals[DEFENSE_KEY], 5, "the smaller one is suppressed again");
 });

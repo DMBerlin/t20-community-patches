@@ -9,6 +9,10 @@
         "Name": "Overloaded when adding or removing items",
         "Hint": "Updates Overloaded (Sobrecarregado) as soon as items are added to or removed from the sheet, without duplicating the condition."
       },
+      "petrified-damage-reduction": {
+        "Name": "Petrified damage reduction",
+        "Hint": "Petrified now grants damage reduction 8, added to the character's existing reduction. Several copies of the condition count as one."
+      },
       "ongoing-damage-conditions": {
         "Name": "Per-turn damage of Em Chamas and Sangrando",
         "Hint": "At the start of the turn, a creature that is Em Chamas (on fire) rolls 1d6 fire damage to chat. A creature that is Sangrando (bleeding) rolls a Constitution test (DC 15): on a success the condition ends; on a failure it rolls the loss of 1d6 HP. Damage is applied from the chat, like the system's ongoing damage. Before, these conditions never dealt damage."

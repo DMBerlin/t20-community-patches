@@ -163,6 +163,20 @@ test("toAdditive copies the change without touching the original", () => {
   assert.equal(original.type, "downgrade");
 });
 
+test("lateProbe (1.6.6): reads Caído from CONFIG.statusEffects; nothing new while CONFIG.T20.conditions exists", async () => {
+  const previous = globalThis.CONFIG;
+  const changes = [{ key: OUTROS_KEY, value: -5, type: "downgrade" }];
+  const statusEffects = { caido: { id: "caido", _source: { system: { changes } } } };
+  try {
+    globalThis.CONFIG = { T20: {}, statusEffects };
+    assert.deepEqual(await patch.lateProbe(), diagnoseProneChanges(changes));
+    globalThis.CONFIG = { T20: { conditions: { caido: { system: { changes } } } }, statusEffects };
+    assert.equal(await patch.lateProbe(), undefined);
+  } finally {
+    globalThis.CONFIG = previous;
+  }
+});
+
 test("diagnoses the shipped Caído data", () => {
   const shipped = [
     { key: "system.pericias.luta.condi", value: -5, type: "downgrade" },

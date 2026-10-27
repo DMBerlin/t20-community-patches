@@ -60,7 +60,11 @@ class ClassList {
   contains(n) { return this.names.has(n); }
 }
 
-function setupFoundry() {
+/**
+ * `layout` mirrors where the sheets find the effect class: 1.6.5 calls the legacy `tormenta20.entities` class (and
+ * also ships `tormenta20.documents`), 1.6.6 only has `tormenta20.documents`.
+ */
+function setupFoundry(layout = "1.6.5") {
   const hooks = {};
   class ActorSheet {}
   class ActorSheetT20 extends ActorSheet {
@@ -68,7 +72,7 @@ function setupFoundry() {
     _onDragStart() {}
   }
   class ActorSheetT20Character extends ActorSheetT20 {}
-  const Legacy = {
+  const makeEffectClass = () => ({
     async onManageActiveEffect(event, owner) {
       const effect = owner.effects.get(event.currentTarget.closest("li").dataset.effectId);
       return effect.update({ disabled: !effect.disabled });
@@ -76,15 +80,20 @@ function setupFoundry() {
     async prepareActiveEffectCategories(list) {
       return { onuse: { effects: list } };
     }
-  };
+  });
+  const Sheet = makeEffectClass();
+  const Other = layout === "1.6.5" ? makeEffectClass() : null;
+  const t20 = layout === "1.6.5"
+    ? { entities: { ActiveEffectT20: Sheet }, documents: { ActiveEffectT20: Other } }
+    : { documents: { ActiveEffectT20: Sheet } };
   Object.assign(globalThis, {
     Hooks: { on: (name, fn) => (hooks[name] ??= []).push(fn) },
     game: { i18n: { localize: (key) => key } },
     HTMLElement: FakeElement,
     foundry: { appv1: { sheets: { ActorSheet } }, utils: { fromUuidSync: () => null } },
-    tormenta20: { entities: { ActiveEffectT20: Legacy }, applications: { ActorSheetT20Character } }
+    tormenta20: { ...t20, applications: { ActorSheetT20Character } }
   });
-  return { hooks, Legacy, ActorSheetT20Character };
+  return { hooks, Sheet, Other, ActorSheetT20Character };
 }
 
 function makeEffect(id, parent, automatic) {
@@ -111,9 +120,15 @@ function makeRow(id) {
   return { li, anchor, icon };
 }
 
-for (const order of [["item-effects", "usage-toggle"], ["usage-toggle", "item-effects"]]) {
-  test(`icons follow each row's own effect with repeated ids (${order.join(" → ")})`, async () => {
-    const { hooks, Legacy, ActorSheetT20Character } = setupFoundry();
+for (const [layout, order] of [
+  ["1.6.5", ["item-effects", "usage-toggle"]],
+  ["1.6.5", ["usage-toggle", "item-effects"]],
+  ["1.6.6", ["item-effects", "usage-toggle"]],
+  ["1.6.6", ["usage-toggle", "item-effects"]]
+]) {
+  test(`icons follow each row's own effect with repeated ids (${layout}, ${order.join(" → ")})`, async () => {
+    const { hooks, Sheet, Other, ActorSheetT20Character } = setupFoundry(layout);
+    const untouched = Other && { ...Other };
     const patches = {
       "item-effects": (await import("../scripts/patches/item-effects-on-actor-sheet.mjs")).default,
       "usage-toggle": (await import("../scripts/patches/usage-effect-toggle.mjs")).default
@@ -143,9 +158,11 @@ for (const order of [["item-effects", "usage-toggle"], ["usage-toggle", "item-ef
     const checked = rows.map((r) => r.icon.classList.contains("fa-square-check"));
     assert.deepEqual(checked, [false, true, false]);
 
-    await Legacy.onManageActiveEffect({ currentTarget: rows[2].anchor, preventDefault() {} }, actor);
+    await Sheet.onManageActiveEffect({ currentTarget: rows[2].anchor, preventDefault() {} }, actor);
     assert.equal(onStaff.system.abilityUse.automatic, true);
     assert.equal(onStaff.disabled, true);
     assert.equal(own.system.abilityUse.automatic, false);
+    // Only the class the sheets call is wrapped.
+    if (Other) assert.deepEqual({ ...Other }, untouched);
   });
 }

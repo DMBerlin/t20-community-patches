@@ -37,6 +37,7 @@ Não edite as seções de versão à mão.
 ### Changed
 
 - A "Central do T20CP" substitui o gerenciador: uma linha por correção com interruptor e detalhes ao expandir, as regras opcionais numa aba própria e um único aviso por carregamento, com link para reportar problemas (#73).
+- Compatibilidade com o Tormenta20 1.6.6: as correções cujo bug continua passam a valer na 1.6.6, os efeitos de itens e o botão de efeitos de uso voltam a funcionar nas fichas da 1.6.6, e Acuidade com Arma e Condições vazias deixam de ser corrigidas, porque o sistema já as corrige (#76).
 
 ### Fixed
 

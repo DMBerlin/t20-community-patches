@@ -9,7 +9,7 @@
  * Fix: the toggle of usage rows flips system.abilityUse.automatic and the icon reflects it. Temporary usage
  * effects held by items keep toggling `disabled` (default vs optional application on the chat card).
  */
-import { MODULE_ID, markWrapper, unwrap } from "../utils.mjs";
+import { MODULE_ID, markWrapper, sheetEffectClass, unwrap } from "../utils.mjs";
 import { resolveEffectFromRow } from "../effect-rows.mjs";
 
 /**
@@ -86,12 +86,12 @@ function scheduleFixToggles(owner, html) {
 }
 
 function isNeeded() {
-  const manage = unwrap(globalThis.tormenta20?.entities?.ActiveEffectT20?.onManageActiveEffect);
+  const manage = unwrap(sheetEffectClass()?.onManageActiveEffect);
   return typeof manage === "function" ? toggleFlipsDisabled(Function.prototype.toString.call(manage)) : undefined;
 }
 
 function apply() {
-  const Legacy = globalThis.tormenta20?.entities?.ActiveEffectT20;
+  const Legacy = sheetEffectClass();
   if (typeof Legacy?.onManageActiveEffect !== "function") throw new Error("ActiveEffectT20.onManageActiveEffect not found");
 
   const manage = Legacy.onManageActiveEffect;
@@ -121,7 +121,7 @@ export default {
   id: "usage-effect-toggle",
   group: "sheet-effects",
   issue: 5,
-  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.5" } },
+  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
   isNeeded,
   apply
 };

@@ -11,7 +11,8 @@
  * go through the core like the system's changes (shouldApplyChange, priority order). The condition is skipped when
  * it penalizes skills in any other way. Stored data is never changed.
  */
-import { markWrapper } from "../utils.mjs";
+import { markWrapper, statusEffectSources } from "../utils.mjs";
+import { findWithRetry } from "./petrified-damage-reduction.mjs";
 
 /** Attributes whose skills each condition penalizes (Tormenta20 JdA, Apêndice, pp. 394-395). */
 export const CONDITION_ABILITIES = Object.freeze({
@@ -103,7 +104,8 @@ export function planConditionChanges({ statuses, changes, isEligible = () => tru
 }
 
 /**
- * Checks the system's own condition definitions (`CONFIG.T20.conditions`) against the skill table
+ * Checks the system's own condition definitions (`CONFIG.T20.conditions` up to 1.6.5, the world.statuses copy in
+ * `CONFIG.statusEffects[id]._source` from 1.6.6) against the skill table
  * (`CONFIG.T20.pericias`). The applied conditions come from the `world.statuses` copy, and custom skills only exist
  * on actors, so a complete list is never a high-confidence fix.
  * @param {Record<string, {system?: {changes?: object[]}}>} conditions
@@ -226,12 +228,23 @@ function isNeeded() {
   return diagnoseConditionLists(CONFIG.T20?.conditions, CONFIG.T20?.pericias);
 }
 
+/**
+ * Tormenta20 1.6.6 dropped CONFIG.T20.conditions: the conditions only exist after the system's "ready" builds
+ * CONFIG.statusEffects from world.statuses. Up to 1.6.5 isNeeded already read the system's data, so nothing is new.
+ */
+async function lateProbe() {
+  if (CONFIG.T20?.conditions) return undefined;
+  const conditions = await findWithRetry(async () => statusEffectSources(Object.keys(CONDITION_ABILITIES)));
+  return conditions ? diagnoseConditionLists(conditions, CONFIG.T20?.pericias) : undefined;
+}
+
 export default {
   id: "condition-skill-lists",
   group: "conditions",
   issue: 38,
   guarded: true,
-  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.5" } },
+  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
   isNeeded,
+  lateProbe,
   apply
 };

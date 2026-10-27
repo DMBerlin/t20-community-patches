@@ -34,7 +34,7 @@ test("patch metadata", () => {
   assert.equal(patch.group, "items");
   assert.equal(patch.issue, 56);
   assert.equal(patch.guarded, true);
-  assert.deepEqual(patch.system, { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.5" } });
+  assert.deepEqual(patch.system, { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } });
   assert.deepEqual(patch.isNeeded(), { bug: "unknown", confidence: "low", evidence: "compendium data can only be read after ready" });
 });
 

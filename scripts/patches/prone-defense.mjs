@@ -9,7 +9,8 @@
  * Caído penalty of that phase counts, legacy ("downgrade") and fixed ("add") copies alike, so duplicated copies of
  * the condition do not stack (book, p. 394). Stored effects are never changed.
  */
-import { markWrapper } from "../utils.mjs";
+import { markWrapper, statusEffectSources } from "../utils.mjs";
+import { findWithRetry } from "./petrified-damage-reduction.mjs";
 
 export const PRONE = "caido";
 export const OUTROS_KEY = "system.attributes.defesa.outros";
@@ -125,9 +126,10 @@ export function toAdditive(change) {
 }
 
 /**
- * Reads the Caído condition data the system ships (CONFIG.T20.conditions.caido.system.changes).
- * It is not the data applied in play (world.statuses and copies stored on actors), so a fix is never high
- * confidence.
+ * Reads the Caído condition data the system ships (CONFIG.T20.conditions.caido.system.changes up to 1.6.5, the
+ * world.statuses copy in CONFIG.statusEffects.caido._source from 1.6.6).
+ * It does not cover every copy applied in play (world.statuses is editable and actors store their own copies), so a
+ * fix is never high confidence.
  * @param {unknown} changes
  * @returns {import("../registry.mjs").Diagnosis}
  */
@@ -214,12 +216,23 @@ function isNeeded() {
   return diagnoseProneChanges(changes);
 }
 
+/**
+ * Tormenta20 1.6.6 dropped CONFIG.T20.conditions: Caído only exists after the system's "ready" builds
+ * CONFIG.statusEffects from world.statuses. Up to 1.6.5 isNeeded already read the system's data, so nothing is new.
+ */
+async function lateProbe() {
+  if (CONFIG.T20?.conditions) return undefined;
+  const conditions = await findWithRetry(async () => statusEffectSources([PRONE]));
+  return conditions ? diagnoseProneChanges(conditions[PRONE]?.system?.changes) : undefined;
+}
+
 export default {
   id: "prone-defense",
   group: "conditions",
   issue: 40,
-  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.5" } },
+  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
   guarded: true,
   isNeeded,
+  lateProbe,
   apply
 };

@@ -126,3 +126,32 @@ export function addTooltipLine(html, label, value) {
   const tail = html.slice(hr).replace(TOOLTIP_TOTAL, (_, open, total, close) => `${open}${signed(Number(total) + value)}${close}`);
   return html.slice(0, hr) + line + tail;
 }
+
+/**
+ * The ActiveEffect class whose static helpers (prepareActiveEffectCategories, onManageActiveEffect) the Tormenta20
+ * sheets call: the legacy class exposed as `tormenta20.entities` up to 1.6.5, `tormenta20.documents` from 1.6.6.
+ * @returns {Function|undefined}
+ */
+export function sheetEffectClass() {
+  const t20 = globalThis.tormenta20;
+  return t20?.entities?.ActiveEffectT20 ?? t20?.documents?.ActiveEffectT20;
+}
+
+/**
+ * Source data of the conditions the system builds on "ready" from world.statuses (1.6.6+:
+ * `CONFIG.statusEffects[id]._source`), keyed by status id. Null until every id in `ids` has its source: the system
+ * fills CONFIG.statusEffects one condition at a time, so a partial map is not read.
+ * @param {string[]} ids
+ * @param {unknown} [statusEffects]  CONFIG.statusEffects (an object in Tormenta20, an array in core).
+ * @returns {Record<string, object>|null}
+ */
+export function statusEffectSources(ids, statusEffects = globalThis.CONFIG?.statusEffects) {
+  if (!statusEffects || typeof statusEffects !== "object") return null;
+  const sources = {};
+  for (const status of Array.isArray(statusEffects) ? statusEffects : Object.values(statusEffects)) {
+    if (typeof status?.id === "string" && status._source && typeof status._source === "object") {
+      sources[status.id] = status._source;
+    }
+  }
+  return ids.every((id) => Object.hasOwn(sources, id)) ? sources : null;
+}

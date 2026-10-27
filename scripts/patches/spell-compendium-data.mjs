@@ -196,7 +196,7 @@ export default {
   group: "items",
   issue: 32,
   guarded: true,
-  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.5" } },
+  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
   isNeeded,
   lateProbe,
   apply

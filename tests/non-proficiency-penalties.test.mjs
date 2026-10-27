@@ -22,6 +22,7 @@ import {
 import { computePenaltyAdjustments } from "../scripts/patches/armor-penalty-reduction.mjs";
 import { MODULE_ID, addTooltipLine } from "../scripts/utils.mjs";
 import { CreatureData165, Item165 } from "./fixtures/non-proficiency-1.6.5.mjs";
+import { Item166 } from "./fixtures/non-proficiency-1.6.6.mjs";
 
 const IDS = {
   arcanista: "TH7OIKaDqtLLQUrs",
@@ -222,6 +223,12 @@ test("fingerprints: the real 1.6.5 methods are recognized; partial fixes, helper
   assert.equal(sourceFingerprint(skill), KNOWN_SOURCES.prepareSkill["1.6.5"]);
   assert.deepEqual(diagnoseSource("getAttackToHit", attack, "1.6.5").bug, "present");
   assert.equal(diagnoseSource("prepareSkill", skill, "1.6.5").confidence, "high");
+
+  // 1.6.6 rewrote getAttackToHit (Acuidade for agile weapons) and kept prepareSkill.
+  const attack166 = Item166.prototype.getAttackToHit.toString();
+  assert.deepEqual(Object.values(diagnoseSource("getAttackToHit", attack166, "1.6.6")).slice(0, 2), ["present", "high"]);
+  assert.equal(diagnoseSource("prepareSkill", skill, "1.6.6").bug, "present");
+  assert.equal(diagnoseSource("getAttackToHit", attack, "1.6.6").bug, "unknown");
 
   const fn = "f(a) {\n  // comment\n  return a + 1;\n}";
   assert.equal(sourceFingerprint(fn), sourceFingerprint("f(a) { /* other */ return a + 1;    }"));

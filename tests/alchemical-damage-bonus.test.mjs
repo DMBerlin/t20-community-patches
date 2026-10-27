@@ -6,7 +6,8 @@ import patch, {
   hasBonus,
   isAlchemical,
   isPlainDamageRoll,
-  rollsMissingAlchemicalBonus
+  rollsMissingAlchemicalBonus,
+  runProbe
 } from "../scripts/patches/alchemical-damage-bonus.mjs";
 
 const getProperty = (obj, path) => path.split(".").reduce((o, k) => o?.[k], obj);
@@ -194,4 +195,33 @@ test("apply removes the part when the original rejects, and overlapping rolls ad
   fail = true;
   await assert.rejects(item.rollDamage(), /cancelled/);
   assert.deepEqual(item.system.rolls[0].parts, [["1d6", "fogo", ""]]);
+});
+
+test("runProbe reaches the parts of the 1.6.6 rollDamage, which reads actor flags through getFlag", () => {
+  /** Reduced copy of the start of ItemT20#rollDamage 1.6.6 (T20:7936-8001). */
+  async function rollDamage166() {
+    const itemData = this.system;
+    const actorData = this.actor.system;
+    const hasFinesse = game.settings.get("tormenta20", "lightFinesseWeapons") || this.actor.getFlag("tormenta20", "acuidade");
+    const hasShootingStyle = this.actor.getFlag("tormenta20", "estiloDisparo");
+    for (const r of itemData.rolls) {
+      const parts = r.parts.map(([dano, tipo, extra]) => [dano, tipo, extra]);
+      const bonuses = actorData.modificadores.dano;
+      const isAlchemical = this.type === "consumivel" && this.system.tipo === "alchemy";
+      if (isAlchemical && bonuses.mag?.filter(Boolean).length) parts.push(["@danoALQ", "", ""]);
+      this.getRollData();
+      void [hasFinesse, hasShootingStyle, parts];
+    }
+  }
+  const previous = globalThis.game;
+  globalThis.game = { settings: { get: () => false } };
+  try {
+    const diagnosis = diagnoseAlchemicalBonus({
+      alqOnly: runProbe(rollDamage166, { alq: ["2"], mag: [] }),
+      both: runProbe(rollDamage166, { alq: ["2"], mag: ["1"] })
+    });
+    assert.deepEqual([diagnosis.bug, diagnosis.confidence], ["present", "high"]);
+  } finally {
+    globalThis.game = previous;
+  }
 });

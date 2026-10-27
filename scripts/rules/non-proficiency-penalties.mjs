@@ -70,8 +70,8 @@ export const POWER_GRANTS = [
 
 /** Normalized source fingerprints of the original methods this rule extends, by system version. */
 export const KNOWN_SOURCES = {
-  getAttackToHit: { "1.6.5": "a81d1734:2142" },
-  prepareSkill: { "1.6.5": "3f09d08e:1504" }
+  getAttackToHit: { "1.6.5": "a81d1734:2142", "1.6.6": "2497aedc:2281" },
+  prepareSkill: { "1.6.5": "3f09d08e:1504", "1.6.6": "3f09d08e:1504" }
 };
 
 /** Lowercase, without accents and repeated spaces. */

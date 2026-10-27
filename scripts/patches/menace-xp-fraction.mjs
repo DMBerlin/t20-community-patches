@@ -148,7 +148,7 @@ export default {
   id: "menace-xp-fraction",
   group: "actor",
   issue: 36,
-  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.5" } },
+  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
   guarded: true,
   isNeeded,
   apply

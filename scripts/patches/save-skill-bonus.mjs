@@ -159,7 +159,7 @@ export default {
   id: "save-skill-bonus",
   group: "actor",
   issue: 39,
-  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.5" } },
+  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
   isNeeded,
   apply
 };

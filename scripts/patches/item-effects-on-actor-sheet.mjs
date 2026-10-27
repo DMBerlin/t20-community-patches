@@ -9,7 +9,7 @@
  * same set Foundry v10 showed). Rows of item effects show the item as source; Toggle/Edit/Delete (with
  * confirmation) and drag act on the effect inside the item.
  */
-import { MODULE_ID, markWrapper, stripComments, unwrap } from "../utils.mjs";
+import { MODULE_ID, markWrapper, sheetEffectClass, stripComments, unwrap } from "../utils.mjs";
 import { resolveEffectFromRow } from "../effect-rows.mjs";
 
 /**
@@ -120,12 +120,12 @@ function isNeeded() {
   const source = (fn) => (typeof fn === "function" ? Function.prototype.toString.call(unwrap(fn)) : undefined);
   return diagnoseItemEffectsSheet(
     source(findActorSheetBase()?.prototype?.getData),
-    source(globalThis.tormenta20?.entities?.ActiveEffectT20?.onManageActiveEffect)
+    source(sheetEffectClass()?.onManageActiveEffect)
   );
 }
 
 function apply() {
-  const Legacy = globalThis.tormenta20?.entities?.ActiveEffectT20;
+  const Legacy = sheetEffectClass();
   const ActorSheetBase = findActorSheetBase();
   if (
     !ActorSheetBase ||
@@ -194,7 +194,7 @@ export default {
   id: "item-effects-on-actor-sheet",
   group: "sheet-effects",
   issue: 2,
-  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.5" } },
+  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
   isNeeded,
   apply
 };

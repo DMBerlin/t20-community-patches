@@ -120,7 +120,7 @@ test("patch metadata", () => {
   assert.equal(patch.issue, 47);
   assert.equal(patch.group, "actor");
   assert.equal(patch.guarded, true);
-  assert.deepEqual(patch.system.affected, { minimum: "1.6.5", maximum: "1.6.5" });
+  assert.deepEqual(patch.system.affected, { minimum: "1.6.5", maximum: "1.6.6" });
   assert.equal(patch.isNeeded().bug, "unknown");
 });
 

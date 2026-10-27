@@ -320,7 +320,7 @@ export default {
   id: "spell-dc-bonus",
   group: "items",
   issue: 35,
-  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.5" } },
+  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
   isNeeded,
   apply
 };

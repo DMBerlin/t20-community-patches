@@ -7,7 +7,7 @@ import patch, {
   planConditionChanges,
   skillRepresentation
 } from "../scripts/patches/condition-skill-lists.mjs";
-import { isSystemVersionAffected } from "../scripts/utils.mjs";
+import { isSystemVersionAffected, statusEffectSources } from "../scripts/utils.mjs";
 
 // Key attribute of each skill in Tormenta20 1.6.5 (CONFIG.T20.pericias[key].abl, T20:3411-3447).
 const ABL = {
@@ -217,6 +217,33 @@ test("diagnosis from CONFIG.T20.conditions", () => {
   assert.equal(diagnoseConditionLists(remodeled, SKILL_CONFIG).bug, "unknown");
   assert.equal(diagnoseConditionLists(undefined, SKILL_CONFIG).bug, "unknown");
   assert.equal(diagnoseConditionLists({ lento: { system: { changes: [] } } }, SKILL_CONFIG).bug, "unknown");
+});
+
+test("statusEffectSources waits for every requested condition and ignores entries without _source", () => {
+  const cego = { system: { changes: [] } };
+  assert.deepEqual(statusEffectSources(["cego"], { cego: { id: "cego", _source: cego } }), { cego });
+  assert.equal(statusEffectSources(["cego", "fraco"], { cego: { id: "cego", _source: cego } }), null);
+  // Core default (before the system's "ready"): an array without _source.
+  assert.equal(statusEffectSources(["cego"], [{ id: "cego", name: "Blind" }]), null);
+  assert.deepEqual(statusEffectSources(["cego"], [{ id: "cego", _source: cego }]), { cego });
+  assert.equal(statusEffectSources(["cego"], undefined), null);
+});
+
+test("lateProbe (1.6.6): reads the conditions from CONFIG.statusEffects[id]._source; nothing new while CONFIG.T20.conditions exists", async () => {
+  const previous = globalThis.CONFIG;
+  const statusEffects = Object.fromEntries(
+    Object.entries(CONDITIONS).map(([id, changes]) => [id, { id, _source: { system: { changes } } }])
+  );
+  try {
+    globalThis.CONFIG = { T20: { pericias: SKILL_CONFIG }, statusEffects };
+    const late = await patch.lateProbe();
+    assert.deepEqual([late.bug, late.confidence], ["present", "high"]);
+    assert.match(late.evidence, /cego \(ladi\)/);
+    globalThis.CONFIG = { T20: { pericias: SKILL_CONFIG, conditions: {} }, statusEffects };
+    assert.equal(await patch.lateProbe(), undefined);
+  } finally {
+    globalThis.CONFIG = previous;
+  }
 });
 
 test("system version range check", () => {

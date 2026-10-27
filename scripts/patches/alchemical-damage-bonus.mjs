@@ -156,7 +156,8 @@ export function runProbe(fn, dano) {
     name: "probe",
     effects: [],
     system: { tipo: "alchemy", rolled: {}, criticoX: 2, rolls: [{ type: "dano", name: "Dano", rd: 0, parts: Recorder.from([["1d6", "fogo", ""]]) }] },
-    actor: { flags: {}, system: { atributos: {}, modificadores: { dano, cura: {} } } },
+    // 1.6.6 reads the actor flags through getFlag before building the parts.
+    actor: { flags: {}, getFlag: () => undefined, system: { atributos: {}, modificadores: { dano, cura: {} } } },
     getRollData() {
       reached = true;
       throw STOP;
@@ -187,7 +188,7 @@ export default {
   id: "alchemical-damage-bonus",
   group: "items",
   issue: 69,
-  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.5" } },
+  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
   isNeeded,
   apply
 };

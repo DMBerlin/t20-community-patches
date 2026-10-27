@@ -8,9 +8,7 @@
  * Flow, without sockets and without writing other users' documents:
  * - the use dialog of a melee attack gets "Manobra": with a maneuver declared, the attack roll is the maneuver test,
  *   damage is not rolled and the maneuver card (B) replaces the system's attack card, with the target frozen when
- *   ItemT20#roll started;
- * - optionally (setting), A (the system's melee attack card) records the frozen targets and gets "Manobra", which
- *   creates B from its attack roll;
+ *   ItemT20#roll started; without a declaration, the system's attack card is untouched;
  * - B is created by the attacker and never updated; it has "Resistir" (and "Dar passagem");
  * - C (the result) is created by whoever resists, in a single ChatMessage.create. The state of B is derived from the
  *   results the current user can read, so a late or duplicate C converges on the next render.
@@ -34,12 +32,10 @@ import {
 } from "./shared/targets.mjs";
 
 export const COMBAT_MANEUVERS_SETTING = "combatManeuversRule";
-export const COMBAT_MANEUVERS_BUTTON_SETTING = "combatManeuversChatButton";
 /** Fields of the use dialog (they reach rollAttack, rollDamage and displayCard in `options`). */
 export const FORM_KIND = "t20cpManeuver";
 export const FORM_VERSATILE = "t20cpManeuverVersatile";
 export const MANEUVERS = ["agarrar", "derrubar", "desarmar", "empurrar", "quebrar", "atropelar"];
-export const TARGETS_FLAG = "maneuverTargets";
 export const MANEUVER_FLAG = "maneuver";
 export const RESULT_FLAG = "maneuverResult";
 const CONDITIONS = { agarrar: "agarrado", derrubar: "caido", atropelar: "caido" };
@@ -236,14 +232,6 @@ function concealmentOf(roll, targetUuid) {
     return null;
   }
   return maneuverConcealment(roll, targetUuid);
-}
-
-function isButtonEnabled() {
-  try {
-    return game.settings.get(MODULE_ID, COMBAT_MANEUVERS_BUTTON_SETTING) !== "off";
-  } catch {
-    return true;
-  }
 }
 
 /** Maneuvers declared in the use dialog, by the per-use clone of ItemT20#roll (rollAttack → rollDamage → displayCard). */
@@ -459,42 +447,6 @@ function versatileRow(checked, hidden) {
   ].join("");
 }
 
-/** Attacker's dialog: maneuver, Versátil and other modifiers. Resolves null when dismissed. */
-async function promptManeuver(propriedades) {
-  const versatileAllowed = !!(propriedades?.ver || propriedades?.versatil);
-  const first = MANEUVERS[0];
-  const options = MANEUVERS.map((kind) => `<option value="${kind}">${escapeHTML(t(`Kind.${kind}`))}</option>`).join("");
-  const content = [
-    '<div class="t20cp-maneuver-dialog">',
-    `<div class="form-group"><label>${escapeHTML(t("Dialog.Kind"))}</label><select name="kind">${options}</select></div>`,
-    versatileRow(versatileDefault(first, propriedades), !versatileAllowed),
-    numberRow(),
-    `<p class="hint">${escapeHTML(t("Reference"))}</p>`,
-    "</div>"
-  ].join("");
-  const result = await DialogV2().wait({
-    window: { title: t("Dialog.Title") },
-    content,
-    buttons: [
-      {
-        action: "ok",
-        label: t("Button.Maneuver"),
-        default: true,
-        callback: (_event, btn) => parseManeuverChoice(formValues(btn.form), { versatileAllowed })
-      }
-    ],
-    render: (_event, dialog) => {
-      const form = dialog.element?.querySelector?.("form") ?? dialog.form;
-      const kind = form?.elements?.namedItem?.("kind");
-      const versatile = form?.elements?.namedItem?.("versatile");
-      kind?.addEventListener("change", () => {
-        if (versatile) versatile.checked = versatileDefault(kind.value, propriedades);
-      });
-    }
-  });
-  return result && typeof result === "object" && result.kind ? result : null;
-}
-
 /** Defender's dialog: melee weapon or Luta, Versátil and other modifiers. Resolves null when dismissed. */
 async function promptResist(actor, kind, weapons) {
   const hasLuta = !!actor.system?.pericias?.[LUTA];
@@ -589,7 +541,7 @@ function rollData(rolls) {
   return (rolls ?? []).map((r) => (typeof r?.toJSON === "function" ? r.toJSON() : r));
 }
 
-/** Only the dialog path passes `rolls` (its own attack roll); the chat button's B carries none of A's rolls. */
+/** B carries a copy of the use's attack roll (`rolls`), the maneuver test. */
 function maneuverChatData(data, { speaker, whisper, blind, rolls = [] }) {
   return {
     user: game.user.id,
@@ -600,35 +552,6 @@ function maneuverChatData(data, { speaker, whisper, blind, rolls = [] }) {
     rolls: rollData(rolls),
     flags: { "core.canPopout": true, [MODULE_ID]: { [MANEUVER_FLAG]: data } }
   };
-}
-
-/** "Manobra" on the attack card A: creates the maneuver card B. Exported for tests. */
-export async function onManeuverClick(message, event) {
-  if (!isEnabled()) return null;
-  if (!(message.isAuthor || game.user.isGM)) return warn("NotOwner");
-  const records = message.getFlag?.(MODULE_ID, TARGETS_FLAG) ?? [];
-  const attacker = message.speakerActor ?? null;
-  const speakerToken = message.speaker?.token;
-  const problem = targetProblem(records, (record) => isSelfTarget(record, attacker, speakerToken));
-  if (problem && problem !== "SelfTarget") return warn(problem);
-  const record = records[0];
-  if (!attacker || !fromUuid(record.uuid)?.actor) return warn("Missing");
-  if (problem) return warn(problem);
-  const attack = attackFromRolls(message.rolls);
-  if (!attack) return null;
-  const choice = await promptManeuver(message.getFlag?.("tormenta20", "itemData")?.propriedades);
-  if (!choice || !isEnabled()) return null;
-  const data = maneuverData({
-    ...choice,
-    source: message.id,
-    actor: attacker,
-    speaker: message.speaker,
-    alias: message.alias,
-    record,
-    attack,
-    concealment: concealmentOf(pickTestRoll(message.rolls), record.uuid)
-  });
-  return ChatMessage.create(maneuverChatData(data, { speaker: message.speaker, whisper: message.whisper, blind: message.blind }));
 }
 
 /* ----------------- Declared in the use dialog ----------------- */
@@ -865,16 +788,6 @@ function host(html) {
   return html.querySelector(".t20cp-maneuver") ?? html.querySelector(".message-content");
 }
 
-function renderAttackCard(message, html) {
-  if (!isButtonEnabled() || !(message.isAuthor || game.user.isGM)) return;
-  if (!isMeleeAttackCard(message.getFlag?.("tormenta20", "itemData")) || !attackFromRolls(message.rolls)) return;
-  const content = html.querySelector(".message-content");
-  if (!content || content.querySelector(".t20cp-maneuver-actions")) return;
-  const footer = el("div", "t20cp-maneuver-actions");
-  footer.append(button(t("Button.Maneuver"), (event) => onManeuverClick(message, event)));
-  content.append(footer);
-}
-
 function renderManeuverCard(message, html, data) {
   fillNames(html, data.target);
   const results = visibleResults(message.id);
@@ -943,7 +856,7 @@ export function onRender(message, html) {
     } else if (flags?.[RESULT_FLAG]) {
       collapse(message, html);
       renderResult(message, html, flags[RESULT_FLAG]);
-    } else renderAttackCard(message, html);
+    }
   } catch (err) {
     console.error(`${LOG} failed to render`, err);
   }
@@ -973,9 +886,7 @@ function onResultChanged(message) {
 function redrawAll() {
   for (const message of allMessages()) {
     const flags = message.flags?.[MODULE_ID];
-    if (flags?.[MANEUVER_FLAG] || flags?.[RESULT_FLAG] || isMeleeAttackCard(message.flags?.tormenta20?.itemData)) {
-      redrawMessage(message);
-    }
+    if (flags?.[MANEUVER_FLAG] || flags?.[RESULT_FLAG]) redrawMessage(message);
   }
 }
 
@@ -988,16 +899,6 @@ export function registerCombatManeuversSetting() {
     type: String,
     choices: { off: "T20CP.CombatManeuvers.Setting.off", on: "T20CP.CombatManeuvers.Setting.on" },
     default: "off",
-    onChange: () => redrawAll()
-  });
-  game.settings.register(MODULE_ID, COMBAT_MANEUVERS_BUTTON_SETTING, {
-    name: "T20CP.CombatManeuvers.ButtonSetting.Name",
-    hint: "T20CP.CombatManeuvers.ButtonSetting.Hint",
-    scope: "world",
-    config: false,
-    type: String,
-    choices: { off: "T20CP.CombatManeuvers.ButtonSetting.off", on: "T20CP.CombatManeuvers.ButtonSetting.on" },
-    default: "on",
     onChange: () => redrawAll()
   });
 }
@@ -1040,31 +941,20 @@ export function installCombatManeuversRule() {
 
   proto.displayCard = markWrapper(async function (params = {}, ...rest) {
     let card = null;
-    let records = null;
     try {
       const declaration = declarations.get(this);
       declarations.delete(this);
       if (declaration) card = declaredCard(this, declaration, params?.rollMode);
-      if (!card && isEnabled() && usePurposeOf(this) !== USE_PURPOSES.MANEUVER_RESISTANCE && isMeleeAttackCard(this.system)) {
-        // Records frozen when ItemT20#roll started (shared use context), before the use dialog.
-        records = useTargetRecords(this).map((r) => ({ uuid: r.uuid, name: r.name, displayName: r.displayName }));
-      }
     } catch (err) {
       console.error(`${LOG} failed to prepare the card of ${this?.name}`, err);
     }
+    if (!card) return displayCard.call(this, params, ...rest);
+    // The maneuver card replaces the system's attack card, but the inner wrappers still run (without a message),
+    // so their side effects that belong to the use (e.g. the charge effect of #59) are kept.
     const createMessage = params?.createMessage ?? true;
-    if (card) {
-      // The maneuver card replaces the system's attack card, but the inner wrappers still run (without a message),
-      // so their side effects that belong to the use (e.g. the charge effect of #59) are kept.
-      const inner = await displayCard.call(this, { ...params, createMessage: false }, ...rest);
-      if (!inner || typeof inner !== "object") return inner;
-      return createMessage ? ChatMessage.create(card) : card;
-    }
-    if (!records) return displayCard.call(this, params, ...rest);
-    const chatData = await displayCard.call(this, { ...params, createMessage: false }, ...rest);
-    if (!chatData || typeof chatData !== "object") return chatData;
-    foundry.utils.setProperty(chatData, `flags.${MODULE_ID}.${TARGETS_FLAG}`, records);
-    return createMessage ? ChatMessage.create(chatData) : chatData;
+    const inner = await displayCard.call(this, { ...params, createMessage: false }, ...rest);
+    if (!inner || typeof inner !== "object") return inner;
+    return createMessage ? ChatMessage.create(card) : card;
   }, displayCard);
 
   Hooks.on("renderAbilityUseDialog", onRenderDialog);

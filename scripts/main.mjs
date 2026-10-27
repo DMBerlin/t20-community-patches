@@ -177,7 +177,8 @@ Hooks.once("init", () => {
     } catch (err) {
       console.error(`${MODULE_ID} | Failed to install the concealment miss chance rule`, err);
     }
-    // Also before casting-restrictions (use-target wrappers): its displayCard wrapper only records the frozen targets.
+    // Also before casting-restrictions (use-target wrappers): without a declared maneuver, its displayCard wrapper only
+    // calls the original.
     try {
       installCombatManeuversRule();
     } catch (err) {

@@ -21,7 +21,7 @@ import { SKILL_PICKER_SETTING } from "./rules/skill-picker.mjs";
 import { SITUATIONAL_SETTING } from "./rules/situational-modifiers.mjs";
 import { NONLETHAL_SETTING } from "./rules/nonlethal-damage.mjs";
 import { CREATURE_TYPE_TRAITS_SETTING } from "./rules/creature-type-traits.mjs";
-import { COMBAT_MANEUVERS_BUTTON_SETTING, COMBAT_MANEUVERS_SETTING } from "./rules/combat-maneuvers.mjs";
+import { COMBAT_MANEUVERS_SETTING } from "./rules/combat-maneuvers.mjs";
 import { DYING_STATES_SETTING } from "./rules/dying-states.mjs";
 import { XP_AWARDS_SETTING } from "./rules/encounter-xp.mjs";
 import { DEATH_FLOOR_SETTING } from "./patches/death-threshold.mjs";
@@ -57,7 +57,7 @@ export const RULE_SETTINGS = [
   { id: "trained-only-skills", keys: [TRAINED_ONLY_SETTING] },
   { id: "skill-picker", keys: [SKILL_PICKER_SETTING] },
   { id: "nonlethal-damage", keys: [NONLETHAL_SETTING] },
-  { id: "combat-maneuvers", keys: [COMBAT_MANEUVERS_SETTING, COMBAT_MANEUVERS_BUTTON_SETTING] },
+  { id: "combat-maneuvers", keys: [COMBAT_MANEUVERS_SETTING] },
   { id: "creature-type-traits", keys: [CREATURE_TYPE_TRAITS_SETTING] },
   { id: "dying-states", keys: [DYING_STATES_SETTING, DEATH_FLOOR_SETTING] },
   { id: "segmented-scene-limit", keys: [SEGMENTED_SCENE_LIMIT] },

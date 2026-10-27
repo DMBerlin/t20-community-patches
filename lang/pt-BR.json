@@ -798,19 +798,11 @@
         "off": "Desligado",
         "on": "Ligado"
       },
-      "ButtonSetting": {
-        "Name": "Botão Manobra no chat",
-        "Hint": "Também mostra o botão Manobra no card de um ataque corpo a corpo já rolado, para declarar a manobra depois do ataque. Desligado, a manobra só é declarada no diálogo de uso.",
-        "off": "Desligado",
-        "on": "Ligado"
-      },
       "Button": {
-        "Maneuver": "Manobra",
         "Resist": "Resistir",
         "Passage": "Dar passagem"
       },
       "Dialog": {
-        "Title": "Manobra de combate",
         "ResistTitle": "Resistir à manobra",
         "ResistPrompt": "Teste de manobra contra {kind}.",
         "Kind": "Manobra",

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
   attackFromRolls,
+  buildManeuverContent,
   buildResultContent,
   findCanonicalResult,
   installCombatManeuversRule,
@@ -13,7 +14,6 @@ import {
   maneuverState,
   maneuverTest,
   maneuverWeapons,
-  onManeuverClick,
   onPassageClick,
   onResistClick,
   resolveOpposed,
@@ -579,14 +579,12 @@ const formOf = (values) => ({
 /** A dialog answer that goes through the module's own button callback. */
 const choose = (values) => (config) => config.buttons[0].callback({}, { form: formOf(values) });
 
-/** Attack (A) and maneuver card (B) from the current user. */
-async function attackAndManeuver(env, { weapon, target, kind = "derrubar", versatile = false, other = 0, d20 = 12, bonus = 7 }) {
+/** Maneuver card (B) declared in the use dialog by the current user. */
+async function attackAndManeuver(env, { weapon, target, kind = "derrubar", versatile = false, d20 = 12, bonus = 7 }) {
   game.user.targets = new Set([target]);
-  env.queues.set(weapon.id, [[d20, bonus]]);
-  const A = await weapon.roll({ event });
-  env.dialogs.push(choose({ kind, versatile, other }));
-  const B = await onManeuverClick(A, event);
-  return { A, B };
+  declare(env, weapon, { t20cpManeuver: kind, t20cpManeuverVersatile: versatile }, { d20, bonus });
+  const B = await weapon.roll({ event });
+  return { B };
 }
 
 /** The defender's test from the current user. */
@@ -605,66 +603,42 @@ test("rule off: displayCard is untouched and no button is added", async () => {
   installCombatManeuversRule();
   game.user.targets = new Set([env.tLobo]);
   const chatData = await env.chicote.roll({ event, createMessage: false });
-  assert.equal(chatData.flags[`${MODULE}.maneuverTargets`], undefined);
   assert.equal(chatData.flags[MODULE], undefined);
   assert.deepEqual(env.seen.find((s) => s.phase === "displayCard").createMessage, false);
   const A = await env.chicote.roll({ event });
   assert.equal(env.render(A).buttons().length, 0);
 });
 
-test("targets frozen at the start of the use; createMessage: false returns the chatData", async () => {
+test("rule on, no maneuver declared: the system's attack card is untouched", async () => {
   const env = setup();
   installCombatManeuversRule();
   game.user.targets = new Set([env.tLobo]);
-  env.chicote.onDialog = () => (game.user.targets = new Set([env.tOgro]));
+  const shortcut = await env.chicote.roll({ event: { shiftKey: true } });
   const chatData = await env.chicote.roll({ event, createMessage: false });
-  assert.deepEqual(chatData.flags[MODULE].maneuverTargets, [{ uuid: env.tLobo.uuid, name: "Lobo", displayName: 0 }]);
-  assert.equal(env.created.length, 0);
-  game.user.targets = new Set([env.tLobo]);
-  const A = await env.chicote.roll({ event });
-  assert.equal(A.flags[MODULE].maneuverTargets[0].name, "Lobo");
-  const html = env.render(A);
-  assert.equal(html.buttons().length, 1);
-  assert.equal(html.buttons()[0].textContent, "Manobra");
-});
-
-test("Manobra: only for the author or the GM, and only on melee attacks", async () => {
-  const env = setup();
-  installCombatManeuversRule();
-  game.user.targets = new Set([env.tLobo]);
-  const A = await env.chicote.roll({ event });
+  declare(env, env.chicote, { t20cpManeuver: "" });
+  const dialog = await env.chicote.roll({ event });
   const ranged = await env.arco.roll({ event });
-  assert.equal(env.render(ranged).buttons().length, 0);
-  env.as("clerigo");
-  assert.equal(env.render(A).buttons().length, 0);
-  env.as("gm");
-  assert.equal(env.render(A).buttons().length, 1);
-});
-
-test("Manobra warns without a target, with several targets and against the attacker", async () => {
-  const env = setup();
-  installCombatManeuversRule();
-  for (const targets of [[], [env.tLobo, env.tOgro], [env.tGuerreiro]]) {
-    game.user.targets = new Set(targets);
-    const A = await env.chicote.roll({ event });
-    assert.equal(await onManeuverClick(A, event), null);
+  assert.equal(chatData.flags[MODULE], undefined);
+  for (const viewer of ["mago", "gm"]) {
+    env.as(viewer);
+    for (const A of [shortcut, dialog, ranged]) {
+      assert.ok(A.flags.tormenta20.itemData, viewer);
+      assert.equal(A.flags[MODULE], undefined, viewer);
+      assert.equal(env.render(A).buttons().length, 0, viewer);
+      assert.equal(env.render(A).querySelectorAll(".t20cp-maneuver-actions").length, 0, viewer);
+    }
   }
-  assert.deepEqual(env.warnings, [
-    LANG.T20CP.CombatManeuvers.Warn.NoTarget,
-    LANG.T20CP.CombatManeuvers.Warn.ManyTargets,
-    LANG.T20CP.CombatManeuvers.Warn.SelfTarget
-  ]);
-  assert.equal(env.dialogs.length, 0);
+  assert.equal(env.seen.filter((s) => s.phase === "rollDamage").length, 4);
 });
 
 test("maneuver card: test with size and Versátil, no target name in the content", async () => {
   const env = setup();
   installCombatManeuversRule();
-  const { B } = await attackAndManeuver(env, { weapon: env.chicote, target: env.tLobo, versatile: true, other: 1 });
+  const { B } = await attackAndManeuver(env, { weapon: env.chicote, target: env.tLobo, versatile: true, bonus: 8 });
   const data = B.flags[MODULE].maneuver;
   assert.equal(data.kind, "derrubar");
   assert.equal(data.target.uuid, env.tLobo.uuid);
-  assert.deepEqual([data.attack.roll, data.attack.total, data.attack.bonus], [19, 22, 10]);
+  assert.deepEqual([data.attack.roll, data.attack.total, data.attack.bonus], [20, 22, 10]);
   assert.equal(B.content.includes("Lobo"), false);
   assert.match(env.render(B).textContent, /Alvo/);
   assert.doesNotMatch(env.render(B).textContent, /Lobo/);
@@ -690,7 +664,7 @@ test("resist with a weapon: maneuver-resistance purpose, no targets, attack roll
   assert.equal(env.seen.find((s) => s.phase === "rollAttack").purpose, USE_PURPOSES.MANEUVER_RESISTANCE);
   assert.deepEqual(env.seen.find((s) => s.phase === "displayCard"), { phase: "displayCard", purpose: USE_PURPOSES.MANEUVER_RESISTANCE, createMessage: false });
   // Only B and C were created: the defender's card is not posted.
-  assert.equal(env.created.length, 3);
+  assert.equal(env.created.length, 2);
   assert.equal(C.rolls.length, 1);
   assert.equal(C.rolls[0].options.type, "attack");
   const result = C.flags[MODULE].maneuverResult;
@@ -725,13 +699,13 @@ test("a cancelled roll creates nothing and releases the lock", async () => {
   env.queues.set("mordida", [null]);
   env.dialogs.push(choose({ weapon: "mordida" }));
   assert.equal(await onResistClick(B, event), null);
-  assert.equal(env.created.length, 2);
+  assert.equal(env.created.length, 1);
   env.lobo.rollPericia = async () => undefined;
   env.dialogs.push(choose({ weapon: "luta" }));
   assert.equal(await onResistClick(B, event), null);
-  assert.equal(env.created.length, 2);
+  assert.equal(env.created.length, 1);
   assert.ok(await resist(env, B, { weapon: env.mordida }));
-  assert.equal(env.created.length, 3);
+  assert.equal(env.created.length, 2);
 });
 
 test("Resistir and Dar passagem share the lock: one result", async () => {
@@ -824,8 +798,8 @@ test("visibility: whispered B is inherited; otherwise the resister's real messag
   }
   const env = setup({ messageMode: "blind" });
   installCombatManeuversRule();
-  const { A, B } = await attackAndManeuver(env, { weapon: env.chicote, target: env.tLobo });
-  assert.deepEqual([A.whisper, A.blind, B.whisper, B.blind], [["gm"], true, ["gm"], true]);
+  const { B } = await attackAndManeuver(env, { weapon: env.chicote, target: env.tLobo });
+  assert.deepEqual([B.whisper, B.blind], [["gm"], true]);
   env.as("gm");
   env.settings["core.messageMode"] = "public";
   await resist(env, B, { weapon: env.mordida });
@@ -943,10 +917,10 @@ test("install orders: the resistance skips #42 and the stubs of #49 and #59 in b
       installAttackVsDefenseRule();
       installCombatManeuversRule();
     }
-    const { A, B } = await attackAndManeuver(env, { weapon: env.chicote, target: env.tLobo });
-    assert.ok(A.rolls[0].options[MODULE]?.attackVsDefense, `${order}: #42 compares the attack`);
+    const { B } = await attackAndManeuver(env, { weapon: env.chicote, target: env.tLobo });
+    assert.ok(B.rolls[0].options[MODULE]?.attackVsDefense, `${order}: #42 compares the attack`);
     assert.deepEqual(stubLog, ["concealment", "charge"], order);
-    assert.equal(A.flags[MODULE].maneuverTargets[0].name, "Lobo", order);
+    assert.equal(B.flags[MODULE].maneuver.target.name, "Lobo", order);
     env.as("gm");
     game.user.targets = new Set([env.tOgro]);
     stubLog.length = 0;
@@ -1108,23 +1082,9 @@ test("declared maneuver against an invalid target: warning, then the normal atta
     const A = await env.chicote.roll({ event });
     assert.equal(env.warnings.at(-1), W.Fallback.replace("{reason}", reason));
     assert.ok(A.flags.tormenta20.itemData);
-    assert.equal(A.flags[MODULE].maneuver, undefined);
+    assert.equal(A.flags[MODULE], undefined);
     assert.equal(env.seen.some((s) => s.phase === "rollDamage"), true);
   }
-});
-
-test("chat button setting off: no Manobra on attack cards, the dialog still declares", async () => {
-  const env = setup({ extra: { [`${MODULE}.combatManeuversChatButton`]: "off" } });
-  installCombatManeuversRule();
-  game.user.targets = new Set([env.tLobo]);
-  const A = await env.chicote.roll({ event });
-  assert.equal(env.render(A).buttons().length, 0);
-  env.settings[`${MODULE}.combatManeuversChatButton`] = "on";
-  assert.equal(env.render(A).buttons().length, 1);
-  env.settings[`${MODULE}.combatManeuversChatButton`] = "off";
-  declare(env, env.chicote, { t20cpManeuver: "desarmar" });
-  const B = await env.chicote.roll({ event });
-  assert.equal(B.flags[MODULE].maneuver.kind, "desarmar");
 });
 
 test("maneuver and result cards: details collapsed, the title toggles them on this client", async () => {
@@ -1176,7 +1136,7 @@ test("declared maneuver with Investida: the inner rules still run (attack bonus 
   assert.equal(effects[0].flags[MODULE].situational, "charge");
 });
 
-test("maneuver cards never carry or serialize the source rolls (button: none; dialog: a copy of the attack)", async () => {
+test("maneuver cards carry a copy of the attack roll and never serialize the live one", async () => {
   const env = setup();
   installCombatManeuversRule();
   class Roll {
@@ -1202,18 +1162,6 @@ test("maneuver cards never carry or serialize the source rolls (button: none; di
   };
 
   game.user.targets = new Set([env.tLobo]);
-  env.queues.set(env.chicote.id, [[12, 7]]);
-  const A = await env.chicote.roll({ event });
-  // Like ChatMessage#rolls: Roll instances rebuilt from the stored JSON.
-  A.rolls = A.rolls.map((r) => new Roll(JSON.parse(r)));
-  const before = [...A.rolls];
-  env.dialogs.push(choose({ kind: "derrubar", versatile: false, other: 0 }));
-  const B = await onManeuverClick(A, event);
-  assert.ok(B.flags[MODULE].maneuver);
-  assert.deepEqual(B.rolls, []);
-  assert.equal(A.rolls.length, 2);
-  assert.ok(A.rolls.every((r, i) => r === before[i] && r instanceof Roll));
-
   declare(env, env.chicote, { t20cpManeuver: "derrubar" });
   const D = await env.chicote.roll({ event });
   assert.equal(D.rolls.length, 1);
@@ -1274,24 +1222,44 @@ test("concealment: a failed d10 makes the declared maneuver fail with no resista
   assert.deepEqual(env.render(B2).buttons().map((b) => b.textContent), ["Resistir", "Dar passagem"]);
 });
 
-test("concealment: the chat button reads the check of the attack card; rule off changes nothing", async () => {
+test("concealment rule off: a declared maneuver ignores the d10", async () => {
   const env = setup();
-  withConcealment(env, [4, 1]);
-  const missed = await attackAndManeuver(env, { weapon: env.chicote, target: env.tLobo });
-  assert.equal(missed.B.flags[MODULE].maneuver.concealment.total, 4);
-  // No roll on the button's card: the maneuver line is the only place with the d10.
-  assert.deepEqual(missed.B.rolls, []);
-  assert.ok(missed.B.content.includes("Falhou por camuflagem (50%): 1d10 = 4, falha em 1 a 5."));
-  env.as("gm");
-  assert.deepEqual(env.render(missed.B).buttons(), []);
-  env.as("mago");
-
-  // The d10 of A failed (1), but the concealment rule is now off: the maneuver goes on as usual.
-  const { A } = await attackAndManeuver(env, { weapon: env.chicote, target: env.tLobo });
+  const rolled = withConcealment(env, [1]);
   env.settings[`${MODULE}.concealmentMissChance`] = "off";
-  env.dialogs.push(choose({ kind: "derrubar", versatile: false, other: 0 }));
-  const B = await onManeuverClick(A, event);
+  game.user.targets = new Set([env.tLobo]);
+  declare(env, env.chicote, { t20cpManeuver: "derrubar" });
+  const B = await env.chicote.roll({ event });
+  assert.deepEqual(rolled, []);
   assert.equal(B.flags[MODULE].maneuver.concealment, null);
+  assert.equal(B.content.includes("camuflagem"), false);
   env.as("gm");
   assert.deepEqual(env.render(B).buttons().map((b) => b.textContent), ["Resistir"]);
+});
+
+test("an old button-made maneuver card still renders and resists", async () => {
+  const env = setup();
+  installCombatManeuversRule();
+  const data = {
+    v: 1,
+    kind: "derrubar",
+    source: "abc",
+    attacker: { actorUuid: env.guerreiro.uuid, tokenUuid: env.tGuerreiro.uuid, size: "med", name: "Guerreiro" },
+    target: { uuid: env.tLobo.uuid, name: "Lobo", displayName: 0 },
+    attack: { d20: 12, roll: 19, sizeMod: 0, versatile: false, other: 1, total: 20, bonus: 8 },
+    concealment: null
+  };
+  const old = (extra) => {
+    const maneuver = { ...data, ...extra };
+    return env.insert({ user: "mago", speaker: { scene: "s", actor: "guerreiro" }, content: buildManeuverContent(maneuver), flags: { [MODULE]: { maneuver } } });
+  };
+  const B = old();
+  const concealed = old({ concealment: { formula: "1d10", total: 4, threshold: 5, chance: 50 } });
+  env.as("gm");
+  assert.deepEqual(env.render(B).buttons().map((b) => b.textContent), ["Resistir"]);
+  assert.match(env.render(B).textContent, /outros \+1/);
+  assert.ok(concealed.content.includes("Falhou por camuflagem (50%): 1d10 = 4, falha em 1 a 5."));
+  assert.deepEqual(env.render(concealed).buttons(), []);
+  const C = await resist(env, B, { weapon: env.mordida, d20: 8, bonus: 6 });
+  assert.deepEqual([C.flags[MODULE].maneuverResult.of, C.flags[MODULE].maneuverResult.attack.total], [B.id, 20]);
+  assert.match(env.render(B).textContent, /Resolvida/);
 });

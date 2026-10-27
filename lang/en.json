@@ -798,19 +798,11 @@
         "off": "Off",
         "on": "On"
       },
-      "ButtonSetting": {
-        "Name": "Maneuver button in chat",
-        "Hint": "Also shows the Maneuver button on the card of a melee attack already rolled, to declare the maneuver after the attack. When off, the maneuver is declared only in the use dialog.",
-        "off": "Off",
-        "on": "On"
-      },
       "Button": {
-        "Maneuver": "Maneuver",
         "Resist": "Resist",
         "Passage": "Let pass"
       },
       "Dialog": {
-        "Title": "Combat maneuver",
         "ResistTitle": "Resist the maneuver",
         "ResistPrompt": "Maneuver test against {kind}.",
         "Kind": "Maneuver",

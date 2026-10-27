@@ -43,6 +43,10 @@
         "Name": "Acuidade com Arma em armas ágeis",
         "Hint": "Acuidade com Arma e a regra opcional Armas Leves e Ágeis passam a usar Destreza no ataque e no dano \"Padrão\" de armas ágeis (Florete, Cimitarra, Katana, Chicote, Corrente de Espinhos), como já faziam com armas leves."
       },
+      "default-damage-attribute": {
+        "Name": "Atributo de dano \"Padrão\"",
+        "Hint": "No Tormenta20 1.6.6, armas que não são leves nem ágeis (e outros itens) com o atributo de dano \"Padrão\" não rolam dano. Restaura a regra da 1.6.5: Força no corpo a corpo, Destreza no arremesso com Acuidade com Arma e Des > For, e Destreza no disparo com Estilo de Disparo."
+      },
       "spell-dc-bonus": {
         "Name": "Bônus na CD de magia",
         "Hint": "A CD das magias passa a somar os efeitos de \"CD de Magias\" do personagem, o bônus de CD dos itens e efeitos de uso dos NPCs, e o Fortalecimento Arcano como bônus passivo (+1, ou +2 com magias de 4º círculo)."

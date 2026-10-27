@@ -73,6 +73,7 @@ Não edite as seções de versão à mão.
 - `rd-exception-once` (#64): a RD com exceção (como 10/luz) vale uma vez por ataque, e não por tipo de dano, e passa a ser reduzida por Penetrante. Afeta Tormenta20 1.6.5.
 - `sustained-spell-cost` (#61): magias sustentadas com mais de um efeito, como a Oração, geram um único "Sustentando", custam 1 PM por turno e não perdem um dos lados ao serem mantidas. Afeta Tormenta20 1.6.5.
 - `petrified-damage-reduction` (#63): Petrificado passa a dar RD 8, contada uma vez por personagem. Afeta Tormenta20 1.6.5.
+- `default-damage-attribute` (#77): o atributo de dano "Padrão" volta a funcionar em armas que não são leves nem ágeis e em outros itens, em vez de quebrar a rolagem de dano. Afeta Tormenta20 1.6.6.
 
 ## v1.0.0 - 2026-10-19
 

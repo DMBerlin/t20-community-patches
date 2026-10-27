@@ -10,6 +10,10 @@ Não edite as seções de versão à mão.
 
 ## Unreleased
 
+## v1.1.0 - 2026-10-27
+
+**Compatibilidade:** Foundry VTT (mínimo 14, verificado 14.369) · Tormenta20 (mínimo 1.6.5, verificado 1.6.6)
+
 ### Added
 
 - Regra opcional "Limite de PM por uso" (#25): avisa ou bloqueia usos que gastam mais PM do que o nível na classe que fornece a habilidade (ou o nível de personagem), respeitando o custo mínimo; o limite pode ser definido por item.

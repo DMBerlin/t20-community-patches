@@ -93,6 +93,14 @@ export function registerSettings(patches) {
     type: PatchManager,
     restricted: true
   });
+  // Translations only load after init: the hint gains the compatibility line once they are ready.
+  Hooks.once("i18nInit", () => {
+    const menu = game.settings.menus.get(`${MODULE_ID}.manager`);
+    const compat = [...(game.modules.get(MODULE_ID).relationships?.systems ?? [])].find((s) => s.id === game.system.id)?.compatibility;
+    if (!menu || !compat) return;
+    const line = game.i18n.format("T20CP.Manager.Compatibility", { minimum: compat.minimum, verified: compat.verified, installed: game.system.version });
+    menu.hint = `${game.i18n.localize("T20CP.Manager.Hint")} ${line}`;
+  });
 }
 
 /**

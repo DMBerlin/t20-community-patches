@@ -240,7 +240,8 @@
     "Manager": {
       "Name": "T20CP Center",
       "Label": "T20CP Center",
-      "Hint": "Tormenta20 bug fixes and the module's optional rules, in one window.",
+      "Hint": "Bug fixes and optional rules for Tormenta20, following the rules of the player's book, in a single window.",
+      "Compatibility": "Compatible with Tormenta20 {minimum} or later (verified on {verified}); installed: {installed}.",
       "Title": "T20CP Center",
       "Tabs": {
         "patches": "Patches",

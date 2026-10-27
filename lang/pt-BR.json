@@ -240,7 +240,8 @@
     "Manager": {
       "Name": "Central do T20CP",
       "Label": "Central do T20CP",
-      "Hint": "Correções de bugs do Tormenta20 e regras opcionais do módulo, numa só janela.",
+      "Hint": "Correções de bugs e implementações de regras opcionais para o Tormenta20 de acordo com as regras do livro do jogador em uma só janela.",
+      "Compatibility": "Compatível com Tormenta20 {minimum} ou superior (verificado na {verified}); instalado: {installed}.",
       "Title": "Central do T20CP",
       "Tabs": {
         "patches": "Correções",

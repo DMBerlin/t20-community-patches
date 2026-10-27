@@ -4,11 +4,11 @@ Módulo para Foundry VTT com correções comunitárias para bugs confirmados no 
 
 **Correções**
 
-![correcoes.png](../../../../../Desktop/correcoes.png)
+![correcoes.png](assets/correcoes.png)
 
 **Opcionais**
 
-![opcionais.png](../../../../../Desktop/opcionais.png)
+![opcionais.png](assets/opcionais.png)
 
 **Princípios**
 

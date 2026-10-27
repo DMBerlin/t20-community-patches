@@ -122,7 +122,6 @@ export class PatchManager extends HandlebarsApplicationMixin(ApplicationV2) {
     const counts = countCategories(rows.map((r) => (status.has(r.id) ? displayState(status.get(r.id).state, status.get(r.id).diagnosis) : "disabled")));
     const plural = new Intl.PluralRules(game.i18n.lang);
     context.summary = [
-      `${game.system.title} ${game.system.version}`,
       ...STATE_CATEGORIES.filter((c) => counts[c]).map((c) =>
         game.i18n.format(`T20CP.Manager.Count.${c}.${plural.select(counts[c]) === "one" ? "one" : "other"}`, { count: counts[c] })
       )

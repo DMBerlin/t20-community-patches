@@ -11,6 +11,10 @@
  * condition (Acuidade or the optional rule, and Des > For), the default attribute is temporarily filled with
  * Dexterity, exactly as the system already does for light weapons. Explicit attributes, ranged weapons, light
  * weapons and stored data are untouched.
+ *
+ * Probe: tormenta20 1.6.6 fixed the bug (T20:6999 and T20:7968). isNeeded() calls the system's original methods
+ * with a fake agile weapon and a light control, and reads the attribute they pick. It only runs code it recognizes
+ * (1.6.5 or 1.6.6); otherwise, or when the probe is inconclusive, the source diagnosis is the fallback.
  */
 
 import { markWrapper, stripComments, unwrap } from "../utils.mjs";
@@ -24,6 +28,12 @@ const RANGED = new Set(["arremesso", "disparo"]);
 export const REFERENCE = {
   attack: { length: 1899, hash: "57f32932" },
   damage: { length: 2493, hash: "953f8861" }
+};
+
+/** The same fingerprints for tormenta20 1.6.6 (T20:6972-7060 and T20:7936-8019), which fixed the bug. */
+export const REFERENCE_1_6_6 = {
+  attack: { length: 2027, hash: "3f52e31e" },
+  damage: { length: 2698, hash: "c5c5ff4f" }
 };
 
 // The usual fix widens the light-weapon condition with the agile property, keeping everything else:
@@ -175,9 +185,9 @@ export function classifyFinesseSource(source, reference) {
 }
 
 /**
- * The patch wraps both methods, so it only claims the bug when it recognizes both exactly: an unknown method gives
- * unknown/low (above the verified range, the patch is then not applied). Reading code never proves a fix, so
- * two methods that read the agile property give fixed/low.
+ * Fallback when the behavior probe is inconclusive. The patch wraps both methods, so it only claims the bug when it
+ * recognizes both exactly: an unknown method gives unknown/low (above the verified range, the patch is then not
+ * applied). Reading code never proves a fix, so two methods that read the agile property give fixed/low.
  * @param {string|undefined} attackSource  Source of ItemT20#getAttackToHit.
  * @param {string|undefined} damageSource  Source of ItemT20#rollDamage.
  * @returns {import("../registry.mjs").Diagnosis}
@@ -188,6 +198,112 @@ export function diagnoseFinesseSource(attackSource, damageSource) {
   const evidence = `attack: ${attack}, damage: ${damage}`;
   if (attack === "unknown" || damage === "unknown") return { bug: "unknown", confidence: "low", evidence };
   if (attack === "agile" && damage === "agile") return { bug: "fixed", confidence: "low", evidence };
+  return { bug: "present", confidence: "high", evidence };
+}
+
+const PROBE_STOP = Symbol("t20cp-finesse-probe");
+
+/**
+ * An owned melee weapon and its actor, only for the behavior probe: Acuidade com Arma, Str 1, Dex 4, Luta 10.
+ * `light` is the control case (the system has always used Dexterity for light weapons). The flag is readable both
+ * as `flags.tormenta20.acuidade` (1.6.5) and through `getFlag` (1.6.6).
+ * @param {{light: boolean}} args
+ * @returns {object}
+ */
+export function probeItem({ light }) {
+  const flags = { tormenta20: { acuidade: true } };
+  return {
+    type: "arma",
+    name: "T20CP probe",
+    isOwned: true,
+    hasAttack: true,
+    effects: [],
+    getRollData: () => ({}),
+    actor: {
+      flags,
+      getFlag: (scope, key) => flags[scope]?.[key],
+      items: null,
+      system: {
+        atributos: { for: { value: 1 }, des: { value: 4 } },
+        pericias: { luta: { value: 10, atributo: "for" } },
+        modificadores: {}
+      }
+    },
+    system: {
+      empunhadura: light ? "leve" : "uma",
+      proposito: "corpo-a-corpo",
+      propriedades: light ? {} : { agi: true },
+      rolled: {},
+      rolls: [
+        { type: "ataque", name: "Ataque", parts: [["1d20", "", ""], ["luta", "", ""]] },
+        { type: "dano", name: "Dano", parts: [["1d6", "perfuracao", ""], ["padrao", "", ""]] }
+      ]
+    }
+  };
+}
+
+/**
+ * Whether the behavior probe may call a method: only code known to be the system's own (1.6.5, 1.6.5 with the usual
+ * fix, or 1.6.6). Anything else, such as another module's wrapper or an unknown version, could have side effects
+ * when called with a fake item, so it is never run.
+ * @param {string|undefined} source
+ * @param {"attack"|"damage"} kind
+ * @returns {boolean}
+ */
+export function isProbeSafe(source, kind) {
+  if (classifyFinesseSource(source, REFERENCE[kind]) !== "unknown") return true;
+  return matches(normalizeSource(source), REFERENCE_1_6_6[kind]);
+}
+
+/**
+ * Attribute the original getAttackToHit picks for the probe item: "des", "for" or null (inconclusive).
+ * @param {Function} getAttackToHit
+ * @param {object} item  From probeItem.
+ * @returns {"des"|"for"|null}
+ */
+export function probeAttack(getAttackToHit, item) {
+  const skill = getAttackToHit.call(item)?.rollData?.skill;
+  return skill === 13 ? "des" : skill === 10 ? "for" : null;
+}
+
+/**
+ * Attribute the original rollDamage picks for the "Padrão" part of the probe item, read when the parts are mapped,
+ * before the first await. The probe stops the call right there (and again in getRollData, which damageRoll's
+ * arguments read), so nothing is rolled and no message is created.
+ * @param {Function} rollDamage
+ * @param {object} item  From probeItem.
+ * @returns {"des"|"for"|null}
+ */
+export function probeDamage(rollDamage, item) {
+  const captured = [];
+  const roll = item.system.rolls.find((r) => r.type === "dano");
+  roll.parts = Object.defineProperty([...roll.parts], "map", {
+    value(fn, thisArg) {
+      captured.push(Array.prototype.map.call(this, fn, thisArg));
+      throw PROBE_STOP;
+    }
+  });
+  item.getRollData = () => {
+    throw PROBE_STOP;
+  };
+  try {
+    rollDamage.call(item)?.catch?.(() => {});
+  } catch (err) {
+    if (err !== PROBE_STOP) return null;
+  }
+  const attribute = captured[0]?.[1]?.[0];
+  return attribute === "@des" ? "des" : attribute === "@for" ? "for" : null;
+}
+
+/**
+ * Diagnosis from the behavior probe, or undefined when it is inconclusive (the light control must use Dexterity).
+ * @param {{attack: string|null, damage: string|null, lightAttack: string|null, lightDamage: string|null}} result
+ * @returns {import("../registry.mjs").Diagnosis|undefined}
+ */
+export function diagnoseFinesseBehavior({ attack, damage, lightAttack, lightDamage }) {
+  if (lightAttack !== "des" || lightDamage !== "des" || !attack || !damage) return undefined;
+  const evidence = `behavior: attack ${attack}, damage ${damage}`;
+  if (attack === "des" && damage === "des") return { bug: "fixed", confidence: "high", evidence };
   return { bug: "present", confidence: "high", evidence };
 }
 
@@ -223,8 +339,24 @@ function getItemClass() {
 function isNeeded() {
   const ItemClass = getItemClass();
   if (!ItemClass) return undefined;
-  const source = (fn) => Function.prototype.toString.call(unwrap(fn));
-  return diagnoseFinesseSource(source(ItemClass.prototype.getAttackToHit), source(ItemClass.prototype.rollDamage));
+  const attack = unwrap(ItemClass.prototype.getAttackToHit);
+  const damage = unwrap(ItemClass.prototype.rollDamage);
+  const attackSource = Function.prototype.toString.call(attack);
+  const damageSource = Function.prototype.toString.call(damage);
+  const fromSource = diagnoseFinesseSource(attackSource, damageSource);
+  if (!isProbeSafe(attackSource, "attack") || !isProbeSafe(damageSource, "damage")) return fromSource;
+  try {
+    const behavior = diagnoseFinesseBehavior({
+      attack: probeAttack(attack, probeItem({ light: false })),
+      damage: probeDamage(damage, probeItem({ light: false })),
+      lightAttack: probeAttack(attack, probeItem({ light: true })),
+      lightDamage: probeDamage(damage, probeItem({ light: true }))
+    });
+    return behavior ?? fromSource;
+  } catch (err) {
+    warn(err);
+    return fromSource;
+  }
 }
 
 function apply() {

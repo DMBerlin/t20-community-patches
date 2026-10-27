@@ -5,14 +5,20 @@ import patch, {
   attackPartWithDexterity,
   classifyFinesseSource,
   damagePartsWithDexterity,
+  diagnoseFinesseBehavior,
   diagnoseFinesseSource,
   isAgileMeleeWeapon,
+  isProbeSafe,
   prefersDexterity,
+  probeDamage,
+  probeItem,
   REFERENCE,
   rollsForCall,
   rollsWithDexterity
 } from "../scripts/patches/finesse-agile-weapons.mjs";
 import { ATTACK_1_6_5 as ATTACK, DAMAGE_1_6_5 as DAMAGE } from "./fixtures/finesse-agile-weapons-1.6.5.mjs";
+import { ATTACK_1_6_6 } from "./fixtures/finesse-agile-weapons-1.6.6.mjs";
+import { ROLL_DAMAGE_1_6_6 } from "./fixtures/roll-damage-1.6.6.mjs";
 
 const weapon = (system) => ({ type: "arma", system: { proposito: "corpo-a-corpo", empunhadura: "uma", propriedades: {}, ...system } });
 
@@ -252,4 +258,124 @@ test("a rejected evaluation leaves the item intact and the next roll works", asy
   assert.equal(item.system.rolls, rolls);
   delete item.evaluate;
   assert.deepEqual(await item.rollDamage(), ["@des", "@des"]);
+});
+
+/* Behavior probe, run against the system's real methods (1.6.5 and 1.6.6 fixtures). */
+
+globalThis.foundry = {
+  utils: {
+    isEmpty: (value) => !value || !Object.keys(value).length,
+    getProperty: (object, path) => path.split(".").reduce((value, key) => value?.[key], object)
+  }
+};
+
+let damageRollCalls = 0;
+const damageRollSpy = () => {
+  damageRollCalls++;
+  return {};
+};
+const systemClass = (attackSource, damageSource) =>
+  new Function("damageRoll", `return class { ${attackSource}\n${damageSource} }`)(damageRollSpy);
+const VERSIONS = { "1.6.5": [ATTACK, DAMAGE], "1.6.6": [ATTACK_1_6_6, ROLL_DAMAGE_1_6_6] };
+
+function diagnoseWith(ItemClass) {
+  const previous = CONFIG.Item.documentClass;
+  CONFIG.Item.documentClass = ItemClass;
+  try {
+    return patch.isNeeded();
+  } finally {
+    CONFIG.Item.documentClass = previous;
+  }
+}
+
+test("the behavior probe sees the 1.6.6 fix and the 1.6.5 bug, without rolling anything", async () => {
+  const rejections = [];
+  const onRejection = (reason) => rejections.push(reason);
+  process.on("unhandledRejection", onRejection);
+  damageRollCalls = 0;
+  try {
+    const cases = [
+      [VERSIONS["1.6.6"], "fixed", "behavior: attack des, damage des"],
+      [VERSIONS["1.6.5"], "present", "behavior: attack for, damage for"],
+      [[ATTACK_1_6_6, DAMAGE], "present", "behavior: attack des, damage for"],
+      [[ATTACK, ROLL_DAMAGE_1_6_6], "present", "behavior: attack for, damage des"]
+    ];
+    for (const [[attack, damage], bug, evidence] of cases) {
+      assert.deepEqual(diagnoseWith(systemClass(attack, damage)), { bug, confidence: "high", evidence });
+    }
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  } finally {
+    process.off("unhandledRejection", onRejection);
+  }
+  assert.equal(damageRollCalls, 0);
+  assert.deepEqual(rejections, []);
+
+  const args = { patch, mode: "auto", systemId: "tormenta20" };
+  const probe = (version) => () => diagnoseWith(systemClass(...VERSIONS[version]));
+  assert.equal(resolvePatchState({ ...args, systemVersion: "1.6.6", probe: probe("1.6.6") }).state, "fixed");
+  assert.equal(resolvePatchState({ ...args, systemVersion: "1.6.5", probe: probe("1.6.5") }).state, "applied");
+  assert.equal(resolvePatchState({ ...args, mode: "force", systemVersion: "1.6.6", probe: probe("1.6.6") }).state, "forced");
+});
+
+test("an inconclusive probe falls back to the source diagnosis", () => {
+  // Known code that throws while probed (settings not ready yet).
+  const { warn } = console;
+  const { get } = game.settings;
+  const warnings = [];
+  console.warn = (...args) => warnings.push(args);
+  game.settings.get = () => {
+    throw new Error("settings not ready");
+  };
+  try {
+    assert.deepEqual(diagnoseWith(systemClass(...VERSIONS["1.6.6"])), diagnoseFinesseSource(ATTACK_1_6_6, ROLL_DAMAGE_1_6_6));
+  } finally {
+    console.warn = warn;
+    game.settings.get = get;
+  }
+  assert.equal(warnings.length, 1);
+  assert.equal(diagnoseFinesseBehavior({ attack: "des", damage: "des", lightAttack: "for", lightDamage: "des" }), undefined);
+  assert.equal(diagnoseFinesseBehavior({ attack: "des", damage: null, lightAttack: "des", lightDamage: "des" }), undefined);
+});
+
+test("code the probe does not recognize is never called, in any mode", () => {
+  const wrappers = [
+    (original, log) => ({ async rollDamage(...args) { log.push("chat"); return original.apply(this, args); } }).rollDamage,
+    (original, log) => function (...args) { log.push("chat"); return original.apply(this, args); },
+    (original, log) => (...args) => { log.push("chat"); return original(...args); }
+  ];
+  for (const wrap of wrappers) {
+    const log = [];
+    const Wrapped = systemClass(...VERSIONS["1.6.6"]);
+    Wrapped.prototype.rollDamage = wrap(Wrapped.prototype.rollDamage, log);
+    for (const mode of ["auto", "off", "force"]) {
+      const state = resolvePatchState({ patch, mode, systemId: "tormenta20", systemVersion: "1.6.6", probe: () => diagnoseWith(Wrapped) });
+      assert.equal(state.diagnosis.bug, "unknown");
+    }
+    assert.deepEqual(log, []);
+  }
+  const unknownVersion = `getAttackToHit() { globalThis.sideEffect = true; return { rollData: { skill: 13 } }; }`;
+  assert.equal(diagnoseWith(systemClass(unknownVersion, ROLL_DAMAGE_1_6_6)).bug, "unknown");
+  assert.equal(globalThis.sideEffect, undefined);
+});
+
+test("probeDamage stops before rolling and ignores other errors", () => {
+  const otherError = async function () {
+    throw new Error("boom");
+  };
+  assert.equal(probeDamage(otherError, probeItem({ light: false })), null);
+  const syncError = function () {
+    throw new Error("boom");
+  };
+  assert.equal(probeDamage(syncError, probeItem({ light: false })), null);
+});
+
+test("only the 1.6.5 and 1.6.6 methods are probed", () => {
+  assert.ok(isProbeSafe(ATTACK_1_6_6, "attack"));
+  assert.ok(isProbeSafe(ROLL_DAMAGE_1_6_6, "damage"));
+  assert.ok(isProbeSafe(ATTACK, "attack"));
+  assert.ok(isProbeSafe(DAMAGE, "damage"));
+  assert.ok(isProbeSafe(`// comment\n${ATTACK_1_6_6.replaceAll("\t", "  ")}`, "attack"));
+  assert.ok(!isProbeSafe(ATTACK_1_6_6, "damage"));
+  assert.ok(!isProbeSafe(ROLL_DAMAGE_1_6_6.replace("des.value > forca.value", "true"), "damage"));
+  assert.ok(!isProbeSafe("async rollDamage(...args) { return original.apply(this, args); }", "damage"));
 });

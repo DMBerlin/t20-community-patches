@@ -1,53 +1,66 @@
 <section class="tab t20cp-tab t20cp-patches {{tab.cssClass}}" data-group="main" data-tab="patches" id="t20cp-panel-patches" role="tabpanel" aria-labelledby="t20cp-tab-patches">
-  <p class="t20cp-summary">
-    <span>{{summary}}</span>
-    {{#if pendingReload}}
-    <span class="t20cp-pending"><i class="fa-solid fa-rotate" inert></i> {{localize "T20CP.Manager.PendingReload"}}</span>
-    {{/if}}
-  </p>
-  <div class="t20cp-toolbar">
+  <aside class="t20cp-sidebar">
     <input type="search" class="t20cp-search" placeholder="{{localize "T20CP.Manager.Search"}}" aria-label="{{localize "T20CP.Manager.Search"}}" autocomplete="off">
-    <div class="t20cp-filters" role="group">
-      <button type="button" data-action="filter" data-filter="all">{{localize "T20CP.Manager.Filter.all"}}</button>
-      <button type="button" data-action="filter" data-filter="attention" {{#unless hasAttention}}disabled{{/unless}}>{{localize "T20CP.Manager.Filter.attention"}}</button>
-    </div>
-  </div>
-  <div class="t20cp-list">
-    {{#each groups}}
-    <div class="t20cp-group">
-      <h4 class="t20cp-group-label">{{label}}</h4>
-      {{#each patches}}
-      <div class="t20cp-row" data-id="{{id}}" data-category="{{category}}" data-search="{{search}}">
-        <div class="t20cp-line">
-          <i class="t20cp-icon t20cp-icon--{{iconClass}} {{icon}}" data-tooltip="{{stateLabel}}" aria-label="{{stateLabel}}"></i>
-          <span class="t20cp-name">{{name}}</span>
-          {{#if changed}}<span class="t20cp-dot" data-tooltip="{{localize "T20CP.Manager.Changed"}}" aria-label="{{localize "T20CP.Manager.Changed"}}"></span>{{/if}}
-          <span class="t20cp-tag" {{#unless always}}hidden{{/unless}}>{{localize "T20CP.Manager.AlwaysTag"}}</span>
-          <label class="t20cp-switch" data-tooltip="{{localize "T20CP.Manager.Switch"}}">
-            <input type="checkbox" name="patch:{{id}}" {{checked enabled}} aria-label="{{name}}">
-            <span class="t20cp-switch-track" aria-hidden="true"></span>
-          </label>
-          <button type="button" class="t20cp-expand icon" data-action="expand" aria-expanded="false" aria-label="{{localize "T20CP.Manager.Expand"}}">
-            <i class="fa-solid fa-chevron-down" inert></i>
-          </button>
-        </div>
-        <div class="t20cp-detail" hidden>
-          <p>{{hint}}</p>
-          <p class="t20cp-state"><strong>{{stateLabel}}.</strong> {{{stateHint}}}</p>
-          <div class="t20cp-detail-footer">
-            <label class="checkbox t20cp-always" {{#unless enabled}}hidden{{/unless}}>
-              <input type="checkbox" name="always:{{id}}" {{checked always}}>
-              {{localize "T20CP.Manager.Always"}}
-            </label>
-            {{#if link}}
-            <a class="t20cp-link" href="{{link.url}}" data-keyboard-focus target="_blank" rel="noopener noreferrer">{{localize link.label}} <i class="fa-solid fa-arrow-up-right-from-square" inert></i></a>
-            {{/if}}
-          </div>
-        </div>
-      </div>
+    <nav class="t20cp-nav" role="group" aria-label="{{localize "T20CP.Manager.Groups"}}">
+      <button type="button" data-action="group" data-group-id="" aria-pressed="false">
+        <span class="t20cp-nav-label">{{localize "T20CP.Manager.AllGroups"}}</span><span class="t20cp-count"></span>
+      </button>
+      {{#each patchGroups}}
+      <button type="button" data-action="group" data-group-id="{{id}}" aria-pressed="false">
+        <span class="t20cp-nav-label">{{label}}</span><span class="t20cp-count"></span>
+      </button>
+      {{/each}}
+    </nav>
+  </aside>
+  <div class="t20cp-main">
+    <p class="t20cp-summary">
+      <span>{{summary}}</span>
+      {{#if pendingReload}}
+      <span class="t20cp-pending"><i class="fa-solid fa-rotate" inert></i> {{localize "T20CP.Manager.PendingReload"}}</span>
+      {{/if}}
+    </p>
+    <div class="t20cp-filters" role="group" aria-label="{{localize "T20CP.Manager.FilterLabel"}}">
+      {{#each patchFilters}}
+      <button type="button" data-action="filter" data-filter="{{id}}" aria-pressed="false" {{#if disabled}}disabled{{/if}}>{{label}} <span class="t20cp-count"></span></button>
       {{/each}}
     </div>
-    {{/each}}
-    <p class="t20cp-empty hint" hidden>{{localize "T20CP.Manager.Empty"}}</p>
+    <div class="t20cp-list">
+      {{#each groups}}
+      <div class="t20cp-group">
+        <h4 class="t20cp-group-label">{{label}}</h4>
+        {{#each patches}}
+        <div class="t20cp-row" data-id="{{id}}" data-group="{{group}}" data-bucket="{{bucket}}" data-category="{{category}}" data-search="{{search}}">
+          <div class="t20cp-line">
+            <i class="t20cp-icon t20cp-icon--{{iconClass}} {{icon}}" data-tooltip="{{stateLabel}}" aria-label="{{stateLabel}}"></i>
+            <span class="t20cp-name">{{name}}</span>
+            {{#if changed}}<span class="t20cp-dot" data-tooltip="{{localize "T20CP.Manager.Changed"}}" aria-label="{{localize "T20CP.Manager.Changed"}}"></span>{{/if}}
+            <span class="t20cp-tag" {{#unless always}}hidden{{/unless}}>{{localize "T20CP.Manager.AlwaysTag"}}</span>
+            <label class="t20cp-switch" data-tooltip="{{localize "T20CP.Manager.Switch"}}">
+              <input type="checkbox" name="patch:{{id}}" {{checked enabled}} aria-label="{{name}}">
+              <span class="t20cp-switch-track" aria-hidden="true"></span>
+            </label>
+            <button type="button" class="t20cp-expand icon" data-action="expand" aria-expanded="false" aria-label="{{localize "T20CP.Manager.Expand"}}">
+              <i class="fa-solid fa-chevron-down" inert></i>
+            </button>
+          </div>
+          <div class="t20cp-detail" hidden>
+            <p>{{hint}}</p>
+            <p class="t20cp-state"><strong>{{stateLabel}}.</strong> {{{stateHint}}}</p>
+            <div class="t20cp-detail-footer">
+              <label class="checkbox t20cp-always" {{#unless enabled}}hidden{{/unless}}>
+                <input type="checkbox" name="always:{{id}}" {{checked always}}>
+                {{localize "T20CP.Manager.Always"}}
+              </label>
+              {{#if link}}
+              <a class="t20cp-link" href="{{link.url}}" data-keyboard-focus target="_blank" rel="noopener noreferrer">{{localize link.label}} <i class="fa-solid fa-arrow-up-right-from-square" inert></i></a>
+              {{/if}}
+            </div>
+          </div>
+        </div>
+        {{/each}}
+      </div>
+      {{/each}}
+      <p class="t20cp-empty hint" hidden>{{localize "T20CP.Manager.Empty"}}</p>
+    </div>
   </div>
 </section>

@@ -256,9 +256,17 @@
       "Search": "Search patches",
       "Filter": {
         "all": "All",
+        "on": "On",
+        "off": "Off",
+        "fixed": "Fixed",
         "attention": "Attention"
       },
+      "FilterLabel": "Filter by state",
+      "Groups": "Groups",
+      "AllGroups": "All groups",
+      "SearchRules": "Search rules",
       "Empty": "No patch found.",
+      "EmptyRules": "No rules found.",
       "Changed": "Changed on this load",
       "AlwaysTag": "always",
       "Switch": "On: applied while the bug exists. Off: not applied.",

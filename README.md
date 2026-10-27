@@ -6,7 +6,8 @@ Módulo para Foundry VTT com correções comunitárias para bugs confirmados no 
 
 - Corrige apenas bugs comprovados, seguindo a intenção dos mantenedores do sistema. O comportamento padrão do Foundry e do Tormenta20 não é alterado.
 - Tudo fica na **Central do T20CP** (**Configurações → Configurar Definições → Tormenta20 Community Patches → Central do T20CP**), só para o GM, com duas abas: **Correções** e **Regras opcionais**.
-- **Aba Correções.** O cabeçalho resume a situação numa linha (por exemplo, `Tormenta20 1.6.5 · 34 ativas · 2 desnecessárias · 1 atenção`). Há uma busca por nome e o filtro Todas | Atenção; a aba abre em Atenção quando há algo a ver. Cada correção ocupa uma linha, com um ícone de categoria, o nome e um interruptor. A seta (⌄) mostra a explicação, o estado detalhado com o diagnóstico, um link e a caixa "Aplicar sempre".
+- **Layout.** Cada aba tem, à esquerda, uma barra lateral com a busca (pelo nome ou pelo id) e os grupos, com a contagem de cada um; clicar num grupo mostra só ele, e "Todos os grupos" volta à lista completa. À direita ficam os filtros de estado, também com contagens, e a lista. A janela é redimensionável e, estreita, põe a barra lateral acima da lista.
+- **Aba Correções.** O cabeçalho resume a situação numa linha (por exemplo, `Tormenta20 1.6.5 · 34 ativas · 2 desnecessárias · 1 atenção`). Os filtros são Todas | Ligadas | Desligadas | Corrigidas | Atenção e seguem o estado do carregamento atual: Ligadas são as ativas; Desligadas, as que foram desligadas; Corrigidas, as desnecessárias porque o Tormenta20 já corrigiu o bug. A aba abre em Atenção quando há algo a ver. Cada correção ocupa uma linha, com um ícone de categoria, o nome e um interruptor. A seta (⌄) mostra a explicação, o estado detalhado com o diagnóstico, um link e a caixa "Aplicar sempre".
   - **Interruptor ligado (Automático):** a correção é aplicada enquanto o bug existir. Ela só deixa de ser aplicada quando há evidência forte de que o Tormenta20 corrigiu o bug; com um indício fraco, continua aplicada e o detalhe pede para verificar. Em versões mais novas, ainda não verificadas, ela é aplicada se o bug for confirmado, ou por precaução quando só age quando o bug aparece; nos demais casos, não é aplicada nesta carga. A preferência nunca muda sozinha.
   - **Interruptor desligado:** a correção não é aplicada, mas o diagnóstico continua aparecendo.
   - **"Aplicar sempre (ignorar o diagnóstico)":** aplica a correção mesmo quando o diagnóstico diz que o bug foi corrigido ou não o confirma (nunca em sistema incompatível). Pede confirmação, e a linha mostra o marcador "sempre". Se o sistema também corrigiu, o comportamento pode ficar duplicado.
@@ -80,7 +81,7 @@ O módulo tem numeração própria, em [SemVer](https://semver.org/lang/pt-BR/),
 
 ## Regras opcionais
 
-Regras do livro que o sistema não aplica. Cada uma tem um ajuste próprio na aba **Regras opcionais** da Central do T20CP (elas não aparecem mais em Configurar Definições). Mudanças valem na hora, sem recarregar, exceto "Valor efetivo dos itens", que pede a recarga do mundo.
+Regras do livro que o sistema não aplica. Cada uma tem um ajuste próprio na aba **Regras opcionais** da Central do T20CP (elas não aparecem mais em Configurar Definições). Mudanças valem na hora, sem recarregar, exceto "Valor efetivo dos itens", que pede a recarga do mundo. Na aba, as regras ficam agrupadas como as correções, e os filtros são Todas | Ligadas | Desligadas: uma regra conta como ligada quando a primeira configuração dela não está em "Desligado" (regras sem essa opção, como "Valor efetivo dos itens", contam sempre como ligadas).
 
 | Regra | Ajuste | O que faz |
 |---|---|---|

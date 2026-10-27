@@ -256,9 +256,17 @@
       "Search": "Buscar correção",
       "Filter": {
         "all": "Todas",
+        "on": "Ligadas",
+        "off": "Desligadas",
+        "fixed": "Corrigidas",
         "attention": "Atenção"
       },
+      "FilterLabel": "Filtrar por estado",
+      "Groups": "Grupos",
+      "AllGroups": "Todos os grupos",
+      "SearchRules": "Buscar regra",
       "Empty": "Nenhuma correção encontrada.",
+      "EmptyRules": "Nenhuma regra encontrada.",
       "Changed": "Mudou neste carregamento",
       "AlwaysTag": "sempre",
       "Switch": "Ligada: aplicada enquanto o bug existir. Desligada: não aplicada.",

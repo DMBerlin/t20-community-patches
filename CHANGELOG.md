@@ -39,6 +39,7 @@ Não edite as seções de versão à mão.
 - A "Central do T20CP" substitui o gerenciador: uma linha por correção com interruptor e detalhes ao expandir, as regras opcionais numa aba própria e um único aviso por carregamento, com link para reportar problemas (#73).
 - Compatibilidade com o Tormenta20 1.6.6: as correções cujo bug continua passam a valer na 1.6.6, os efeitos de itens e o botão de efeitos de uso voltam a funcionar nas fichas da 1.6.6, e Acuidade com Arma e Condições vazias deixam de ser corrigidas, porque o sistema já as corrige (#76).
 - `finesse-agile-weapons` (#80): o teste da correção passa a verificar o comportamento do sistema, e no Tormenta20 1.6.6 a Central a mostra como desnecessária, em vez de "não verificada".
+- A Central do T20CP ganha uma barra lateral com busca e grupos, e os filtros Todas, Ligadas, Desligadas, Corrigidas e Atenção com contagens, também na aba Regras opcionais (#81).
 
 ### Fixed
 

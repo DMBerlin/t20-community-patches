@@ -1,32 +1,58 @@
 <section class="tab t20cp-tab t20cp-rules {{tab.cssClass}}" data-group="main" data-tab="rules" id="t20cp-panel-rules" role="tabpanel" aria-labelledby="t20cp-tab-rules">
-  <div class="t20cp-list">
-    {{#each rules}}
-    <div class="t20cp-row" data-id="{{id}}">
-      <div class="t20cp-line">
-        <span class="t20cp-name">{{label}}</span>
-        {{#if single}}<span class="t20cp-control">{{{input}}}</span>{{/if}}
-        <button type="button" class="t20cp-expand icon" data-action="expand" aria-expanded="false" aria-label="{{localize "T20CP.Manager.Expand"}}">
-          <i class="fa-solid fa-chevron-down" inert></i>
-        </button>
-      </div>
-      <div class="t20cp-detail" hidden>
-        {{#if single}}
-        <p>{{hint}}</p>
-        {{else}}
-        {{#each entries}}
-        <div class="t20cp-subrule">
+  <aside class="t20cp-sidebar">
+    <input type="search" class="t20cp-search" placeholder="{{localize "T20CP.Manager.SearchRules"}}" aria-label="{{localize "T20CP.Manager.SearchRules"}}" autocomplete="off">
+    <nav class="t20cp-nav" role="group" aria-label="{{localize "T20CP.Manager.Groups"}}">
+      <button type="button" data-action="group" data-group-id="" aria-pressed="false">
+        <span class="t20cp-nav-label">{{localize "T20CP.Manager.AllGroups"}}</span><span class="t20cp-count"></span>
+      </button>
+      {{#each ruleNav}}
+      <button type="button" data-action="group" data-group-id="{{id}}" aria-pressed="false">
+        <span class="t20cp-nav-label">{{label}}</span><span class="t20cp-count"></span>
+      </button>
+      {{/each}}
+    </nav>
+  </aside>
+  <div class="t20cp-main">
+    <div class="t20cp-filters" role="group" aria-label="{{localize "T20CP.Manager.FilterLabel"}}">
+      {{#each ruleFilters}}
+      <button type="button" data-action="filter" data-filter="{{id}}" aria-pressed="false">{{label}} <span class="t20cp-count"></span></button>
+      {{/each}}
+    </div>
+    <div class="t20cp-list">
+      {{#each ruleGroups}}
+      <div class="t20cp-group">
+        <h4 class="t20cp-group-label">{{label}}</h4>
+        {{#each rules}}
+        <div class="t20cp-row" data-id="{{id}}" data-group="{{group}}" data-bucket="{{bucket}}" data-search="{{search}}">
           <div class="t20cp-line">
             <span class="t20cp-name">{{label}}</span>
-            <span class="t20cp-control">{{{input}}}</span>
+            {{#if single}}<span class="t20cp-control">{{{input}}}</span>{{/if}}
+            <button type="button" class="t20cp-expand icon" data-action="expand" aria-expanded="false" aria-label="{{localize "T20CP.Manager.Expand"}}">
+              <i class="fa-solid fa-chevron-down" inert></i>
+            </button>
           </div>
-          <p class="hint">{{hint}}</p>
+          <div class="t20cp-detail" hidden>
+            {{#if single}}
+            <p>{{hint}}</p>
+            {{else}}
+            {{#each entries}}
+            <div class="t20cp-subrule">
+              <div class="t20cp-line">
+                <span class="t20cp-name">{{label}}</span>
+                <span class="t20cp-control">{{{input}}}</span>
+              </div>
+              <p class="hint">{{hint}}</p>
+            </div>
+            {{/each}}
+            {{/if}}
+          </div>
         </div>
         {{/each}}
-        {{/if}}
       </div>
+      {{else}}
+      <p class="hint">{{localize "T20CP.Manager.NoRules"}}</p>
+      {{/each}}
+      {{#if ruleGroups.length}}<p class="t20cp-empty hint" hidden>{{localize "T20CP.Manager.EmptyRules"}}</p>{{/if}}
     </div>
-    {{else}}
-    <p class="hint">{{localize "T20CP.Manager.NoRules"}}</p>
-    {{/each}}
   </div>
 </section>

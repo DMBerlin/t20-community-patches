@@ -43,12 +43,89 @@
   outline: 2px solid var(--color-warm-1, #ee9b3a);
   outline-offset: -2px;
 }
+/* Each tab: a sidebar (search and groups) on the left and the filters and list on the right. The sidebar and the list
+   scroll on their own. Narrow windows put the sidebar above the list. */
+.t20cp-patch-manager .window-content {
+  container-type: inline-size;
+}
 .t20cp-patch-manager .t20cp-tab.active {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
   flex: 1 1 auto;
   min-height: 0;
+  gap: 0.75rem;
+}
+.t20cp-patch-manager .t20cp-sidebar {
+  display: flex;
+  flex-direction: column;
   gap: 0.5rem;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 0.75rem;
+  border-right: 1px solid var(--color-border-light-2, rgba(128, 128, 128, 0.25));
+}
+.t20cp-patch-manager .t20cp-search {
+  flex: 0 0 auto;
+  width: 100%;
+}
+.t20cp-patch-manager .t20cp-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.t20cp-patch-manager .t20cp-nav button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 1.75rem;
+  padding: 0 0.5rem;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  text-align: left;
+}
+.t20cp-patch-manager .t20cp-nav button:hover,
+.t20cp-patch-manager .t20cp-nav button.active {
+  background: var(--button-hover-background-color, rgba(0, 0, 0, 0.2));
+}
+.t20cp-patch-manager .t20cp-nav button.active { font-weight: bold; }
+.t20cp-patch-manager .t20cp-nav-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.t20cp-patch-manager .t20cp-count {
+  flex: 0 0 auto;
+  opacity: 0.7;
+  font-size: var(--font-size-12, 12px);
+}
+.t20cp-patch-manager .t20cp-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  min-height: 0;
+}
+.t20cp-patch-manager .t20cp-single-group .t20cp-group-label { display: none; }
+@container (max-width: 640px) {
+  .t20cp-patch-manager .t20cp-tab.active {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .t20cp-patch-manager .t20cp-sidebar {
+    max-height: 9rem;
+    padding: 0 0 0.5rem;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border-light-2, rgba(128, 128, 128, 0.25));
+  }
+  .t20cp-patch-manager .t20cp-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .t20cp-patch-manager .t20cp-nav button { width: auto; }
 }
 .t20cp-patch-manager .t20cp-list {
   flex: 1 1 auto;
@@ -67,16 +144,9 @@
   font-weight: normal;
   color: var(--color-level-warning, #c08000);
 }
-.t20cp-patch-manager .t20cp-toolbar {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-.t20cp-patch-manager .t20cp-search {
-  flex: 1 1 auto;
-}
 .t20cp-patch-manager .t20cp-filters {
   display: flex;
+  flex-wrap: wrap;
   flex: 0 0 auto;
 }
 .t20cp-patch-manager .t20cp-filters button {
@@ -87,6 +157,7 @@
 }
 .t20cp-patch-manager .t20cp-filters button:first-child { border-radius: 4px 0 0 4px; }
 .t20cp-patch-manager .t20cp-filters button:last-child { border-radius: 0 4px 4px 0; }
+.t20cp-patch-manager .t20cp-filters button .t20cp-count { margin-left: 0.25rem; }
 .t20cp-patch-manager .t20cp-filters button.active {
   background: var(--button-hover-background-color, rgba(0, 0, 0, 0.2));
   font-weight: bold;

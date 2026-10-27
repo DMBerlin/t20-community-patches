@@ -12,6 +12,7 @@ import {
   nextFocusIndex
 } from "../registry.mjs";
 import { GROUPS, PATCHES } from "../patches/index.mjs";
+import { PATCH_FILTERS, RULE_FILTERS, facetCounts, matchesView, patchBucket, ruleBucket } from "./center-view.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -37,19 +38,20 @@ export class PatchManager extends HandlebarsApplicationMixin(ApplicationV2) {
     id: "t20cp-patch-manager",
     tag: "form",
     classes: ["t20cp-patch-manager"],
-    window: { title: "T20CP.Manager.Title", icon: "fa-solid fa-screwdriver-wrench", contentClasses: ["standard-form"] },
-    position: { width: 640, height: "auto" },
+    window: { title: "T20CP.Manager.Title", icon: "fa-solid fa-screwdriver-wrench", contentClasses: ["standard-form"], resizable: true },
+    position: { width: 900, height: 640 },
     form: { handler: PatchManager.#onSubmit, closeOnSubmit: false },
     actions: {
       expand: PatchManager.#onExpand,
-      filter: PatchManager.#onFilter
+      filter: PatchManager.#onFilter,
+      group: PatchManager.#onGroup
     }
   };
 
   static PARTS = {
     tabs: { template: `modules/${MODULE_ID}/templates/patch-manager-tabs.hbs` },
-    patches: { template: `modules/${MODULE_ID}/templates/patch-manager.hbs`, scrollable: [".t20cp-list"] },
-    rules: { template: `modules/${MODULE_ID}/templates/patch-manager-rules.hbs`, scrollable: [".t20cp-list"] },
+    patches: { template: `modules/${MODULE_ID}/templates/patch-manager.hbs`, scrollable: [".t20cp-sidebar", ".t20cp-list"] },
+    rules: { template: `modules/${MODULE_ID}/templates/patch-manager-rules.hbs`, scrollable: [".t20cp-sidebar", ".t20cp-list"] },
     footer: { template: "templates/generic/form-footer.hbs" }
   };
 
@@ -69,8 +71,11 @@ export class PatchManager extends HandlebarsApplicationMixin(ApplicationV2) {
   /** Rule setting values shown when the form was rendered, keyed by setting key. */
   #ruleSnapshot = {};
 
-  /** Patch list filter: "all" or "attention". Chosen on the first render. */
-  #filter = null;
+  /**
+   * Search, group and status filter of each tab. The patches filter is chosen on the first render.
+   * @type {Record<"patches"|"rules", import("./center-view.mjs").View>}
+   */
+  #views = { patches: { query: "", group: null, filter: null }, rules: { query: "", group: null, filter: "all" } };
 
   /** @override */
   async _prepareContext(options) {
@@ -93,7 +98,8 @@ export class PatchManager extends HandlebarsApplicationMixin(ApplicationV2) {
         id: patch.id,
         group: patch.group,
         name,
-        search: name.toLocaleLowerCase(game.i18n.lang),
+        search: searchText(name, patch.id),
+        bucket: patchBucket(category),
         hint: game.i18n.localize(`T20CP.Patches.${patch.id}.Hint`),
         mode,
         ...controlsFromMode(mode),
@@ -121,16 +127,18 @@ export class PatchManager extends HandlebarsApplicationMixin(ApplicationV2) {
         game.i18n.format(`T20CP.Manager.Count.${c}.${plural.select(counts[c]) === "one" ? "one" : "other"}`, { count: counts[c] })
       )
     ].join(" · ");
-    this.#filter ??= counts.attention ? "attention" : "all";
-    context.filter = this.#filter;
+    this.#views.patches.filter ??= counts.attention ? "attention" : "all";
     context.hasAttention = counts.attention > 0;
 
-    const groupIds = [...GROUPS, ...new Set(rows.map((r) => r.group).filter((g) => !GROUPS.includes(g)))];
-    context.groups = groupIds
-      .map((id) => ({ id, label: game.i18n.localize(`T20CP.Groups.${id}`), patches: rows.filter((r) => r.group === id) }))
-      .filter((g) => g.patches.length);
+    context.groups = groupRows(rows).map((g) => ({ ...g, patches: g.rows }));
+    context.patchGroups = context.groups.map(({ id, label }) => ({ id, label }));
+    context.patchFilters = filterButtons(PATCH_FILTERS, { attention: !context.hasAttention });
 
-    context.rules = this.#prepareRules();
+    const rules = this.#prepareRules();
+    context.rules = rules;
+    context.ruleGroups = groupRows(rules).map((g) => ({ ...g, rules: g.rows }));
+    context.ruleNav = context.ruleGroups.map(({ id, label }) => ({ id, label }));
+    context.ruleFilters = filterButtons(RULE_FILTERS);
     context.buttons = [{ type: "submit", icon: "fa-solid fa-floppy-disk", label: "T20CP.Manager.Save" }];
     return context;
   }
@@ -146,11 +154,15 @@ export class PatchManager extends HandlebarsApplicationMixin(ApplicationV2) {
   #prepareRules() {
     this.#ruleSnapshot = {};
     const rules = [];
-    for (const { id, keys } of RULE_SETTINGS) {
+    for (const { id, group, keys } of RULE_SETTINGS) {
       const entries = keys.map((key) => this.#prepareSetting(key)).filter(Boolean);
       if (!entries.length) continue;
-      if (keys.length === 1) rules.push({ id, single: true, ...entries[0] });
-      else rules.push({ id, single: false, label: game.i18n.localize(`T20CP.Manager.Rules.${id}`), entries });
+      const view = { id, group, bucket: ruleBucket(entries.map((e) => e.value)) };
+      if (keys.length === 1) rules.push({ ...view, single: true, ...entries[0], search: searchText(entries[0].label, id) });
+      else {
+        const label = game.i18n.localize(`T20CP.Manager.Rules.${id}`);
+        rules.push({ ...view, single: false, label, entries, search: searchText(label, id) });
+      }
     }
     return rules;
   }
@@ -170,6 +182,7 @@ export class PatchManager extends HandlebarsApplicationMixin(ApplicationV2) {
     input.setAttribute?.("aria-label", game.i18n.localize(setting.name ?? ""));
     return {
       key,
+      value,
       label: game.i18n.localize(setting.name ?? ""),
       hint: game.i18n.localize(setting.hint ?? ""),
       input: input.outerHTML,
@@ -219,6 +232,14 @@ export class PatchManager extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!(control instanceof HTMLElement) || control.checkVisibility()) return;
     const tab = control.closest(".tab[data-tab]");
     if (tab) this.changeTab(tab.dataset.tab, tab.dataset.group);
+    const row = control.closest(".t20cp-row");
+    const view = this.#views[tab?.dataset.tab];
+    if (row?.hidden && view) {
+      Object.assign(view, { query: "", group: null, filter: "all" });
+      const search = tab.querySelector(".t20cp-search");
+      if (search) search.value = "";
+      this.#applyFilter(tab.dataset.tab);
+    }
     const detail = control.closest(".t20cp-detail");
     if (detail?.hidden) {
       detail.hidden = false;
@@ -234,8 +255,17 @@ export class PatchManager extends HandlebarsApplicationMixin(ApplicationV2) {
   /** @override */
   async _onRender(context, options) {
     await super._onRender(context, options);
-    this.element.querySelector(".t20cp-search")?.addEventListener("input", () => this.#applyFilter());
-    this.#applyFilter();
+    for (const search of this.element.querySelectorAll(".t20cp-search")) {
+      const tab = search.closest(".tab[data-tab]")?.dataset.tab;
+      if (!tab || !this.#views[tab]) continue;
+      search.value = this.#views[tab].query;
+      search.addEventListener("input", () => {
+        this.#views[tab].query = search.value;
+        this.#applyFilter(tab);
+      });
+    }
+    for (const nav of this.element.querySelectorAll(".t20cp-nav")) nav.addEventListener("keydown", (event) => this.#onGroupKey(event));
+    for (const tab of Object.keys(this.#views)) this.#applyFilter(tab);
     this.#refreshFooter();
   }
 
@@ -276,24 +306,56 @@ export class PatchManager extends HandlebarsApplicationMixin(ApplicationV2) {
     button.querySelector("i")?.classList.toggle("fa-floppy-disk", !reload);
   }
 
-  /** Shows the rows that match the search and the filter, and hides empty groups. */
-  #applyFilter() {
-    const form = this.element;
-    const query = (form.querySelector(".t20cp-search")?.value ?? "").trim().toLocaleLowerCase(game.i18n.lang);
-    for (const button of form.querySelectorAll('[data-action="filter"]')) {
-      const active = button.dataset.filter === this.#filter;
-      button.classList.toggle("active", active);
-      button.setAttribute("aria-pressed", String(active));
-    }
-    for (const row of form.querySelectorAll(".t20cp-patches .t20cp-row")) {
-      const match = (!query || row.dataset.search.includes(query)) && (this.#filter !== "attention" || row.dataset.category === "attention");
-      row.hidden = !match;
-    }
-    for (const group of form.querySelectorAll(".t20cp-patches .t20cp-group")) {
+  /**
+   * Shows the rows of a tab that match its search, group and status filter, hides empty groups, marks the active
+   * buttons and writes the facet counts.
+   * @param {"patches"|"rules"} tab
+   */
+  #applyFilter(tab) {
+    const panel = this.element.querySelector(`.tab[data-tab="${tab}"]`);
+    const view = this.#views[tab];
+    if (!panel || !view) return;
+    const normalized = { ...view, query: normalizeSearch(view.query) };
+    const rows = [...panel.querySelectorAll(".t20cp-list .t20cp-row[data-bucket]")];
+    const data = rows.map((row) => ({ group: row.dataset.group, bucket: row.dataset.bucket, search: row.dataset.search ?? "" }));
+    rows.forEach((row, i) => (row.hidden = !matchesView(data[i], normalized)));
+    for (const group of panel.querySelectorAll(".t20cp-group")) {
       group.hidden = !group.querySelector(".t20cp-row:not([hidden])");
     }
-    const empty = form.querySelector(".t20cp-empty");
-    if (empty) empty.hidden = !!form.querySelector(".t20cp-patches .t20cp-row:not([hidden])");
+    // With one group selected, its title would only repeat the sidebar.
+    panel.classList.toggle("t20cp-single-group", !!view.group);
+
+    const counts = facetCounts(data, normalized, tab === "patches" ? PATCH_FILTERS : RULE_FILTERS);
+    for (const button of panel.querySelectorAll('[data-action="group"]')) {
+      const id = button.dataset.groupId || null;
+      const active = id === view.group;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", String(active));
+      const count = button.querySelector(".t20cp-count");
+      if (count) count.textContent = String(id ? (counts.groups[id] ?? 0) : counts.allGroups);
+    }
+    for (const button of panel.querySelectorAll('[data-action="filter"]')) {
+      const active = button.dataset.filter === view.filter;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", String(active));
+      const count = button.querySelector(".t20cp-count");
+      if (count) count.textContent = String(counts.filters[button.dataset.filter] ?? 0);
+    }
+    const empty = panel.querySelector(".t20cp-empty");
+    if (empty) empty.hidden = rows.some((row) => !row.hidden);
+  }
+
+  /** Arrow keys, Home and End move between the sidebar's group buttons. */
+  #onGroupKey(event) {
+    const current = event.target.closest?.('[data-action="group"]');
+    if (!current) return;
+    const buttons = [...event.currentTarget.querySelectorAll('[data-action="group"]')];
+    const index = buttons.indexOf(current);
+    const next = { ArrowDown: index + 1, ArrowUp: index - 1, Home: 0, End: buttons.length - 1 }[event.key];
+    if (next === undefined) return;
+    event.preventDefault();
+    event.stopPropagation();
+    buttons[(next + buttons.length) % buttons.length].focus();
   }
 
   /**
@@ -343,8 +405,25 @@ export class PatchManager extends HandlebarsApplicationMixin(ApplicationV2) {
    * @param {HTMLElement} target
    */
   static #onFilter(event, target) {
-    this.#filter = target.dataset.filter === "attention" ? "attention" : "all";
-    this.#applyFilter();
+    const tab = target.closest(".tab[data-tab]")?.dataset.tab;
+    const view = this.#views[tab];
+    if (!view) return;
+    const filters = tab === "patches" ? PATCH_FILTERS : RULE_FILTERS;
+    view.filter = filters.includes(target.dataset.filter) ? target.dataset.filter : "all";
+    this.#applyFilter(tab);
+  }
+
+  /**
+   * @this {PatchManager}
+   * @param {PointerEvent} event
+   * @param {HTMLElement} target
+   */
+  static #onGroup(event, target) {
+    const tab = target.closest(".tab[data-tab]")?.dataset.tab;
+    const view = this.#views[tab];
+    if (!view) return;
+    view.group = target.dataset.groupId || null;
+    this.#applyFilter(tab);
   }
 
   /**
@@ -467,4 +546,35 @@ function describeDiagnosis(diagnosis) {
     confidence: game.i18n.localize(`T20CP.Diagnosis.Confidence.${diagnosis.confidence}`),
     evidence: diagnosis.evidence ? ` (${foundry.utils.escapeHTML(diagnosis.evidence)})` : ""
   });
+}
+
+/** @param {string} text */
+function normalizeSearch(text) {
+  return (text ?? "").toLocaleLowerCase(game.i18n.lang);
+}
+
+/** Lowercased text the search looks in: the localized name and the id. */
+function searchText(name, id) {
+  return normalizeSearch(`${name} ${id}`);
+}
+
+/**
+ * Rows grouped in GROUPS order (unknown groups last), skipping empty groups.
+ * @template {{group: string}} T
+ * @param {T[]} rows
+ * @returns {{id: string, label: string, rows: T[]}[]}
+ */
+function groupRows(rows) {
+  const ids = [...GROUPS, ...new Set(rows.map((r) => r.group).filter((g) => !GROUPS.includes(g)))];
+  return ids
+    .map((id) => ({ id, label: game.i18n.localize(`T20CP.Groups.${id}`), rows: rows.filter((r) => r.group === id) }))
+    .filter((g) => g.rows.length);
+}
+
+/**
+ * @param {string[]} filters
+ * @param {Record<string, boolean>} [disabled]
+ */
+function filterButtons(filters, disabled = {}) {
+  return filters.map((id) => ({ id, label: game.i18n.localize(`T20CP.Manager.Filter.${id}`), disabled: !!disabled[id] }));
 }

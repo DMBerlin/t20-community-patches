@@ -39,29 +39,30 @@ export const SETTINGS = {
  * `config: false`, so they no longer appear in the core settings window. A rule with several settings shows them in
  * its detail, under the label `T20CP.Center.Rules.<id>`. Only settings registered on this load are listed (the scene
  * limit only exists while segmented-scene-setting applies its fix).
- * @type {{id: string, keys: string[]}[]}
+ * Each rule sits in one of the patch GROUPS, used by the Center's sidebar.
+ * @type {{id: string, group: string, keys: string[]}[]}
  */
 export const RULE_SETTINGS = [
-  { id: "mana-limit", keys: [MANA_LIMIT_SETTING] },
-  { id: "usage-effect-max", keys: [USAGE_EFFECT_MAX_SETTING] },
-  { id: "same-ability-stacking", keys: [SAME_ABILITY_SETTING] },
-  { id: "source-stacking", keys: [SOURCE_STACKING_SETTING] },
-  { id: "item-effective-stats", keys: [ITEM_EFFECTIVE_STATS_SETTING] },
-  { id: "casting-restrictions", keys: [SUSTAINED_SPELL_SETTING, CASTING_CONDITION_SETTING, CONCENTRATION_SETTING] },
-  { id: "arcane-armor", keys: [ARCANE_ARMOR_SETTING] },
-  { id: "non-proficiency", keys: [NON_PROFICIENCY_SETTING] },
-  { id: "save-button", keys: [SAVE_BUTTON_SETTING] },
-  { id: "attack-vs-defense", keys: [ATTACK_VS_DEFENSE_SETTING, ATTACK_VS_DEFENSE_VISIBILITY_SETTING] },
-  { id: "concealment-miss-chance", keys: [CONCEALMENT_SETTING] },
-  { id: "situational-modifiers", keys: [SITUATIONAL_SETTING] },
-  { id: "trained-only-skills", keys: [TRAINED_ONLY_SETTING] },
-  { id: "skill-picker", keys: [SKILL_PICKER_SETTING] },
-  { id: "nonlethal-damage", keys: [NONLETHAL_SETTING] },
-  { id: "combat-maneuvers", keys: [COMBAT_MANEUVERS_SETTING] },
-  { id: "creature-type-traits", keys: [CREATURE_TYPE_TRAITS_SETTING] },
-  { id: "dying-states", keys: [DYING_STATES_SETTING, DEATH_FLOOR_SETTING] },
-  { id: "segmented-scene-limit", keys: [SEGMENTED_SCENE_LIMIT] },
-  { id: "encounter-xp", keys: [XP_AWARDS_SETTING] }
+  { id: "mana-limit", group: "usage-effects", keys: [MANA_LIMIT_SETTING] },
+  { id: "usage-effect-max", group: "usage-effects", keys: [USAGE_EFFECT_MAX_SETTING] },
+  { id: "same-ability-stacking", group: "usage-effects", keys: [SAME_ABILITY_SETTING] },
+  { id: "source-stacking", group: "sheet-effects", keys: [SOURCE_STACKING_SETTING] },
+  { id: "item-effective-stats", group: "items", keys: [ITEM_EFFECTIVE_STATS_SETTING] },
+  { id: "casting-restrictions", group: "usage-effects", keys: [SUSTAINED_SPELL_SETTING, CASTING_CONDITION_SETTING, CONCENTRATION_SETTING] },
+  { id: "arcane-armor", group: "usage-effects", keys: [ARCANE_ARMOR_SETTING] },
+  { id: "non-proficiency", group: "items", keys: [NON_PROFICIENCY_SETTING] },
+  { id: "save-button", group: "combat", keys: [SAVE_BUTTON_SETTING] },
+  { id: "attack-vs-defense", group: "combat", keys: [ATTACK_VS_DEFENSE_SETTING, ATTACK_VS_DEFENSE_VISIBILITY_SETTING] },
+  { id: "concealment-miss-chance", group: "combat", keys: [CONCEALMENT_SETTING] },
+  { id: "situational-modifiers", group: "combat", keys: [SITUATIONAL_SETTING] },
+  { id: "trained-only-skills", group: "actor", keys: [TRAINED_ONLY_SETTING] },
+  { id: "skill-picker", group: "actor", keys: [SKILL_PICKER_SETTING] },
+  { id: "nonlethal-damage", group: "combat", keys: [NONLETHAL_SETTING] },
+  { id: "combat-maneuvers", group: "combat", keys: [COMBAT_MANEUVERS_SETTING] },
+  { id: "creature-type-traits", group: "actor", keys: [CREATURE_TYPE_TRAITS_SETTING] },
+  { id: "dying-states", group: "actor", keys: [DYING_STATES_SETTING, DEATH_FLOOR_SETTING] },
+  { id: "segmented-scene-limit", group: "settings", keys: [SEGMENTED_SCENE_LIMIT] },
+  { id: "encounter-xp", group: "settings", keys: [XP_AWARDS_SETTING] }
 ];
 
 /** Setting used by 0.1.0, one Boolean per patch. Kept hidden only to migrate its value. */

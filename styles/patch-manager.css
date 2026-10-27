@@ -61,7 +61,8 @@
   gap: 0.5rem;
   min-height: 0;
   overflow-y: auto;
-  padding-right: 0.75rem;
+  /* Room for the outline of the focused or selected item, which the scroll container would clip. */
+  padding: 3px 0.75rem 3px 3px;
   border-right: 1px solid var(--color-border-light-2, rgba(128, 128, 128, 0.25));
 }
 .t20cp-patch-manager .t20cp-search {

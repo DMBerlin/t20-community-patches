@@ -14,7 +14,8 @@
  * combatants of this token (or of this actor, when linked) that have no initiative yet, as core
  * Actor#rollInitiative selects them.
  */
-import { markWrapper, stripComments, unwrap } from "../utils.mjs";
+import { stripComments, unwrap } from "../utils.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 const LOG = "t20-community-patches | sheet-initiative-token:";
 export const INITIATIVE_KEY = "inic";
@@ -192,11 +193,10 @@ function apply() {
     }
   }
 
-  const setInitiative = CombatClass.prototype.setInitiative;
-  CombatClass.prototype.setInitiative = markWrapper(function (id, value) {
+  wraps.wrap(CombatClass.prototype, "setInitiative", "sheet-initiative-token", function (setInitiative, id, value) {
     if (isSystemCall(this, id)) return Promise.resolve();
     return setInitiative.call(this, id, value);
-  }, setInitiative);
+  });
 
   // While a roll is in flight, an own property on each combat runs before any other module's Combat#setInitiative
   // wrapper, so the check still sees the toInitiative frame when such a wrapper awaits before delegating.
@@ -216,8 +216,7 @@ function apply() {
     }
   }
 
-  const rollPericia = proto.rollPericia;
-  proto.rollPericia = markWrapper(async function (key, options = {}) {
+  wraps.wrap(proto, "rollPericia", "sheet-initiative-token", async function (rollPericia, key, options = {}) {
     if (options?.message === false) return rollPericia.call(this, key, options);
     // Any skill labelled "Iniciativa" reaches the system's write, so it is suppressed for every key; only "inic" writes.
     const actorId = this.id;
@@ -235,7 +234,7 @@ function apply() {
     }
     if (key === INITIATIVE_KEY) await writeInitiative(this, message);
     return message;
-  }, rollPericia);
+  });
 }
 
 function isNeeded() {

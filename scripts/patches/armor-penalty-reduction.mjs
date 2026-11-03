@@ -10,6 +10,7 @@
  * and the item sheet stay untouched; only the actor's armor penalty (skills and rolls) is corrected.
  * Penalty increases (Reforçada, Sobrecarregado, custom effects) keep the system's behavior.
  */
+import { wraps } from "../kernel/wrap.mjs";
 
 const PDA_KEY = "system.attributes.defesa.pda";
 const UNASSIGNED = "";
@@ -197,8 +198,7 @@ function apply() {
   const EffectClass = CONFIG.ActiveEffect.documentClass;
   const ActorClass = CONFIG.Actor.documentClass;
 
-  const applyChange = EffectClass.applyChange;
-  EffectClass.applyChange = function (targetDoc, change, options) {
+  wraps.wrap(EffectClass, "applyChange", "armor-penalty-reduction", function (applyChange, targetDoc, change, options) {
     if (change?.key === PDA_KEY && change.type === "add" && targetDoc instanceof foundry.documents.Actor) {
       const reducer = isArmorPenaltyReducer(change.effect);
       // Reductions are applied while derived data is prepared, so only initial-phase changes can be corrected.
@@ -211,10 +211,9 @@ function apply() {
       if (!reducer && currentPhase === "initial") recordIncrease(targetDoc, change, options);
     }
     return applyChange.call(this, targetDoc, change, options);
-  };
+  });
 
-  const applyActiveEffects = ActorClass.prototype.applyActiveEffects;
-  ActorClass.prototype.applyActiveEffects = function (phase, ...args) {
+  wraps.wrap(ActorClass.prototype, "applyActiveEffects", "armor-penalty-reduction", function (applyActiveEffects, phase, ...args) {
     if (phase === "initial") {
       reductionsByActor.delete(this);
       increasesByActor.delete(this);
@@ -226,7 +225,7 @@ function apply() {
     } finally {
       currentPhase = previous;
     }
-  };
+  });
 
   // prepareDefense runs inside each actor type's TypeDataModel#prepareDerivedData.
   const prototypes = new Set(
@@ -235,8 +234,7 @@ function apply() {
       .filter((proto) => proto && Object.hasOwn(proto, "prepareDerivedData"))
   );
   for (const proto of prototypes) {
-    const prepareDerivedData = proto.prepareDerivedData;
-    proto.prepareDerivedData = function (...args) {
+    wraps.wrap(proto, "prepareDerivedData", "armor-penalty-reduction", function (prepareDerivedData, ...args) {
       const actor = this.parent;
       const reductions = actor && reductionsByActor.get(actor);
       if (!reductions?.size || preparing.has(actor)) return prepareDerivedData.apply(this, args);
@@ -248,7 +246,7 @@ function apply() {
         restore();
         preparing.delete(actor);
       }
-    };
+    });
   }
 }
 

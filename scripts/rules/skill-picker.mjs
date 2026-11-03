@@ -7,7 +7,8 @@
  * while one of these powers is created on a character (any path) and stores the training as transfer effects on
  * the power, in the same shape as the system's _applyTreinado, so removing the power removes the training.
  */
-import { MODULE_ID, markWrapper } from "../utils.mjs";
+import { MODULE_ID } from "../utils.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 export const SKILL_PICKER_SETTING = "skillPickerRule";
 /** Operation option that links _preCreateOperation to the createDocuments call that releases the actor queue. */
@@ -365,7 +366,7 @@ export function installSkillPickerRule() {
     if (Object.hasOwn(c, "createDocuments")) console.warn(`${MODULE_ID} | skill-picker: ${c.name}.createDocuments overrides the wrapped base`);
   }
 
-  cls._preCreateOperation = markWrapper(async function (documents, operation, user) {
+  wraps.wrap(cls, "_preCreateOperation", "skill-picker", async function (originalPre, documents, operation, user) {
     const allowed = await originalPre.call(this, documents, operation, user);
     if (allowed === false) return allowed;
     try {
@@ -374,9 +375,9 @@ export function installSkillPickerRule() {
       console.error(`${MODULE_ID} | skill-picker: failed`, err);
     }
     return allowed;
-  }, originalPre);
+  });
 
-  base.createDocuments = markWrapper(async function (data = [], operation = {}) {
+  wraps.wrap(base, "createDocuments", "skill-picker", async function (originalCreate, data = [], operation = {}) {
     if (!isEnabled()) return originalCreate.call(this, data, operation);
     const token = foundry.utils.randomID();
     try {
@@ -385,5 +386,5 @@ export function installSkillPickerRule() {
       releases.get(token)?.();
       releases.delete(token);
     }
-  }, originalCreate);
+  });
 }

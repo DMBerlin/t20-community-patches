@@ -15,6 +15,7 @@
  * imports the rule.
  */
 import { MODULE_ID, markWrapper, stripComments, unwrap } from "../utils.mjs";
+import { fromFactory, wraps } from "../kernel/wrap.mjs";
 
 const LOG = "t20-community-patches | death-threshold:";
 export const DEATH_FLOOR = -10;
@@ -149,7 +150,9 @@ export function wrapDamageFloor(original, allows) {
 export function installDamageFloor(allows) {
   const proto = CONFIG.Actor.documentClass.prototype;
   for (const name of ["applyDamage", "applyDamageV2"]) {
-    if (typeof proto[name] === "function") proto[name] = wrapDamageFloor(proto[name], allows);
+    if (typeof proto[name] === "function") {
+      wraps.wrap(proto, name, "death-threshold", fromFactory((original) => wrapDamageFloor(original, allows)));
+    }
   }
 }
 
@@ -168,7 +171,7 @@ function apply() {
   for (const proto of prototypes) {
     const original = proto.prepareDerivedData;
     if (typeof original !== "function") continue;
-    proto.prepareDerivedData = markWrapper(function (...args) {
+    wraps.wrap(proto, "prepareDerivedData", "death-threshold", function (original, ...args) {
       const result = original.apply(this, args);
       if (bypass) {
         if (this.parent) prepared.add(this.parent);
@@ -183,7 +186,7 @@ function apply() {
         }
       }
       return result;
-    }, original);
+    });
   }
 }
 

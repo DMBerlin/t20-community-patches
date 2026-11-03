@@ -9,6 +9,7 @@
  */
 import { readEntries, sameSignature, summarize, wrapPreCreate } from "../compendium-copy.mjs";
 import { MODULE_ID, markWrapper, stripComments, unwrap } from "../utils.mjs";
+import { fromFactory, wraps } from "../kernel/wrap.mjs";
 
 const PATCH_ID = "bestiary-creature-type";
 
@@ -351,7 +352,7 @@ async function lateProbe() {
 function apply() {
   const actor = CONFIG.Actor.documentClass?.prototype;
   if (typeof actor?._preCreate === "function") {
-    actor._preCreate = wrapPreCreate(actor._preCreate, "Actor", ENTRIES, PATCH_ID);
+    wraps.wrap(actor, "_preCreate", PATCH_ID, fromFactory((original) => wrapPreCreate(original, "Actor", ENTRIES, PATCH_ID)));
   }
   const parser = globalThis.tormenta20?.applications?.StatblockParser?.prototype;
   if (typeof parser?.parseData !== "function") return;
@@ -359,7 +360,7 @@ function apply() {
     console.warn(`${MODULE_ID} | ${PATCH_ID}: StatblockParser#parseData not recognized; parser correction inactive`);
     return;
   }
-  parser.parseData = wrapParseData(parser.parseData);
+  wraps.wrap(parser, "parseData", PATCH_ID, fromFactory(wrapParseData));
 }
 
 export default {

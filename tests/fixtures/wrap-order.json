@@ -1,0 +1,508 @@
+{
+  "wraps": [
+    {
+      "label": "ActiveEffect.createDocuments",
+      "owners": [
+        "status-effects-compendium"
+      ]
+    },
+    {
+      "label": "ActorT20#_checkEncumbered",
+      "owners": [
+        "encumbered-status-sync"
+      ]
+    },
+    {
+      "label": "ActorT20#_onCreateDescendantDocuments",
+      "owners": [
+        "encumbered-status-sync"
+      ]
+    },
+    {
+      "label": "ActorT20#_onDeleteDescendantDocuments",
+      "owners": [
+        "encumbered-status-sync"
+      ]
+    },
+    {
+      "label": "ActorT20#applyActiveEffects",
+      "owners": [
+        "petrified-damage-reduction",
+        "prone-defense",
+        "condition-skill-lists",
+        "conditional-powers",
+        "attribute-breakdown",
+        "armor-penalty-reduction",
+        "source-stacking"
+      ]
+    },
+    {
+      "label": "ActorT20#traverseEmbeddedDocuments",
+      "owners": [
+        "suppressed-usage-effects",
+        "usage-effect-max"
+      ]
+    },
+    {
+      "label": "ActorT20#rollPericia",
+      "owners": [
+        "suppressed-usage-effects",
+        "sheet-initiative-token",
+        "usage-effect-max",
+        "trained-only-skills"
+      ]
+    },
+    {
+      "label": "ActorT20#rollAtributo",
+      "owners": [
+        "suppressed-usage-effects",
+        "usage-effect-max"
+      ]
+    },
+    {
+      "label": "ActorT20#descanso",
+      "owners": [
+        "rest-recovery"
+      ]
+    },
+    {
+      "label": "ActorT20#_preCreate",
+      "owners": [
+        "race-data",
+        "partner-combatant",
+        "bestiary-creature-type"
+      ]
+    },
+    {
+      "label": "ActorT20#applyDamageV2",
+      "owners": [
+        "rd-exception-once",
+        "death-threshold",
+        "creature-type-traits"
+      ]
+    },
+    {
+      "label": "ActorT20#spendMana",
+      "owners": [
+        "mana-queue"
+      ]
+    },
+    {
+      "label": "ActorT20#modifyTokenAttribute",
+      "owners": [
+        "mana-queue"
+      ]
+    },
+    {
+      "label": "ActorT20#displayCard",
+      "owners": [
+        "trained-only-skills"
+      ]
+    },
+    {
+      "label": "ActorT20#applyDamage",
+      "owners": [
+        "death-threshold"
+      ]
+    },
+    {
+      "label": "ActiveEffectT20#shouldApplyChange",
+      "owners": [
+        "petrified-damage-reduction",
+        "source-stacking"
+      ]
+    },
+    {
+      "label": "ActiveEffectT20#_preCreate",
+      "owners": [
+        "usage-buff-templates",
+        "sustained-spell-cost",
+        "same-ability-stacking"
+      ]
+    },
+    {
+      "label": "ActiveEffectT20#prepareBaseData",
+      "owners": [
+        "enchantment-data"
+      ]
+    },
+    {
+      "label": "ActiveEffectT20.applyChange",
+      "owners": [
+        "petrified-damage-reduction",
+        "prone-defense",
+        "armor-penalty-reduction",
+        "item-effective-stats"
+      ]
+    },
+    {
+      "label": "ActiveEffectT20.onManageActiveEffect",
+      "owners": [
+        "item-effects-on-actor-sheet",
+        "usage-effect-toggle"
+      ]
+    },
+    {
+      "label": "ActiveEffectT20.applyChangeField",
+      "owners": [
+        "attribute-breakdown"
+      ]
+    },
+    {
+      "label": "CombatT20#_manageDOTEffects",
+      "owners": [
+        "ongoing-damage-conditions"
+      ]
+    },
+    {
+      "label": "CombatT20#_sortCombatants",
+      "owners": [
+        "initiative-tiebreak"
+      ]
+    },
+    {
+      "label": "CharacterData#prepareDerivedData",
+      "owners": [
+        "death-threshold",
+        "armor-penalty-reduction",
+        "source-stacking",
+        "nonlethal-damage"
+      ]
+    },
+    {
+      "label": "CharacterData#prepareBaseData",
+      "owners": [
+        "spell-dc-bonus"
+      ]
+    },
+    {
+      "label": "MenaceData#prepareDerivedData",
+      "owners": [
+        "death-threshold",
+        "armor-penalty-reduction",
+        "source-stacking",
+        "nonlethal-damage"
+      ]
+    },
+    {
+      "label": "MenaceData#prepareBaseData",
+      "owners": [
+        "menace-xp-fraction"
+      ]
+    },
+    {
+      "label": "SimpleData#prepareDerivedData",
+      "owners": [
+        "death-threshold",
+        "armor-penalty-reduction",
+        "source-stacking",
+        "nonlethal-damage"
+      ]
+    },
+    {
+      "label": "ActorSheetT20#getData",
+      "owners": [
+        "item-effects-on-actor-sheet"
+      ]
+    },
+    {
+      "label": "ActorSheetT20#_onDragStart",
+      "owners": [
+        "item-effects-on-actor-sheet"
+      ]
+    },
+    {
+      "label": "Handlebars.helpers.fieldBonuses",
+      "owners": [
+        "field-bonuses-breakdown",
+        "field-bonuses-tooltip",
+        "non-proficiency-penalties"
+      ]
+    },
+    {
+      "label": "ItemT20#_allApplicableOnUseEffects",
+      "owners": [
+        "suppressed-usage-effects",
+        "appended-usage-changes",
+        "linked-usage-effects",
+        "usage-buff-templates",
+        "spell-cost-zero",
+        "spell-dc-bonus",
+        "threatening-crit-range",
+        "same-ability-stacking",
+        "source-stacking",
+        "item-effective-stats"
+      ]
+    },
+    {
+      "label": "ItemT20#displayCard",
+      "owners": [
+        "sustained-spell-cost",
+        "save-button",
+        "situational-modifiers",
+        "combat-maneuvers",
+        "arcane-armor-casting",
+        "casting-restrictions"
+      ]
+    },
+    {
+      "label": "ItemT20#getAttackToHit",
+      "owners": [
+        "finesse-agile-weapons",
+        "non-proficiency-penalties"
+      ]
+    },
+    {
+      "label": "ItemT20#rollDamage",
+      "owners": [
+        "finesse-agile-weapons",
+        "default-damage-attribute",
+        "alchemical-damage-bonus",
+        "combat-maneuvers",
+        "nonlethal-attack"
+      ]
+    },
+    {
+      "label": "ItemT20#prepareBaseData",
+      "owners": [
+        "enchantment-data"
+      ]
+    },
+    {
+      "label": "ItemT20#_preCreate",
+      "owners": [
+        "race-data",
+        "partner-combatant"
+      ]
+    },
+    {
+      "label": "ItemT20#_onUpdate",
+      "owners": [
+        "initial-class"
+      ]
+    },
+    {
+      "label": "ItemT20#_onDelete",
+      "owners": [
+        "initial-class"
+      ]
+    },
+    {
+      "label": "ItemT20#roll",
+      "owners": [
+        "usage-effect-max",
+        "use-targets",
+        "casting-restrictions"
+      ]
+    },
+    {
+      "label": "ItemT20#clone",
+      "owners": [
+        "use-targets"
+      ]
+    },
+    {
+      "label": "ItemT20#rollAttack",
+      "owners": [
+        "attack-vs-defense",
+        "situational-modifiers",
+        "concealment-miss-chance",
+        "combat-maneuvers",
+        "nonlethal-attack"
+      ]
+    },
+    {
+      "label": "ItemT20#prepareFinalAttributes",
+      "owners": [
+        "item-effective-stats"
+      ]
+    },
+    {
+      "label": "AbilityUseDialog#_onInputChange",
+      "owners": [
+        "ability-dialog-cost",
+        "spell-cost-zero"
+      ]
+    },
+    {
+      "label": "AbilityUseDialog#submit",
+      "owners": [
+        "use-dialog-guard"
+      ]
+    },
+    {
+      "label": "BasesData#prepareDerivedData",
+      "owners": [
+        "armor-penalty-reduction",
+        "source-stacking"
+      ]
+    },
+    {
+      "label": "Tormenta20ItemData#prepareFinalAttributes",
+      "owners": [
+        "spell-dc-bonus"
+      ]
+    },
+    {
+      "label": "CreatureData#prepareSkill",
+      "owners": [
+        "save-skill-bonus",
+        "engenhoqueiro-armor-penalty",
+        "non-proficiency-penalties"
+      ]
+    },
+    {
+      "label": "CreatureData#prepareAtributos",
+      "owners": [
+        "skill-modifier-attributes"
+      ]
+    },
+    {
+      "label": "Combat#setInitiative",
+      "owners": [
+        "sheet-initiative-token"
+      ]
+    },
+    {
+      "label": "BaseEffect#prepareBaseData",
+      "owners": [
+        "spell-compendium-data"
+      ]
+    },
+    {
+      "label": "StringField#_replaceDataRefs",
+      "owners": [
+        "skill-modifier-attributes"
+      ]
+    },
+    {
+      "label": "StringField#_replaceDataRefs",
+      "owners": [
+        "skill-modifier-attributes"
+      ]
+    },
+    {
+      "label": "StringField#_replaceDataRefs",
+      "owners": [
+        "skill-modifier-attributes"
+      ]
+    },
+    {
+      "label": "StringField#_replaceDataRefs",
+      "owners": [
+        "skill-modifier-attributes"
+      ]
+    },
+    {
+      "label": "StringField#_replaceDataRefs",
+      "owners": [
+        "skill-modifier-attributes"
+      ]
+    },
+    {
+      "label": "StringField#_replaceDataRefs",
+      "owners": [
+        "skill-modifier-attributes"
+      ]
+    },
+    {
+      "label": "StringField#_replaceDataRefs",
+      "owners": [
+        "skill-modifier-attributes"
+      ]
+    },
+    {
+      "label": "StringField#_replaceDataRefs",
+      "owners": [
+        "skill-modifier-attributes"
+      ]
+    },
+    {
+      "label": "StringField#_replaceDataRefs",
+      "owners": [
+        "skill-modifier-attributes"
+      ]
+    },
+    {
+      "label": "StringField#_replaceDataRefs",
+      "owners": [
+        "skill-modifier-attributes"
+      ]
+    },
+    {
+      "label": "StringField#_replaceDataRefs",
+      "owners": [
+        "skill-modifier-attributes"
+      ]
+    },
+    {
+      "label": "StringField#_replaceDataRefs",
+      "owners": [
+        "skill-modifier-attributes"
+      ]
+    },
+    {
+      "label": "StringField#_replaceDataRefs",
+      "owners": [
+        "skill-modifier-attributes"
+      ]
+    },
+    {
+      "label": "StringField#_replaceDataRefs",
+      "owners": [
+        "skill-modifier-attributes"
+      ]
+    },
+    {
+      "label": "StringField#_replaceDataRefs",
+      "owners": [
+        "skill-modifier-attributes"
+      ]
+    },
+    {
+      "label": "StatblockParser#parseData",
+      "owners": [
+        "bestiary-creature-type"
+      ]
+    },
+    {
+      "label": "ItemT20._preCreateOperation",
+      "owners": [
+        "initial-class",
+        "skill-picker"
+      ]
+    },
+    {
+      "label": "ChatMessageT20#renderHTML",
+      "owners": [
+        "attack-vs-defense",
+        "concealment-miss-chance"
+      ]
+    },
+    {
+      "label": "Item.createDocuments",
+      "owners": [
+        "skill-picker"
+      ]
+    },
+    {
+      "label": "EquipmentData#prepareDerivedData",
+      "owners": [
+        "item-effective-stats"
+      ]
+    },
+    {
+      "label": "WeaponData#prepareDerivedData",
+      "owners": [
+        "item-effective-stats"
+      ]
+    }
+  ],
+  "noWraps": [
+    "modified-fields-filter",
+    "temporary-usage-effect-expiry",
+    "hide-legacy-upgrades",
+    "segmented-scene-setting",
+    "racial-attribute-choice"
+  ]
+}

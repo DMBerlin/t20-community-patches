@@ -10,7 +10,8 @@
  * Armor and shield Defense (and their upgrades) always add; among the other equipped items, only the one with the
  * greatest Defense counts. The user who caused a suppression is notified, and the sheet marks what is suppressed.
  */
-import { MODULE_ID, markWrapper } from "../utils.mjs";
+import { MODULE_ID } from "../utils.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 export const SOURCE_STACKING_SETTING = "sourceStackingRule";
 export const SOURCE_FLAG = "source";
@@ -579,7 +580,7 @@ export function installSourceStackingRule() {
   if (typeof shouldApply !== "function") throw new Error("ActiveEffect#shouldApplyChange not found");
   if (typeof applyEffects !== "function") throw new Error("Actor#applyActiveEffects not found");
 
-  itemProto._allApplicableOnUseEffects = markWrapper(function (...args) {
+  wraps.wrap(itemProto, "_allApplicableOnUseEffects", "source-stacking", function (onUse, ...args) {
     const effects = onUse.apply(this, args);
     try {
       stampClone(this);
@@ -587,9 +588,9 @@ export function installSourceStackingRule() {
       console.error(`${MODULE_ID} | source-stacking: failed to stamp the effect source`, err);
     }
     return effects;
-  }, onUse);
+  });
 
-  effectProto.shouldApplyChange = markWrapper(function (change, ...args) {
+  wraps.wrap(effectProto, "shouldApplyChange", "source-stacking", function (shouldApply, change, ...args) {
     const result = shouldApply.call(this, change, ...args);
     if (!result || !active || !active.suppressed.has(change)) return result;
     try {
@@ -597,9 +598,9 @@ export function installSourceStackingRule() {
     } catch {
       return result;
     }
-  }, shouldApply);
+  });
 
-  actorProto.applyActiveEffects = markWrapper(function (phase, ...args) {
+  wraps.wrap(actorProto, "applyActiveEffects", "source-stacking", function (applyEffects, phase, ...args) {
     let plan = null;
     try {
       if (phase === "initial") {
@@ -631,7 +632,7 @@ export function installSourceStackingRule() {
     } finally {
       active = previous;
     }
-  }, applyEffects);
+  });
 
   // prepareDefense runs inside each actor type's TypeDataModel#prepareDerivedData, before the skills read the
   // armor penalty, so losing accessories are left out for the duration of the call only.
@@ -641,8 +642,7 @@ export function installSourceStackingRule() {
       .filter((proto) => proto && Object.hasOwn(proto, "prepareDerivedData"))
   );
   for (const proto of prototypes) {
-    const prepareDerivedData = proto.prepareDerivedData;
-    proto.prepareDerivedData = markWrapper(function (...args) {
+    wraps.wrap(proto, "prepareDerivedData", "source-stacking", function (prepareDerivedData, ...args) {
       const actor = this.parent;
       const losers = actor && accessoryLosers.get(actor);
       if (!losers?.length || preparing.has(actor)) return prepareDerivedData.apply(this, args);
@@ -663,7 +663,7 @@ export function installSourceStackingRule() {
         }
         preparing.delete(actor);
       }
-    }, prepareDerivedData);
+    });
   }
 
   Hooks.on("createActiveEffect", (effect, options, userId) => onEffectHook(effect, userId));

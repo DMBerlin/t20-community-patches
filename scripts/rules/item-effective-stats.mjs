@@ -22,6 +22,7 @@ import { isPatchApplied } from "../registry.mjs";
 import { computePenaltyAdjustments, isArmorPenaltyReducer } from "../patches/armor-penalty-reduction.mjs";
 import { rewriteThreatChanges } from "../patches/threatening-crit-range.mjs";
 import { hasUsageLimit } from "./usage-effect-max.mjs";
+import { fromFactory, wraps } from "../kernel/wrap.mjs";
 
 export const ITEM_EFFECTIVE_STATS_SETTING = "itemEffectiveStats";
 export const MODES = ["ends", "display", "effective"];
@@ -1152,7 +1153,7 @@ export function installItemEffectiveStatsRule() {
   if (typeof applyChange !== "function") throw new Error("ActiveEffect.applyChange not found");
 
   // Effective attack and damage labels; the official labels are never overwritten.
-  itemProto.prepareFinalAttributes = markWrapper(function (...args) {
+  wraps.wrap(itemProto, "prepareFinalAttributes", "item-effective-stats", function (finalAttributes, ...args) {
     const result = finalAttributes.apply(this, args);
     try {
       if (this?.type === "arma" && this.labels && currentMode() !== "ends") {
@@ -1163,11 +1164,11 @@ export function installItemEffectiveStatsRule() {
       console.error(`${MODULE_ID} | item-effective-stats: failed to prepare the labels of ${this?.name}`, err);
     }
     return result;
-  }, finalAttributes);
+  });
 
-  itemProto._allApplicableOnUseEffects = createOnUseWrapper(onUse);
+  wraps.wrap(itemProto, "_allApplicableOnUseEffects", "item-effective-stats", fromFactory((original) => createOnUseWrapper(original)));
 
-  EffectClass.applyChange = markWrapper(function (targetDoc, change, options) {
+  wraps.wrap(EffectClass, "applyChange", "item-effective-stats", function (applyChange, targetDoc, change, options) {
     try {
       const effect = change?.effect;
       const item = effect?.parent;
@@ -1196,14 +1197,14 @@ export function installItemEffectiveStatsRule() {
       console.error(`${MODULE_ID} | item-effective-stats: failed to check a change`, err);
     }
     return applyChange.call(this, targetDoc, change, options);
-  }, applyChange);
+  });
 
   // EquipmentData and WeaponData inherit prepareDerivedData; each gets its own wrapper.
   for (const type of ["equipamento", "arma"]) {
     const proto = CONFIG.Item?.dataModels?.[type]?.prototype;
     const prepare = proto?.prepareDerivedData;
     if (typeof prepare !== "function") continue;
-    proto.prepareDerivedData = markWrapper(function (...args) {
+    wraps.wrap(proto, "prepareDerivedData", "item-effective-stats", function (prepare, ...args) {
       const result = prepare.apply(this, args);
       try {
         foldItemSystem(this);
@@ -1211,7 +1212,7 @@ export function installItemEffectiveStatsRule() {
         console.error(`${MODULE_ID} | item-effective-stats: failed to fold ${this?.parent?.name}`, err);
       }
       return result;
-    }, prepare);
+    });
   }
 
   Hooks.on("renderItemSheetT20", guarded("failed to draw the item sheet", renderItemSheet));

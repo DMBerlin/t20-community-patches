@@ -27,6 +27,7 @@ import {
   wrapPreCreate
 } from "../compendium-copy.mjs";
 import { MODULE_ID } from "../utils.mjs";
+import { fromFactory, wraps } from "../kernel/wrap.mjs";
 
 const PATCH_ID = "race-data";
 const SENSES = "system.attributes.sentidos.value";
@@ -246,9 +247,13 @@ function markOutdated(app, html) {
 
 function apply() {
   const item = CONFIG.Item.documentClass?.prototype;
-  if (typeof item?._preCreate === "function") item._preCreate = wrapPreCreate(item._preCreate, "Item", ENTRIES, PATCH_ID);
+  if (typeof item?._preCreate === "function") {
+    wraps.wrap(item, "_preCreate", PATCH_ID, fromFactory((original) => wrapPreCreate(original, "Item", ENTRIES, PATCH_ID)));
+  }
   const actor = CONFIG.Actor.documentClass?.prototype;
-  if (typeof actor?._preCreate === "function") actor._preCreate = wrapActorPreCreate(actor._preCreate, ENTRIES, PATCH_ID);
+  if (typeof actor?._preCreate === "function") {
+    wraps.wrap(actor, "_preCreate", PATCH_ID, fromFactory((original) => wrapActorPreCreate(original, ENTRIES, PATCH_ID)));
+  }
   Hooks.on("renderActorSheetT20", markOutdated);
 }
 

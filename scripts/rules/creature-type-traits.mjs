@@ -13,6 +13,7 @@
  *   HP change stays a single update; a view of the actor splits the chat card per operation.
  */
 import { MODULE_ID, markWrapper } from "../utils.mjs";
+import { fromFactory, wraps } from "../kernel/wrap.mjs";
 import { allActors } from "./source-stacking.mjs";
 
 export const CREATURE_TYPE_TRAITS_SETTING = "creatureTypeTraitsRule";
@@ -405,9 +406,8 @@ export function installCreatureTypeTraitsRule() {
   }
 
   const actorProto = CONFIG.Actor?.documentClass?.prototype;
-  const original = actorProto?.applyDamageV2;
-  if (typeof original === "function") {
-    actorProto.applyDamageV2 = markWrapper(wrapApplyDamage(original), original);
+  if (typeof actorProto?.applyDamageV2 === "function") {
+    wraps.wrap(actorProto, "applyDamageV2", "creature-type-traits", fromFactory(wrapApplyDamage));
   } else {
     console.warn(`${LOG} ActorT20#applyDamageV2 not found; damage and healing are unchanged`);
   }

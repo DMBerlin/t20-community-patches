@@ -7,6 +7,7 @@
  * that carry the prepared value back (the system's custom Ofício creation) get the stored pda again.
  */
 import { MODULE_ID, markWrapper, stripComments, unwrap } from "../utils.mjs";
+import { fromFactory, wraps } from "../kernel/wrap.mjs";
 
 const PATCH_ID = "engenhoqueiro-armor-penalty";
 
@@ -131,7 +132,7 @@ function apply() {
       console.warn(`${MODULE_ID} | ${PATCH_ID}: prepareSkill not recognized; correction inactive`);
       continue;
     }
-    owner.prepareSkill = wrapPrepareSkill(owner.prepareSkill);
+    wraps.wrap(owner, "prepareSkill", PATCH_ID, fromFactory(wrapPrepareSkill));
     wrapped = true;
   }
   if (!wrapped) return;

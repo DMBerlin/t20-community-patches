@@ -9,7 +9,7 @@
  * where M is the weapon's base criticoM. The threat range doubles (19 -> 17) and, since additions commute, the
  * doubling counts before any increase whatever the order of the usage effects (Tormenta20 JdA, p. 335).
  */
-import { markWrapper } from "../utils.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 const D20_FACES = 20;
 
@@ -85,11 +85,11 @@ function apply() {
   if (typeof original !== "function") throw new Error("Tormenta20 usage effect API not found");
 
   // `this` is the rolled weapon's clone (ItemT20#roll); only its own effects are adjusted.
-  ItemClass.prototype._allApplicableOnUseEffects = markWrapper(function (...args) {
+  wraps.wrap(ItemClass.prototype, "_allApplicableOnUseEffects", "threatening-crit-range", function (original, ...args) {
     const effects = original.apply(this, args);
     if (this?.type !== "arma" || !Array.isArray(effects)) return effects;
     return effects.map((effect) => (effect?.parent?.id === this.id ? adjustThreatEffect(effect, this) : effect));
-  }, original);
+  });
 }
 
 /** applyItemChanges/applyOnUseEffects are module-local in the system bundle, so the bug cannot be probed. */

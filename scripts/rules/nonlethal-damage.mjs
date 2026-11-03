@@ -20,8 +20,9 @@
  * The functions of the lethal HP contract (#51) are exported from here: lethalSnapshot, rebaseSnapshot,
  * hpSnapshotOf, nonlethalOf and touchesLethalHp.
  */
-import { MODULE_ID, markWrapper, stripComments, unwrap } from "../utils.mjs";
+import { MODULE_ID, stripComments, unwrap } from "../utils.mjs";
 import { allActors } from "./source-stacking.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 export const NONLETHAL_SETTING = "nonlethalDamageRule";
 export const NONLETHAL_FLAG = "nonlethal";
@@ -544,7 +545,7 @@ export function installNonlethalRule() {
   for (const proto of prototypes) {
     const original = proto.prepareDerivedData;
     if (typeof original !== "function") continue;
-    proto.prepareDerivedData = markWrapper(function (...args) {
+    wraps.wrap(proto, "prepareDerivedData", "nonlethal-damage", function (original, ...args) {
       try {
         restorePreparedMin(this);
       } catch {
@@ -560,7 +561,7 @@ export function installNonlethalRule() {
         }
       }
       return result;
-    }, original);
+    });
   }
 
   Hooks.on("preUpdateActor", onPreUpdateActor);

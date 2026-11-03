@@ -10,7 +10,7 @@
  * source (description, usage settings and changes, field by field) still match the buggy data. Nothing is saved;
  * edited or upstream-fixed effects are left untouched.
  */
-import { markWrapper } from "../utils.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 const PACK_ID = "tormenta20.magias";
 
@@ -157,7 +157,7 @@ function apply() {
   const original = Model?.prototype?.prepareBaseData;
   if (typeof original !== "function") throw new Error("Tormenta20 effect data model not found");
 
-  Model.prototype.prepareBaseData = markWrapper(function (...args) {
+  wraps.wrap(Model.prototype, "prepareBaseData", "spell-compendium-data", function (original, ...args) {
     let effect;
     try {
       effect = this.parent;
@@ -167,7 +167,7 @@ function apply() {
       console.warn("t20-community-patches | spell-compendium-data: could not fix", effect?.id, err);
     }
     return original.apply(this, args);
-  }, original);
+  });
 }
 
 /** The bug lives in compendium data, which is only readable after "ready". */

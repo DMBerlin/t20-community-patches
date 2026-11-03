@@ -6,7 +6,8 @@
  * result skips the original submit, so the dialog stays open and nothing is spent. Covers every button
  * ("Usar", "Poção") and the Enter key, which all go through submit.
  */
-import { MODULE_ID, markWrapper } from "../utils.mjs";
+import { MODULE_ID } from "../utils.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 /**
  * @typedef {object} UseViolation
@@ -71,7 +72,7 @@ export function installUseDialogGuard() {
   const original = AbilityUseDialog?.prototype?.submit;
   if (typeof original !== "function") throw new Error("Tormenta20 AbilityUseDialog not found");
 
-  AbilityUseDialog.prototype.submit = markWrapper(function (button, event) {
+  wraps.wrap(AbilityUseDialog.prototype, "submit", "use-dialog-guard", function (original, button, event) {
     let verdict = { block: false, messages: [] };
     try {
       const form = toElement(this.element)?.querySelector("form");
@@ -87,6 +88,6 @@ export function installUseDialogGuard() {
     for (const message of verdict.messages) ui.notifications.warn(message);
     if (verdict.block) return;
     return original.call(this, button, event);
-  }, original);
+  });
   installed = true;
 }

@@ -110,6 +110,7 @@ Diagnóstico (`Diagnosis`, em `scripts/registry.mjs`): `{ bug: "present" | "fixe
 Regras:
 - Lógica de decisão em **funções puras exportadas**, testadas em `tests/<id>.test.mjs`. A integração com o Foundry fica fina.
 - Wrappers preservam `this`, argumentos e o valor de retorno, e falham de forma segura (sem quebrar o sistema).
+- Todo wrapper de método passa por `wraps.wrap(alvo, "método", "<id>", function (original, ...args) { … })`, de `scripts/kernel/wrap.mjs`; nunca atribua direto ao protótipo. O dono é o id do patch ou da regra (ou o nome do serviço compartilhado). Quem registra primeiro fica mais perto do original, e a ordem aparece em `api.wraps()` e no snapshot `tests/fixtures/wrap-order.json` (regerar com `UPDATE_WRAP_ORDER=1 node --test tests/wrap-order.test.mjs` quando a ordem mudar de propósito). Para uma fábrica pura `(original) => substituta`, use `fromFactory`. `scripts/kernel/` não lê globais do Foundry.
 - Nunca avaliar texto de usuário como JavaScript (`eval`, `Function`, `Roll.safeEval`). Fórmulas passam por `foundry.dice.Roll`, como no core.
 - Para cada patch, atualizar:
   - `lang/pt-BR.json` e `lang/en.json` (paridade de chaves; é a tradução da interface do módulo);

@@ -11,7 +11,8 @@
  * so the order stays the same for the whole combat even if they change. A combatant without a saved value comes after
  * the ones with it; with equal values, or none on both sides, the core order (id) is kept.
  */
-import { MODULE_ID, markWrapper, sourceFingerprint, unwrap } from "../utils.mjs";
+import { MODULE_ID, sourceFingerprint, unwrap } from "../utils.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 const LOG = `${MODULE_ID} | initiative-tiebreak:`;
 export const FLAG = "tiebreak";
@@ -155,9 +156,8 @@ function apply() {
   });
 
   const prototype = CONFIG.Combat.documentClass.prototype;
-  const original = prototype._sortCombatants;
   // setupTurns passes this method unbound to Array#sort (combat.mjs:496), so the wrapper never relies on `this`.
-  prototype._sortCombatants = markWrapper(function (a, b) {
+  wraps.wrap(prototype, "_sortCombatants", "initiative-tiebreak", function (original, a, b) {
     let tie = 0;
     try {
       tie = compareInitiativeTie(a, b);
@@ -165,7 +165,7 @@ function apply() {
       tie = 0;
     }
     return tie || original.call(this, a, b);
-  }, original);
+  });
 }
 
 export default {

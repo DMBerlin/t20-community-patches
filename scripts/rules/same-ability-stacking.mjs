@@ -8,7 +8,8 @@
  * same identity, either replaces the previous one or keeps the greater one. The GM picks off (default), replace
  * or highest.
  */
-import { MODULE_ID, markWrapper } from "../utils.mjs";
+import { MODULE_ID } from "../utils.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 export const SAME_ABILITY_SETTING = "sameAbilityStackingRule";
 export const SAME_ABILITY_FLAG = "ability";
@@ -338,7 +339,7 @@ export function installSameAbilityRule() {
   const proto = CONFIG.Item?.documentClass?.prototype;
   const original = proto?._allApplicableOnUseEffects;
   if (typeof original !== "function") throw new Error("Tormenta20 usage effect API not found");
-  proto._allApplicableOnUseEffects = markWrapper(function (...args) {
+  wraps.wrap(proto, "_allApplicableOnUseEffects", "same-ability-stacking", function (original, ...args) {
     const effects = original.apply(this, args);
     try {
       stampClone(this);
@@ -346,11 +347,11 @@ export function installSameAbilityRule() {
       console.error(`${MODULE_ID} | same-ability-stacking: failed to stamp the ability effects`, err);
     }
     return effects;
-  }, original);
+  });
   const effectProto = CONFIG.ActiveEffect?.documentClass?.prototype;
   const preCreate = effectProto?._preCreate;
   if (typeof preCreate !== "function") throw new Error("ActiveEffect#_preCreate not found");
-  effectProto._preCreate = markWrapper(function (...args) {
+  wraps.wrap(effectProto, "_preCreate", "same-ability-stacking", function (preCreate, ...args) {
     let allowed;
     try {
       allowed = checkCreation(this, args[0], args[1]);
@@ -362,7 +363,7 @@ export function installSameAbilityRule() {
     const deletion = args[0]?.duration?.expiry === "sustainEnd" ? deletingMarkers.get(args[0].origin) : undefined;
     if (!deletion) return preCreate.apply(this, args);
     return deletion.catch(() => {}).then(() => preCreate.apply(this, args));
-  }, preCreate);
+  });
   Hooks.on("createActiveEffect", (effect, options, userId) => {
     try {
       onCreate(effect, options, userId);

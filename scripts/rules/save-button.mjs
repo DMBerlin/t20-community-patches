@@ -6,7 +6,7 @@
  * tokens the user targeted. The card lists the targets with a roll button per skill; the owner of each target (the
  * GM for NPCs) rolls the system's skill test, the roll message stores the outcome and every client redraws the card.
  */
-import { MODULE_ID, markWrapper } from "../utils.mjs";
+import { MODULE_ID } from "../utils.mjs";
 import {
   canSeeTokenName,
   installUseTargets,
@@ -16,6 +16,7 @@ import {
   usePurposeOf,
   USE_PURPOSES
 } from "./shared/targets.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 export const SAVE_BUTTON_SETTING = "saveButtonRule";
 export const SAVE_FLAG = "save";
@@ -423,7 +424,7 @@ export function installSaveButtonRule() {
   const proto = CONFIG.Item?.documentClass?.prototype;
   const original = proto?.displayCard;
   if (typeof original !== "function") throw new Error("ItemT20#displayCard not found");
-  proto.displayCard = markWrapper(async function (params = {}, ...rest) {
+  wraps.wrap(proto, "displayCard", "save-button", async function (original, params = {}, ...rest) {
     let save = null;
     try {
       if (isEnabled() && usePurposeOf(this) !== USE_PURPOSES.MANEUVER_RESISTANCE) {
@@ -445,7 +446,7 @@ export function installSaveButtonRule() {
     if (!chatData || typeof chatData !== "object") return chatData;
     foundry.utils.setProperty(chatData, `flags.${MODULE_ID}.${SAVE_FLAG}`, save);
     return createMessage ? ChatMessage.create(chatData) : chatData;
-  }, original);
+  });
 
   Hooks.on("renderChatMessageHTML", onRender);
   Hooks.on("createChatMessage", onResultChanged);

@@ -11,6 +11,7 @@
  * system's own notion of equipped items. An actor that owns Fanático gets "ignora-armadura" in its movement tags.
  */
 import { markWrapper, stripComments, unwrap } from "../utils.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 const POWERS = "Compendium.tormenta20.poderes.Item.";
 const DEFENSE = "system.attributes.defesa.bonus";
@@ -265,7 +266,7 @@ function apply() {
   });
 
   // prepareMovement (T20:19920) runs in the TypeDataModel's prepareDerivedData, after the "initial" phase.
-  actorProto.applyActiveEffects = markWrapper(function (phase, ...args) {
+  wraps.wrap(actorProto, "applyActiveEffects", "conditional-powers", function (applyEffects, phase, ...args) {
     const result = applyEffects.call(this, phase, ...args);
     if (phase === "initial") {
       try {
@@ -276,7 +277,7 @@ function apply() {
       }
     }
     return result;
-  }, applyEffects);
+  });
 }
 
 function getterSource(proto) {

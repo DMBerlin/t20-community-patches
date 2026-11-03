@@ -15,8 +15,9 @@
  * that only echoes those prepared values back (the item sheet submits every field) does not persist them.
  * A Manto da Resistência created straight from the compendium data is created with its effect enabled.
  */
-import { MODULE_ID, markWrapper } from "../utils.mjs";
+import { MODULE_ID } from "../utils.mjs";
 import { isPatchApplied } from "../registry.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 const DEFENSE = "system.attributes.defesa.bonus";
 const PENALTY = "system.attributes.defesa.pda";
@@ -399,26 +400,26 @@ function apply() {
   const original = EffectClass.prototype.prepareBaseData;
   if (typeof original !== "function") throw new Error("ActiveEffect#prepareBaseData not found");
 
-  EffectClass.prototype.prepareBaseData = markWrapper(function (...args) {
+  wraps.wrap(EffectClass.prototype, "prepareBaseData", "enchantment-data", function (original, ...args) {
     try {
       correct(this);
     } catch (err) {
       console.warn(`${MODULE_ID} | enchantment-data: could not correct`, this?.uuid, err);
     }
     return original.apply(this, args);
-  }, original);
+  });
 
   const ItemClass = CONFIG.Item.documentClass;
   const originalItem = ItemClass.prototype.prepareBaseData;
   if (typeof originalItem !== "function") throw new Error("Item#prepareBaseData not found");
-  ItemClass.prototype.prepareBaseData = markWrapper(function (...args) {
+  wraps.wrap(ItemClass.prototype, "prepareBaseData", "enchantment-data", function (originalItem, ...args) {
     try {
       correctItemData(this);
     } catch (err) {
       console.warn(`${MODULE_ID} | enchantment-data: could not correct the item`, this?.uuid, err);
     }
     return originalItem.apply(this, args);
-  }, originalItem);
+  });
 
   Hooks.on("preCreateItem", onPreCreateItem);
   Hooks.on("preUpdateItem", onPreUpdateItem);

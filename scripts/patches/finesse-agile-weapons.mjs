@@ -17,7 +17,8 @@
  * (1.6.5 or 1.6.6); otherwise, or when the probe is inconclusive, the source diagnosis is the fallback.
  */
 
-import { markWrapper, stripComments, unwrap } from "../utils.mjs";
+import { stripComments, unwrap } from "../utils.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 const RANGED = new Set(["arremesso", "disparo"]);
 
@@ -364,8 +365,7 @@ function apply() {
   if (!ItemClass) throw new Error("Tormenta20 ItemT20#getAttackToHit/rollDamage not found");
 
   // Synchronous: the attribute is restored before anything else can read the roll.
-  const getAttackToHit = ItemClass.prototype.getAttackToHit;
-  ItemClass.prototype.getAttackToHit = markWrapper(function (...args) {
+  wraps.wrap(ItemClass.prototype, "getAttackToHit", "finesse-agile-weapons", function (getAttackToHit, ...args) {
     let roll = null;
     let original;
     try {
@@ -386,7 +386,7 @@ function apply() {
     } finally {
       if (roll) roll.parts[1] = original;
     }
-  }, getAttackToHit);
+  });
 
   // ItemT20#rollDamage is async, but it reads `this.system.rolls` (the `for…of` iterator and the attack skill)
   // before its first `await` (damageRoll → Roll#evaluate, T20:9170-9182). So each call installs its own `rolls`
@@ -394,8 +394,7 @@ function apply() {
   // keeps iterating that call's array. The synchronous start can still reach a nested call on the same item
   // (Roll#evaluate starts before the `await`; a hook may roll again): `frames` keeps the item's real rolls while a
   // per-call array is installed, so the nested call builds its own array from them, whatever its eligibility.
-  const rollDamage = ItemClass.prototype.rollDamage;
-  ItemClass.prototype.rollDamage = markWrapper(function (...args) {
+  wraps.wrap(ItemClass.prototype, "rollDamage", "finesse-agile-weapons", function (rollDamage, ...args) {
     const outer = frames.get(this);
     let before;
     let installed = null;
@@ -419,7 +418,7 @@ function apply() {
         else frames.delete(this);
       }
     }
-  }, rollDamage);
+  });
 }
 
 export default {

@@ -10,7 +10,8 @@
  * the system's Constitution test: success removes the condition, failure rolls the loss. Turn starts of the same actor
  * run one after the other. No data is changed.
  */
-import { markWrapper, stripComments, unwrap } from "../utils.mjs";
+import { stripComments, unwrap } from "../utils.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 export const LEGACY_KEY = "dano";
 export const OFFICIAL_KEY = "danoContinuo";
@@ -270,7 +271,7 @@ function apply() {
   const recognized = diagnoseDotSource(originalSource()).bug === "present";
   if (!recognized) console.warn(`${LOG} _manageDOTEffects not recognized; the conditions are left to the system`);
 
-  CombatClass.prototype._manageDOTEffects = markWrapper(async function (...args) {
+  wraps.wrap(CombatClass.prototype, "_manageDOTEffects", "ongoing-damage-conditions", async function (original, ...args) {
     const result = await original.apply(this, args);
     const actor = args[0]?.actor;
     if (recognized && actor) {
@@ -281,7 +282,7 @@ function apply() {
       }
     }
     return result;
-  }, original);
+  });
 }
 
 function isNeeded() {

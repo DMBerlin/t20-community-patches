@@ -10,6 +10,7 @@
  * conditions of the system pack, so the system's own routine builds CONFIG and locks the pack. Clients that
  * were connected during the repair rebuild CONFIG.statusEffects when the pack is filled.
  */
+import { wraps } from "../kernel/wrap.mjs";
 
 export const STATUS_PACK = "world.statuses";
 export const SOURCE_PACK = "tormenta20.efeitos";
@@ -71,8 +72,7 @@ let rebuildPending = false;
 
 function wrapCreateDocuments() {
   const Base = foundry.documents.ActiveEffect;
-  const original = Base.createDocuments;
-  Base.createDocuments = async function (data = [], operation = {}) {
+  wraps.wrap(Base, "createDocuments", "status-effects-compendium", async function (original, data = [], operation = {}) {
     let substitutedNow = false;
     if (!substituted) {
       try {
@@ -95,7 +95,7 @@ function wrapCreateDocuments() {
     const result = original.call(this, data, operation);
     if (substitutedNow) Promise.resolve(result).then(() => markTriggered(), () => {});
     return result;
-  };
+  });
 }
 
 /** Mirrors the system's CONFIG preparation (prepareStatusesCompendium) without writing to or locking the pack. */

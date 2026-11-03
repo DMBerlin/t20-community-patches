@@ -12,11 +12,12 @@
  * happen. Skill training follows the shared contract of #62 (skill-training.mjs); the cost of a training grant
  * (Eclético) is charged in the actor's turn of the mana queue, after the spell's own spend.
  */
-import { MODULE_ID, markWrapper } from "../utils.mjs";
+import { MODULE_ID } from "../utils.mjs";
 import { markCastFailed, isCastUse } from "./cast-outcome.mjs";
 import { automaticApplied } from "./mana-limit.mjs";
 import { withManaTurn } from "./mana-queue.mjs";
 import { isTrainedFor, plainUseEffect, skillUseEffects, trainingGrants } from "./skill-training.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 export const ARCANE_ARMOR_SETTING = "arcaneArmorRule";
 export const ARCANE_ARMOR_MODES = ["off", "roll"];
@@ -476,7 +477,7 @@ export function installArcaneArmorRule() {
   const original = itemProto?.displayCard;
   if (typeof original !== "function") throw new Error("ItemT20#displayCard not found");
 
-  itemProto.displayCard = markWrapper(async function (...args) {
+  wraps.wrap(itemProto, "displayCard", "arcane-armor-casting", async function (original, ...args) {
     const [{ options, rollMode, createMessage = true } = {}] = args;
     let check = null;
     try {
@@ -497,7 +498,7 @@ export function installArcaneArmorRule() {
     if (outcome.passed) return original.apply(this, args);
     markCastFailed(options, { rule: "arcane-armor-casting", reason: outcome.reason, messageId: outcome.messageId });
     return null;
-  }, original);
+  });
 
   Hooks.on("renderAbilityUseDialog", (app, html) => {
     try {

@@ -19,7 +19,7 @@
  * its own tooltip, the element already has one and is left alone.
  */
 
-import { markWrapper } from "../utils.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 const LOG = "t20-community-patches | attribute-breakdown:";
 const KEY = /^system\.atributos\.([^.*]+)\.(value|bonus)$/;
@@ -175,7 +175,7 @@ function apply() {
   if (typeof applyChangeField !== "function") throw new Error("ActiveEffect.applyChangeField not found");
   if (typeof applyActiveEffects !== "function") throw new Error("Actor#applyActiveEffects not found");
 
-  actorProto.applyActiveEffects = markWrapper(function (phase, ...args) {
+  wraps.wrap(actorProto, "applyActiveEffects", "attribute-breakdown", function (applyActiveEffects, phase, ...args) {
     let log;
     try {
       if (phase === "initial") logs.set(this, { phase: null, start: snapshot(this), entries: {} });
@@ -190,18 +190,19 @@ function apply() {
     } finally {
       if (log) log.phase = previous;
     }
-  }, applyActiveEffects);
+  });
 
-  EffectClass.applyChangeField = markWrapper(function (targetDoc, change, options) {
+  wraps.wrap(EffectClass, "applyChangeField", "attribute-breakdown", function (applyChangeField, ...args) {
+    const [targetDoc, change, options] = args;
     const log = targetDoc ? logs.get(targetDoc) : undefined;
-    if (!log?.phase || !attributeTarget(change?.key)) return applyChangeField.apply(this, arguments);
+    if (!log?.phase || !attributeTarget(change?.key)) return applyChangeField.apply(this, args);
     let before;
     try {
       before = foundry.utils.getProperty(targetDoc, change.key);
     } catch (err) {
       warn("could not read the attribute", err);
     }
-    const result = applyChangeField.apply(this, arguments);
+    const result = applyChangeField.apply(this, args);
     try {
       const after = options?.modifyTarget === false ? result : foundry.utils.getProperty(targetDoc, change.key);
       recordChange(log, { key: change.key, phase: log.phase, label: change.effect?.name, type: change.type, before, after });
@@ -209,7 +210,7 @@ function apply() {
       warn("could not record the change", err);
     }
     return result;
-  }, applyChangeField);
+  });
 
   Hooks.on("renderActorSheet", decorate);
 }

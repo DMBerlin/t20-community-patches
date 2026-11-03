@@ -12,7 +12,8 @@
  * reduces the exception RD. The prepared data is restored right after the call; nothing is persisted. The wrapper
  * only acts on the verified applyDamageV2 source (tormenta20 1.6.5).
  */
-import { MODULE_ID, markWrapper, sourceFingerprint, unwrap } from "../utils.mjs";
+import { MODULE_ID, sourceFingerprint, unwrap } from "../utils.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 const LOG = `${MODULE_ID} | rd-exception-once:`;
 
@@ -193,7 +194,7 @@ function apply() {
 
   // applyDamageV2 reads the resistances synchronously, before its first await (this.update, T20:7449), so the
   // prepared data can be restored as soon as the original returns its promise.
-  prototype.applyDamageV2 = markWrapper(function (roll, multiplier = 1, type = "dano", ...rest) {
+  wraps.wrap(prototype, "applyDamageV2", "rd-exception-once", function (original, roll, multiplier = 1, type = "dano", ...rest) {
     let restore = null;
     if (known) {
       try {
@@ -210,7 +211,7 @@ function apply() {
     } finally {
       restore?.();
     }
-  }, original);
+  });
 }
 
 export default {

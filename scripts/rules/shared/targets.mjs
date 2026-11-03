@@ -5,7 +5,7 @@
  * clones the item synchronously before its first await (T20:8545) and runs rollAttack, rollDamage and displayCard
  * on that clone, so the clone is bound to the frozen selection until the use ends.
  */
-import { markWrapper } from "../../utils.mjs";
+import { wraps } from "../../kernel/wrap.mjs";
 
 /** CONST.TOKEN_DISPLAY_MODES.HOVER and ALWAYS: the only modes the canvas shows to users who do not own the token. */
 export const PUBLIC_NAME_MODES = new Set([30, 50]);
@@ -98,7 +98,7 @@ export function installUseTargets() {
   const clone = proto.clone;
   if (typeof roll !== "function" || typeof clone !== "function") throw new Error("ItemT20#roll or #clone not found");
 
-  proto.clone = markWrapper(function (...args) {
+  wraps.wrap(proto, "clone", "use-targets", function (clone, ...args) {
     const top = frames.at(-1);
     // Reserve before running the original: nested rolls or clones inside it cannot take this frame.
     const frame = top && !top.claimed && top.source === this ? top : null;
@@ -109,9 +109,9 @@ export function installUseTargets() {
       contexts.set(copy, frame.use);
     }
     return copy;
-  }, clone);
+  });
 
-  proto.roll = markWrapper(async function (...args) {
+  wraps.wrap(proto, "roll", "use-targets", async function (roll, ...args) {
     // Consumed here, so nested rolls started by this one do not inherit it.
     const purpose = pendingPurpose;
     pendingPurpose = null;
@@ -133,7 +133,7 @@ export function installUseTargets() {
     } finally {
       if (frame.clone) contexts.delete(frame.clone);
     }
-  }, roll);
+  });
 
   installedOn.add(proto);
 }

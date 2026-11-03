@@ -17,7 +17,7 @@
  * B and C show a summary; clicking the title shows the details (per client, like the system's item cards).
  * The module never applies conditions: the card says which one applies and the GM uses the token HUD.
  */
-import { MODULE_ID, markWrapper } from "../utils.mjs";
+import { MODULE_ID } from "../utils.mjs";
 import { FORM_FIELD as NONLETHAL_FIELD } from "./nonlethal-attack.mjs";
 import { CONCEALMENT_SETTING, concealmentChecksOf } from "./concealment-miss-chance.mjs";
 import {
@@ -30,6 +30,7 @@ import {
   useTargetRecords,
   withUsePurpose
 } from "./shared/targets.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 export const COMBAT_MANEUVERS_SETTING = "combatManeuversRule";
 /** Fields of the use dialog (they reach rollAttack, rollDamage and displayCard in `options`). */
@@ -916,7 +917,7 @@ export function installCombatManeuversRule() {
     throw new Error("ItemT20#rollAttack, #rollDamage or #displayCard not found");
   }
 
-  proto.rollAttack = markWrapper(async function (...args) {
+  wraps.wrap(proto, "rollAttack", "combat-maneuvers", async function (rollAttack, ...args) {
     try {
       declarations.delete(this);
       const declaration = resolveDeclaration(this, args[0]?.options);
@@ -925,10 +926,10 @@ export function installCombatManeuversRule() {
       console.error(`${LOG} failed to read the declared maneuver of ${this?.name}`, err);
     }
     return rollAttack.apply(this, args);
-  }, rollAttack);
+  });
 
   // A declared maneuver deals no damage: the damage is not rolled (the attack roll is the maneuver test).
-  proto.rollDamage = markWrapper(async function (...args) {
+  wraps.wrap(proto, "rollDamage", "combat-maneuvers", async function (rollDamage, ...args) {
     let skip = false;
     try {
       skip = declarations.has(this) && !!attackFromRolls(Object.values(this.system?.rolled ?? {}));
@@ -937,9 +938,9 @@ export function installCombatManeuversRule() {
     }
     if (skip) return undefined;
     return rollDamage.apply(this, args);
-  }, rollDamage);
+  });
 
-  proto.displayCard = markWrapper(async function (params = {}, ...rest) {
+  wraps.wrap(proto, "displayCard", "combat-maneuvers", async function (displayCard, params = {}, ...rest) {
     let card = null;
     try {
       const declaration = declarations.get(this);
@@ -955,7 +956,7 @@ export function installCombatManeuversRule() {
     const inner = await displayCard.call(this, { ...params, createMessage: false }, ...rest);
     if (!inner || typeof inner !== "object") return inner;
     return createMessage ? ChatMessage.create(card) : card;
-  }, displayCard);
+  });
 
   Hooks.on("renderAbilityUseDialog", onRenderDialog);
   Hooks.on("renderChatMessageHTML", onRender);

@@ -8,7 +8,7 @@
  * the attack roll, the result against each target the user marked when the use started, cancels the critical when
  * every target was missed, and shows the result on the chat card.
  */
-import { MODULE_ID, markWrapper } from "../utils.mjs";
+import { MODULE_ID } from "../utils.mjs";
 import {
   canSeeTokenName,
   defenseAdjustmentsFor,
@@ -20,6 +20,7 @@ import {
   useTargets
 } from "./shared/targets.mjs";
 import { finalOutcome, getConcealmentChecks, keepCritical, missedByConcealment } from "./shared/attack-outcome.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 export const ATTACK_VS_DEFENSE_SETTING = "attackVsDefenseRule";
 export const ATTACK_VS_DEFENSE_VISIBILITY_SETTING = "attackVsDefenseVisibility";
@@ -341,7 +342,7 @@ export function installAttackVsDefenseRule() {
   const itemProto = CONFIG.Item.documentClass?.prototype;
   const rollAttack = itemProto?.rollAttack;
   if (typeof rollAttack !== "function") throw new Error("ItemT20#rollAttack not found");
-  itemProto.rollAttack = markWrapper(async function (...args) {
+  wraps.wrap(itemProto, "rollAttack", "attack-vs-defense", async function (rollAttack, ...args) {
     let records = [];
     let tokens = [];
     try {
@@ -364,12 +365,12 @@ export function installAttackVsDefenseRule() {
       }
     }
     return result;
-  }, rollAttack);
+  });
 
   const messageProto = CONFIG.ChatMessage.documentClass?.prototype;
   const renderHTML = messageProto?.renderHTML;
   if (typeof renderHTML !== "function") throw new Error("ChatMessage#renderHTML not found");
-  messageProto.renderHTML = markWrapper(async function (...args) {
+  wraps.wrap(messageProto, "renderHTML", "attack-vs-defense", async function (renderHTML, ...args) {
     const html = await renderHTML.apply(this, args);
     try {
       decorate(this, html);
@@ -377,5 +378,5 @@ export function installAttackVsDefenseRule() {
       console.error(`${MODULE_ID} | attack-vs-defense: failed to show the result`, err);
     }
     return html;
-  }, renderHTML);
+  });
 }

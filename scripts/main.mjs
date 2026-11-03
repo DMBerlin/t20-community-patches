@@ -1,5 +1,6 @@
 import { GROUPS, PATCHES } from "./patches/index.mjs";
 import { MODULE_ID } from "./utils.mjs";
+import { wraps } from "./kernel/wrap.mjs";
 import {
   APPLY_STATES,
   applyLateDiagnosis,
@@ -260,6 +261,8 @@ Hooks.once("init", () => {
   game.modules.get(MODULE_ID).api = {
     status,
     groups: GROUPS,
+    // Wrapper chains, owners from the innermost to the outermost: game.modules.get(MODULE_ID).api.wraps()
+    wraps: wraps.list,
     rewards: { open: openRewards, pending: listPending, resume: resumeRewards, divergences: listDivergences }
   };
 });

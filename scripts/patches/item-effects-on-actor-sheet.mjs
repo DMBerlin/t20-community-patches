@@ -9,8 +9,9 @@
  * same set Foundry v10 showed). Rows of item effects show the item as source; Toggle/Edit/Delete (with
  * confirmation) and drag act on the effect inside the item.
  */
-import { MODULE_ID, markWrapper, sheetEffectClass, stripComments, unwrap } from "../utils.mjs";
+import { MODULE_ID, sheetEffectClass, stripComments, unwrap } from "../utils.mjs";
 import { resolveEffectFromRow } from "../effect-rows.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 /**
  * Groups the categorized effects by id, in render order (category key order, then insertion order).
@@ -138,8 +139,7 @@ function apply() {
   }
 
   // 1) Data: list actor effects + transferred item effects.
-  const getData = ActorSheetBase.prototype.getData;
-  ActorSheetBase.prototype.getData = markWrapper(async function (...args) {
+  wraps.wrap(ActorSheetBase.prototype, "getData", "item-effects-on-actor-sheet", async function (getData, ...args) {
     const data = await getData.apply(this, args);
     if (!data?.effects || typeof this.actor?.allApplicableEffects !== "function") return data;
     try {
@@ -151,14 +151,13 @@ function apply() {
       console.error(`${MODULE_ID} | item-effects-on-actor-sheet: failed to list item effects`, err);
     }
     return data;
-  }, getData);
+  });
 
   // 2) DOM: runs after activateListeners for every T20 actor sheet (including non-editable NPC sheets).
   Hooks.on(`render${ActorSheetBase.name}`, annotateRows);
 
   // 3) Controls: act on the effect's real parent.
-  const manage = Legacy.onManageActiveEffect;
-  Legacy.onManageActiveEffect = markWrapper(async function (event, owner) {
+  wraps.wrap(Legacy, "onManageActiveEffect", "item-effects-on-actor-sheet", async function (manage, event, owner) {
     const anchor = event?.currentTarget;
     const li = anchor?.closest?.("li");
     const action = anchor?.dataset?.action;
@@ -173,11 +172,10 @@ function apply() {
       }
     }
     return manage.call(this, event, owner);
-  }, manage);
+  });
 
   // 4) Drag: core ActorSheet#_onDragStart only looks at actor.effects.
-  const onDragStart = ActorSheetBase.prototype._onDragStart;
-  ActorSheetBase.prototype._onDragStart = function (event) {
+  wraps.wrap(ActorSheetBase.prototype, "_onDragStart", "item-effects-on-actor-sheet", function (onDragStart, event) {
     const li = event?.currentTarget;
     if (li?.dataset?.effectUuid) {
       const effect = resolveEffectFromRow(li, this.actor);
@@ -187,7 +185,7 @@ function apply() {
       }
     }
     return onDragStart.call(this, event);
-  };
+  });
 }
 
 export default {

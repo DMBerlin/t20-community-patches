@@ -13,8 +13,8 @@
  * contributions ("add" 8 on .bonus) that do not win are skipped in memory. The condition's reduction is kept out of the
  * optional source-stacking rule. Nothing is written to the documents.
  */
-import { markWrapper } from "../utils.mjs";
 import { registerStackingExclusion } from "../rules/source-stacking.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 export const PETRIFIED = "petrificado";
 export const RD_VALUE_KEY = "system.tracos.resistencias.dano.value";
@@ -207,7 +207,7 @@ function apply() {
   if (typeof shouldApply !== "function") throw new Error("ActiveEffect#shouldApplyChange not found");
   if (typeof applyEffects !== "function") throw new Error("Actor#applyActiveEffects not found");
 
-  actorProto.applyActiveEffects = markWrapper(function (phase, ...args) {
+  wraps.wrap(actorProto, "applyActiveEffects", "petrified-damage-reduction", function (applyEffects, phase, ...args) {
     if (phase !== "initial") return applyEffects.call(this, phase, ...args);
     try {
       let rollData;
@@ -224,9 +224,9 @@ function apply() {
     } finally {
       tracker.end(this);
     }
-  }, applyEffects);
+  });
 
-  EffectClass.prototype.shouldApplyChange = markWrapper(function (change, ...args) {
+  wraps.wrap(EffectClass.prototype, "shouldApplyChange", "petrified-damage-reduction", function (shouldApply, change, ...args) {
     const result = shouldApply.call(this, change, ...args);
     if (!result) return result;
     try {
@@ -234,9 +234,9 @@ function apply() {
     } catch {
       return result;
     }
-  }, shouldApply);
+  });
 
-  EffectClass.applyChange = markWrapper(function (targetDoc, change, options) {
+  wraps.wrap(EffectClass, "applyChange", "petrified-damage-reduction", function (applyChange, targetDoc, change, options) {
     let normalized = null;
     try {
       normalized = tracker.normalize(targetDoc, change, { consume: options?.modifyTarget !== false });
@@ -244,7 +244,7 @@ function apply() {
       console.warn(LOG, "could not normalize", change?.key, err);
     }
     return applyChange.call(this, targetDoc, normalized ?? change, options);
-  }, applyChange);
+  });
 
   registerStackingExclusion(isPetrifiedContribution);
 }

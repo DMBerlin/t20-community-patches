@@ -9,7 +9,7 @@
  * Fix: the applicable usage effects are isolated clones, and in that proven case the clone's "+system.*" key is
  * normalized to "system.*", so addToChange appends it exactly once.
  */
-import { markWrapper } from "../utils.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 const ROLL_ONLY_TYPES = new Set(["pericia", "atributo"]);
 const APPENDED_PASSIVE_KEY = /^\+system\.[\w.-]+$/;
@@ -70,10 +70,10 @@ function apply() {
   if (typeof original !== "function") throw new Error("Tormenta20 usage effect API not found");
 
   // `this` is the rolled item's clone (ItemT20#roll); only the other items' effects were live documents.
-  ItemClass.prototype._allApplicableOnUseEffects = markWrapper(function (...args) {
+  wraps.wrap(ItemClass.prototype, "_allApplicableOnUseEffects", "appended-usage-changes", function (original, ...args) {
     const effects = original.apply(this, args);
     return Array.isArray(effects) ? effects.map((effect) => isolateUsageEffect(effect, this.type)) : effects;
-  }, original);
+  });
 }
 
 /** applyEffectChanges/applyOnUseEffects are module-local in the system bundle, so the bug cannot be probed. */

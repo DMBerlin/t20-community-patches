@@ -19,10 +19,11 @@
  * doubled.
  */
 import { isPatchApplied } from "../registry.mjs";
-import { MODULE_ID, addTooltipLine, markWrapper, stripComments, unwrap } from "../utils.mjs";
+import { MODULE_ID, addTooltipLine, stripComments, unwrap } from "../utils.mjs";
 import { resolveDataRefs } from "./armor-penalty-reduction.mjs";
 import { fieldTerms } from "./field-bonuses-tooltip.mjs";
 import { PRONE, collectProneCandidates, isProneDefenseChange, planProneChange } from "./prone-defense.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 const LOG = "t20-community-patches | field-bonuses-breakdown:";
 export const PARTS = ["manual", "zeroLevel", "formula", "types", "wildcard", "heavyArmor", "defenseSources"];
@@ -686,9 +687,11 @@ function apply() {
     console.warn(`${LOG} fieldBonuses not recognized; nothing to fix`);
     return;
   }
-  Handlebars.registerHelper(
+  wraps.wrap(
+    Handlebars.helpers,
     "fieldBonuses",
-    markWrapper(function (path, options) {
+    "field-bonuses-breakdown",
+    function (original, path, options) {
       const [type, key] = fieldTerms(path);
       if (!HELPER_TYPES.has(type) || (type === "defesa" && key === "pda")) return original.call(this, path, options);
       const resource = type === "pv" || type === "pm";
@@ -743,7 +746,8 @@ function apply() {
         warnOnce("could not adjust the breakdown", err);
       }
       return html;
-    }, original)
+    },
+    { label: "Handlebars.helpers.fieldBonuses" }
   );
 }
 

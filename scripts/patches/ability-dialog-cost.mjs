@@ -9,7 +9,8 @@
  *
  * Fix: data-initial-cost holds only the base activation cost, and the total is computed from the checked boxes.
  */
-import { MODULE_ID, markWrapper, unwrap } from "../utils.mjs";
+import { MODULE_ID, unwrap } from "../utils.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 /**
  * Base PM cost of the activation (what the system adds when `ativacao.custo > 0`).
@@ -111,8 +112,7 @@ function apply() {
     throw new Error("Tormenta20 AbilityUseDialog not found");
   }
 
-  const original = AbilityUseDialog.prototype._onInputChange;
-  AbilityUseDialog.prototype._onInputChange = markWrapper(function (html, ...args) {
+  wraps.wrap(AbilityUseDialog.prototype, "_onInputChange", "ability-dialog-cost", function (original, html, ...args) {
     const root = toElement(html);
     const inputCost = root?.querySelector(TOTAL_SELECTOR);
     if (!inputCost) return original.call(this, html, ...args);
@@ -121,7 +121,7 @@ function apply() {
       initialCost: inputCost.dataset.initialCost,
       adjustment: root.querySelector("input[name=ajustecusto]")?.value
     });
-  }, original);
+  });
 
   Hooks.on("renderAbilityUseDialog", (app, html) => {
     try {

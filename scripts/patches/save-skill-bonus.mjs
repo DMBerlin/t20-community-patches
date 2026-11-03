@@ -11,7 +11,8 @@
  * as in any other skill; no roll data variable is redefined. Only the saves the probe still finds buggy are touched,
  * so a partial fix upstream is never doubled. semataque bonuses with dice are left alone.
  */
-import { markWrapper, unwrap } from "../utils.mjs";
+import { unwrap } from "../utils.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 const LOG = "t20-community-patches | save-skill-bonus:";
 export const ATTACK_SKILLS = new Set(["luta", "pont"]);
@@ -116,7 +117,7 @@ function apply() {
     targets = new Set();
   }
   if (!targets.size) console.warn(`${LOG} no save shows the bug; nothing to fix`);
-  proto.prepareSkill = markWrapper(function (skillId, options = {}) {
+  wraps.wrap(proto, "prepareSkill", "save-skill-bonus", function (original, skillId, options = {}) {
     let args = options;
     let skillData;
     let bonus;
@@ -141,7 +142,7 @@ function apply() {
     } finally {
       if (bonus) skillData.bonus = bonus;
     }
-  }, original);
+  });
 }
 
 function isNeeded() {

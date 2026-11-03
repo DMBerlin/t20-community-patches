@@ -15,11 +15,12 @@
  * - Weapon sheet: the "Dano natural" field (Automático / Letal / Não letal).
  * Everything is gated by the "Dano não letal" setting, read on every use.
  */
-import { MODULE_ID, markWrapper } from "../utils.mjs";
+import { MODULE_ID } from "../utils.mjs";
 import { matchesSource } from "../patches/spell-dc-bonus.mjs";
 import { ROLL_DATA_KEY, ruleEnabled } from "./nonlethal-damage.mjs";
 import { sanitizeFlavor } from "./situational-modifiers.mjs";
 import { USE_PURPOSES, inItemUse, installUseTargets, registerTargetConsumer, usePurposeOf } from "./shared/targets.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 export const NATURAL_FLAG = "naturalDamage";
 export const NATURAL_MODES = Object.freeze(["auto", "lethal", "nonlethal"]);
@@ -271,7 +272,7 @@ export function installNonlethalAttackRule() {
   registerTargetConsumer(ruleEnabled);
   installUseTargets();
 
-  proto.rollAttack = markWrapper(async function (...args) {
+  wraps.wrap(proto, "rollAttack", "nonlethal-attack", async function (rollAttack, ...args) {
     let undo = () => {};
     try {
       undo = pushPenalty(this, resolveChoice(this, args[0]?.options));
@@ -287,9 +288,9 @@ export function installNonlethalAttackRule() {
         console.error(`${LOG} failed to remove the attack penalty`, err);
       }
     }
-  }, rollAttack);
+  });
 
-  proto.rollDamage = markWrapper(async function (...args) {
+  wraps.wrap(proto, "rollDamage", "nonlethal-attack", async function (rollDamage, ...args) {
     const result = await rollDamage.apply(this, args);
     try {
       // Without dialog fields (shortcut) the choice is the natural type.
@@ -299,7 +300,7 @@ export function installNonlethalAttackRule() {
       console.error(`${LOG} failed to record the choice in the damage`, err);
     }
     return result;
-  }, rollDamage);
+  });
 
   Hooks.on("renderAbilityUseDialog", (app, html) => {
     try {

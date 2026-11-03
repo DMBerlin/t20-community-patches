@@ -13,7 +13,8 @@
  * uuid; the Defesa breakdown gets a "Condição" line before the total, which is corrected. Each part is installed
  * only when its bug is recognized in the helper's source, so a partial fix upstream is never undone or doubled.
  */
-import { addTooltipLine, markWrapper, stripComments, unwrap } from "../utils.mjs";
+import { addTooltipLine, stripComments, unwrap } from "../utils.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 const LOG = "t20-community-patches | field-bonuses-tooltip:";
 export const CONDITION_KEY = "T20CP.FieldBonuses.Condition";
@@ -113,9 +114,11 @@ function apply() {
   if (typeof original !== "function") throw new Error("Handlebars helper fieldBonuses not found");
   const bugs = helperBugs(helperSource(original));
   if (!bugs.lookup && !bugs.noCondition) console.warn(`${LOG} fieldBonuses not recognized; nothing to fix`);
-  Handlebars.registerHelper(
+  wraps.wrap(
+    Handlebars.helpers,
     "fieldBonuses",
-    markWrapper(function (path, options) {
+    "field-bonuses-tooltip",
+    function (original, path, options) {
       let args = options;
       const root = options?.data?.root;
       try {
@@ -135,7 +138,8 @@ function apply() {
         warned = true;
         return html;
       }
-    }, original)
+    },
+    { label: "Handlebars.helpers.fieldBonuses" }
   );
 }
 

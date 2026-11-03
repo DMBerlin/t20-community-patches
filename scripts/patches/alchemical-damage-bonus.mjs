@@ -9,7 +9,8 @@
  * Fix: while the system rolls the damage of an alchemical item whose actor has "alq" bonuses and no "mag" bonus,
  * each plain damage roll receives the "@danoALQ" part the system would have added. The part is removed afterwards.
  */
-import { markWrapper, stripComments, unwrap } from "../utils.mjs";
+import { stripComments, unwrap } from "../utils.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 export const ALCHEMICAL_PART = "@danoALQ";
 const NOT_DAMAGE = new Set(["curatpv", "curapm", "curatpm", "curapv", "perda"]);
@@ -117,9 +118,8 @@ function itemPrototype() {
 function apply() {
   const proto = itemPrototype();
   if (!proto) throw new Error("Tormenta20 ItemT20#rollDamage not found");
-  const rollDamage = proto.rollDamage;
   const ledger = createPartLedger();
-  proto.rollDamage = markWrapper(async function (...args) {
+  wraps.wrap(proto, "rollDamage", "alchemical-damage-bonus", async function (rollDamage, ...args) {
     let taken = [];
     try {
       const dano = foundry.utils.getProperty(this?.actor?.system ?? {}, "modificadores.dano");
@@ -132,7 +132,7 @@ function apply() {
     } finally {
       ledger.release(taken);
     }
-  }, rollDamage);
+  });
 }
 
 const STOP = Symbol("probe stop");

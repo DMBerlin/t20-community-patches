@@ -10,7 +10,8 @@
  * Copies of Fortalecimento Arcano that still have the shipped usage effect become a single passive bonus on
  * attributes.cd, and their usage effects are no longer offered.
  */
-import { markWrapper, stripComments, unwrap } from "../utils.mjs";
+import { stripComments, unwrap } from "../utils.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 export const ARCANE_EMPOWERMENT = { id: "KhQoVoaIZ8huXnPY", names: new Set(["fortalecimento arcano"]) };
 /** Basic-book classes whose spell progression reaches the 4th circle, and the class level that grants it. */
@@ -256,8 +257,7 @@ function apply() {
     throw new Error("Tormenta20 save DC API not found");
   }
 
-  const prepareFinalAttributes = itemData.prepareFinalAttributes;
-  itemData.prepareFinalAttributes = markWrapper(function (...args) {
+  wraps.wrap(itemData, "prepareFinalAttributes", "spell-dc-bonus", function (prepareFinalAttributes, ...args) {
     const result = prepareFinalAttributes.apply(this, args);
     try {
       fixSaveDC(this);
@@ -265,10 +265,9 @@ function apply() {
       console.warn("t20-community-patches | spell-dc-bonus: could not fix the save DC", this.parent?.uuid, err);
     }
     return result;
-  }, prepareFinalAttributes);
+  });
 
-  const prepareBaseData = characterData.prepareBaseData;
-  characterData.prepareBaseData = markWrapper(function (...args) {
+  wraps.wrap(characterData, "prepareBaseData", "spell-dc-bonus", function (prepareBaseData, ...args) {
     const result = prepareBaseData.apply(this, args);
     try {
       const items = this.parent?.items;
@@ -279,15 +278,14 @@ function apply() {
       console.warn("t20-community-patches | spell-dc-bonus: could not apply Fortalecimento Arcano", this.parent?.uuid, err);
     }
     return result;
-  }, prepareBaseData);
+  });
 
-  const allApplicable = ItemClass.prototype._allApplicableOnUseEffects;
-  ItemClass.prototype._allApplicableOnUseEffects = markWrapper(function (...args) {
+  wraps.wrap(ItemClass.prototype, "_allApplicableOnUseEffects", "spell-dc-bonus", function (allApplicable, ...args) {
     const effects = allApplicable.apply(this, args);
     if (!Array.isArray(effects) || this.actor?.type !== "character") return effects;
     const empowerments = findArcaneEmpowerments(this.actor.items);
     return empowerments.length ? withoutEmpowermentEffects(effects, empowerments) : effects;
-  }, allApplicable);
+  });
 }
 
 /** Runs the recognized 1.6.5 implementation on a synthetic item. Never called for unknown code. */

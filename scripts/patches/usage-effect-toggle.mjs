@@ -9,8 +9,9 @@
  * Fix: the toggle of usage rows flips system.abilityUse.automatic and the icon reflects it. Temporary usage
  * effects held by items keep toggling `disabled` (default vs optional application on the chat card).
  */
-import { MODULE_ID, markWrapper, sheetEffectClass, unwrap } from "../utils.mjs";
+import { MODULE_ID, sheetEffectClass, unwrap } from "../utils.mjs";
 import { resolveEffectFromRow } from "../effect-rows.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 /**
  * Whether the sheet toggle of this effect should mean "Always Apply".
@@ -94,8 +95,7 @@ function apply() {
   const Legacy = sheetEffectClass();
   if (typeof Legacy?.onManageActiveEffect !== "function") throw new Error("ActiveEffectT20.onManageActiveEffect not found");
 
-  const manage = Legacy.onManageActiveEffect;
-  Legacy.onManageActiveEffect = markWrapper(async function (event, owner) {
+  wraps.wrap(Legacy, "onManageActiveEffect", "usage-effect-toggle", async function (manage, event, owner) {
     const anchor = event?.currentTarget;
     let effect = null;
     if (anchor?.dataset?.action === "toggle" && owner) {
@@ -111,7 +111,7 @@ function apply() {
       return effect.update({ "system.abilityUse.automatic": !effect.system.abilityUse?.automatic });
     }
     return manage.call(this, event, owner);
-  }, manage);
+  });
 
   Hooks.on("renderActorSheetT20", (app, html) => scheduleFixToggles(app.actor, html));
   Hooks.on("renderItemSheetT20", (app, html) => scheduleFixToggles(app.item, html));

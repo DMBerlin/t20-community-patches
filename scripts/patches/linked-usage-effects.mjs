@@ -8,7 +8,7 @@
  * Fix: the single matching effect of the usage effect's own item is injected (as an isolated, disabled clone named
  * after the change value) into the rolled item's clone, and "efeito"/"condicao" are not appended to own effects.
  */
-import { markWrapper } from "../utils.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 const LINK_KEY = "efeito";
 const DROPPED_KEYS = new Set(["efeito", "condicao"]);
@@ -110,7 +110,7 @@ function apply() {
   if (typeof original !== "function") throw new Error("Tormenta20 usage effect API not found");
 
   // `this` is the rolled item's clone (ItemT20#roll); the live document is never touched.
-  ItemClass.prototype._allApplicableOnUseEffects = markWrapper(function (...args) {
+  wraps.wrap(ItemClass.prototype, "_allApplicableOnUseEffects", "linked-usage-effects", function (original, ...args) {
     const effects = original.apply(this, args);
     if (!Array.isArray(effects) || !this.effects || this.actor?.items?.get(this.id) === this) return effects;
     try {
@@ -124,7 +124,7 @@ function apply() {
       console.warn("t20-community-patches | linked-usage-effects:", err);
     }
     return effects;
-  }, original);
+  });
 }
 
 /** applyEffectChanges is module-local in the system bundle, so the bug cannot be probed. */

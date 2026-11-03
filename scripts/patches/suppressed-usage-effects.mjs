@@ -10,7 +10,8 @@
  * actor's own effects are kept.
  */
 
-import { markWrapper, unwrap } from "../utils.mjs";
+import { unwrap } from "../utils.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 /**
  * @param {object} effect                 ActiveEffect
@@ -55,15 +56,13 @@ function apply() {
   }
 
   // Item rolls (dialog and automatic path). `this` is the rolled item's clone, which keeps its id.
-  const allApplicable = ItemClass.prototype._allApplicableOnUseEffects;
-  ItemClass.prototype._allApplicableOnUseEffects = markWrapper(function (...args) {
+  wraps.wrap(ItemClass.prototype, "_allApplicableOnUseEffects", "suppressed-usage-effects", function (allApplicable, ...args) {
     const effects = allApplicable.apply(this, args);
     return Array.isArray(effects) ? effects.filter((e) => !isSuppressedUsageEffect(e, this.id)) : effects;
-  }, allApplicable);
+  });
 
   // Skill/attribute rolls build their list inline: filter the traversal only inside the collection window.
-  const traverse = proto.traverseEmbeddedDocuments;
-  proto.traverseEmbeddedDocuments = markWrapper(function (...args) {
+  wraps.wrap(proto, "traverseEmbeddedDocuments", "suppressed-usage-effects", function (traverse, ...args) {
     const iterator = traverse.apply(this, args);
     if (!collecting.get(this)) return iterator;
     return (function* () {
@@ -73,11 +72,10 @@ function apply() {
         yield entry;
       }
     })();
-  }, traverse);
+  });
 
   for (const method of ROLL_METHODS) {
-    const original = proto[method];
-    proto[method] = markWrapper(function (...args) {
+    wraps.wrap(proto, method, "suppressed-usage-effects", function (original, ...args) {
       collecting.set(this, (collecting.get(this) ?? 0) + 1);
       try {
         // The async original runs synchronously until its first await, which comes after the collection loop.
@@ -87,7 +85,7 @@ function apply() {
         if (depth > 0) collecting.set(this, depth);
         else collecting.delete(this);
       }
-    }, original);
+    });
   }
 }
 

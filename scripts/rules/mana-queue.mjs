@@ -11,7 +11,7 @@
  * ActorT20#modifyTokenAttribute (T20:7340-7349, token HUD/bars) turns an absolute PM value into a debit read before
  * calling spendMana. Queuing only spendMana would apply a stale debit, so absolute PM edits compute it in the turn.
  */
-import { markWrapper } from "../utils.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 /** @type {WeakMap<object, Promise<unknown>>} */
 const queues = new WeakMap();
@@ -55,13 +55,13 @@ export function installManaQueue(proto = globalThis.CONFIG?.Actor?.documentClass
   const original = proto?.spendMana;
   if (typeof original !== "function") throw new Error("ActorT20#spendMana not found");
   originalSpend = original;
-  proto.spendMana = markWrapper(function (...args) {
+  wraps.wrap(proto, "spendMana", "mana-queue", function (original, ...args) {
     return withManaTurn(this, ({ spend }) => spend(...args));
-  }, original);
+  });
 
   const modify = proto.modifyTokenAttribute;
   if (typeof modify !== "function") return;
-  proto.modifyTokenAttribute = markWrapper(function (attribute, value, isDelta, isBar) {
+  wraps.wrap(proto, "modifyTokenAttribute", "mana-queue", function (modify, attribute, value, isDelta, isBar) {
     if (attribute !== "attributes.pm" || isDelta || !this.system?.attributes?.pm) {
       return modify.call(this, attribute, value, isDelta, isBar);
     }
@@ -70,5 +70,5 @@ export function installManaQueue(proto = globalThis.CONFIG?.Actor?.documentClass
       const pm = this.system.attributes.pm;
       return spend(pm.value + pm.temp - value);
     });
-  }, modify);
+  });
 }

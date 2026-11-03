@@ -9,7 +9,7 @@
  *   (defenseAdjustmentsFor, read by attack-vs-defense) and recorded in the roll, so the card can show them as a note;
  * - a charge gives the attacker a -2 Defense effect, which the table removes by hand.
  */
-import { MODULE_ID, markWrapper } from "../utils.mjs";
+import { MODULE_ID } from "../utils.mjs";
 import {
   addDefenseAdjustments,
   canSeeTokenName,
@@ -20,6 +20,7 @@ import {
   useTargetRecords
 } from "./shared/targets.mjs";
 import { castCompleted } from "./cast-outcome.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 export const SITUATIONAL_SETTING = "situationalModifiersRule";
 export const FORM_ATTACK = "t20cpSituationalAttack";
@@ -386,7 +387,7 @@ export function installSituationalModifiersRule() {
   registerTargetConsumer(ruleOn);
   installUseTargets();
 
-  proto.rollAttack = markWrapper(async function (...args) {
+  wraps.wrap(proto, "rollAttack", "situational-modifiers", async function (rollAttack, ...args) {
     let record = null;
     try {
       record = prepareUse(this, args[0]?.options);
@@ -402,9 +403,9 @@ export function installSituationalModifiersRule() {
       }
     }
     return result;
-  }, rollAttack);
+  });
 
-  proto.displayCard = markWrapper(async function (...args) {
+  wraps.wrap(proto, "displayCard", "situational-modifiers", async function (displayCard, ...args) {
     let charge = false;
     const options = args[0]?.options;
     try {
@@ -427,7 +428,7 @@ export function installSituationalModifiersRule() {
       }
     }
     return result;
-  }, displayCard);
+  });
 
   Hooks.on("renderAbilityUseDialog", (app, html) => {
     try {

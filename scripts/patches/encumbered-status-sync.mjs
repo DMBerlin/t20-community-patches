@@ -9,6 +9,7 @@
  * creation/removal. Every copy is removed when the character is no longer encumbered.
  */
 import { stripComments, unwrap } from "../utils.mjs";
+import { fromFactory, wraps } from "../kernel/wrap.mjs";
 
 export const ENCUMBERED = "sobrecarregado";
 const LOG = "t20-community-patches | encumbered-status-sync:";
@@ -155,11 +156,12 @@ function checkAfterItems(actor, [parent, collection, , , , userId]) {
 
 function apply() {
   const proto = CONFIG.Actor.documentClass.prototype;
-  proto._checkEncumbered = function () {
+  // Replaces the system's check: the original is not called.
+  wraps.wrap(proto, "_checkEncumbered", "encumbered-status-sync", function () {
     return sync(this);
-  };
+  });
   for (const name of ["_onCreateDescendantDocuments", "_onDeleteDescendantDocuments"]) {
-    proto[name] = wrapDescendantCallback(proto[name], checkAfterItems);
+    wraps.wrap(proto, name, "encumbered-status-sync", fromFactory((original) => wrapDescendantCallback(original, checkAfterItems)));
   }
 }
 

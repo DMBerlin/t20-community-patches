@@ -7,9 +7,10 @@
  * effects. The use dialog shows the maximum and the submit is checked; the GM picks warn, block or off.
  * A misconfigured formula never blocks: it means "no limit", with a single console warning.
  */
-import { MODULE_ID, markWrapper } from "../utils.mjs";
+import { MODULE_ID } from "../utils.mjs";
 import { evaluateManaLimit } from "./mana-limit.mjs";
 import { installUseDialogGuard, registerUseValidator } from "./use-dialog-guard.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 export const USAGE_EFFECT_MAX_SETTING = "usageEffectMaxRule";
 export const USAGE_EFFECT_MAX_FLAG = "maxApplications";
@@ -346,7 +347,7 @@ const observed = new WeakMap();
 function installTraversalObserver(proto) {
   const traverse = proto?.traverseEmbeddedDocuments;
   if (typeof traverse !== "function") return false;
-  proto.traverseEmbeddedDocuments = markWrapper(function (...args) {
+  wraps.wrap(proto, "traverseEmbeddedDocuments", "usage-effect-max", function (traverse, ...args) {
     const iterator = traverse.apply(this, args);
     const seen = observed.get(this);
     if (!seen || typeof iterator?.[Symbol.iterator] !== "function") return iterator;
@@ -356,7 +357,7 @@ function installTraversalObserver(proto) {
         yield entry;
       }
     })();
-  }, traverse);
+  });
   return true;
 }
 
@@ -367,7 +368,7 @@ function installTraversalObserver(proto) {
 function wrapActorRoll(proto, method, type, nameOf) {
   const original = proto?.[method];
   if (typeof original !== "function") return;
-  proto[method] = markWrapper(function (...args) {
+  wraps.wrap(proto, method, "usage-effect-max", function (original, ...args) {
     let entries = null;
     const previous = observed.get(this);
     try {
@@ -394,21 +395,21 @@ function wrapActorRoll(proto, method, type, nameOf) {
         }
       }
     }
-  }, original);
+  });
 }
 
 /** Wraps a method to run a check first; the check never changes the call. */
 function wrapBefore(proto, method, check) {
   const original = proto?.[method];
   if (typeof original !== "function") return;
-  proto[method] = markWrapper(function (...args) {
+  wraps.wrap(proto, method, "usage-effect-max", function (original, ...args) {
     try {
       check(this, ...args);
     } catch (err) {
       console.error(`${MODULE_ID} | usage-effect-max: failed to check an automatic use`, err);
     }
     return original.apply(this, args);
-  }, original);
+  });
 }
 
 /** Registers the world setting. Runs on "init" for every system, so the setting always exists. */

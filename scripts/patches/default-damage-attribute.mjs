@@ -11,8 +11,9 @@
  * melee and other items: For). Parts the system resolves itself, explicit attributes and stored data are untouched.
  */
 
-import { markWrapper, sourceFingerprint, unwrap } from "../utils.mjs";
+import { sourceFingerprint, unwrap } from "../utils.mjs";
 import { prefersDexterity } from "./finesse-agile-weapons.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 /** sourceFingerprint of ItemT20#rollDamage in tormenta20 1.6.6. */
 export const REFERENCE = "b6191939:3049";
@@ -152,8 +153,7 @@ function apply() {
 
   // rollDamage reads `this.system.rolls` (the for…of iterator) before its first `await`, so the view is installed
   // only for the synchronous start and restored before the promise is returned (see finesse-agile-weapons).
-  const rollDamage = ItemClass.prototype.rollDamage;
-  ItemClass.prototype.rollDamage = markWrapper(function (...args) {
+  wraps.wrap(ItemClass.prototype, "rollDamage", "default-damage-attribute", function (rollDamage, ...args) {
     const outer = frames.get(this);
     let before;
     let installed = null;
@@ -179,7 +179,7 @@ function apply() {
         else frames.delete(this);
       }
     }
-  }, rollDamage);
+  });
 }
 
 export default {

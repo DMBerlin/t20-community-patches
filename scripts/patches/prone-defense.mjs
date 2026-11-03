@@ -9,8 +9,9 @@
  * Caído penalty of that phase counts, legacy ("downgrade") and fixed ("add") copies alike, so duplicated copies of
  * the condition do not stack (book, p. 394). Stored effects are never changed.
  */
-import { markWrapper, statusEffectSources } from "../utils.mjs";
+import { statusEffectSources } from "../utils.mjs";
 import { findWithRetry } from "./petrified-damage-reduction.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 export const PRONE = "caido";
 export const OUTROS_KEY = "system.attributes.defesa.outros";
@@ -163,19 +164,17 @@ function currentPass(actor) {
 
 function apply() {
   const ActorClass = CONFIG.Actor.documentClass;
-  const applyActiveEffects = ActorClass.prototype.applyActiveEffects;
-  ActorClass.prototype.applyActiveEffects = markWrapper(function (phase, ...args) {
+  wraps.wrap(ActorClass.prototype, "applyActiveEffects", "prone-defense", function (applyActiveEffects, phase, ...args) {
     passes.push({ actor: this, phase, counted: false });
     try {
       return applyActiveEffects.call(this, phase, ...args);
     } finally {
       passes.pop();
     }
-  }, applyActiveEffects);
+  });
 
   const EffectClass = CONFIG.ActiveEffect.documentClass;
-  const applyChange = EffectClass.applyChange;
-  EffectClass.applyChange = markWrapper(function (targetDoc, change, options) {
+  wraps.wrap(EffectClass, "applyChange", "prone-defense", function (applyChange, targetDoc, change, options) {
     let next = change;
     let pass = null;
     let counts = false;
@@ -207,7 +206,7 @@ function apply() {
     const result = applyChange.call(this, targetDoc, next, options);
     if (counts && pass) pass.counted = true;
     return result;
-  }, applyChange);
+  });
 }
 
 function isNeeded() {

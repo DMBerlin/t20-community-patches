@@ -18,7 +18,8 @@
  * getRollData reduces are reduced again, in getRollData's order and with the system's own simplifyRollFormula, in the
  * same rollData, before Defesa and skills are prepared. PV/PM are prepared earlier and keep ignoring temporary bonuses.
  */
-import { markWrapper, unwrap } from "../utils.mjs";
+import { unwrap } from "../utils.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 const LOG = "t20-community-patches | skill-modifier-attributes:";
 
@@ -235,13 +236,11 @@ function apply() {
   const fields = modifierElementFields();
   if (!fields.size) throw new Error("modificadores list fields not found");
   for (const field of fields) {
-    const replaceRefs = field._replaceDataRefs;
-    field._replaceDataRefs = markWrapper(function (raw, data, options = {}) {
+    wraps.wrap(field, "_replaceDataRefs", "skill-modifier-attributes", function (replaceRefs, raw, data, options = {}) {
       return keepAttributeRefs(raw, data, (r, d, o) => replaceRefs.call(this, r, d, o), options ?? {});
-    }, replaceRefs);
+    });
   }
-  const original = proto.prepareAtributos;
-  proto.prepareAtributos = markWrapper(function (options, ...rest) {
+  wraps.wrap(proto, "prepareAtributos", "skill-modifier-attributes", function (original, options, ...rest) {
     const result = original.call(this, options, ...rest);
     try {
       if (hasTemporaryBonus(this.atributos)) refreshModifiers(this, options?.rollData, simplify);
@@ -250,7 +249,7 @@ function apply() {
       warned = true;
     }
     return result;
-  }, original);
+  });
 }
 
 /**

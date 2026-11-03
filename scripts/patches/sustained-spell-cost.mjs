@@ -9,7 +9,8 @@
  * Fix: before the card is created, every sustained effect of the same caster gets the origin of the first one, so a
  * cast has a single marker, named after the spell. The system's own cost and deletion logic then work per cast.
  */
-import { MODULE_ID, markWrapper, stripComments, unwrap } from "../utils.mjs";
+import { MODULE_ID, stripComments, unwrap } from "../utils.mjs";
+import { fromFactory, wraps } from "../kernel/wrap.mjs";
 
 export const SUSTAIN_EXPIRY = "sustainEnd";
 export const SUSTAIN_STATUS = "sustentando";
@@ -177,16 +178,21 @@ function apply() {
   if (typeof displayCard !== "function") throw new Error("ItemT20#displayCard not found");
   if (typeof preCreate !== "function") throw new Error("ActiveEffect#_preCreate not found");
 
-  ItemClass.prototype.displayCard = markWrapper(function (config, ...rest) {
+  wraps.wrap(ItemClass.prototype, "displayCard", "sustained-spell-cost", function (displayCard, config, ...rest) {
     try {
       unifySustainedOrigins(config?.options?.effects, this?.name);
     } catch (err) {
       console.error(`${MODULE_ID} | sustained-spell-cost: failed to group the sustained effects`, err);
     }
     return displayCard.call(this, config, ...rest);
-  }, displayCard);
+  });
 
-  EffectClass.prototype._preCreate = markWrapper(wrapSustainedPreCreate(preCreate, { queues, labels }), preCreate);
+  wraps.wrap(
+    EffectClass.prototype,
+    "_preCreate",
+    "sustained-spell-cost",
+    fromFactory((original) => wrapSustainedPreCreate(original, { queues, labels }))
+  );
 
   Hooks.on("preCreateActiveEffect", (effect, data) => {
     try {

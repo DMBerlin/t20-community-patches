@@ -7,9 +7,10 @@
  * - Conditions that prevent casting (p. 394-395, p. 170; reactions follow p. 233): checked before the use dialog.
  * - Concentration in a bad condition (p. 170): casting while Caído or Surdo posts the Vontade DC (15 + PM spent).
  */
-import { MODULE_ID, markWrapper } from "../utils.mjs";
+import { MODULE_ID } from "../utils.mjs";
 import { castCompleted, isCastUse } from "./cast-outcome.mjs";
 import { installUseDialogGuard, registerUseValidator } from "./use-dialog-guard.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 export const SUSTAINED_SPELL_SETTING = "sustainedSpellRule";
 export const SUSTAINED_SPELL_MODES = ["off", "warn"];
@@ -620,7 +621,7 @@ export function installCastingRestrictionsRule() {
   const displayCard = itemProto?.displayCard;
   if (typeof roll !== "function" || typeof displayCard !== "function") throw new Error("ItemT20 roll/displayCard not found");
 
-  itemProto.roll = markWrapper(function (...args) {
+  wraps.wrap(itemProto, "roll", "casting-restrictions", function (roll, ...args) {
     let allowed = true;
     try {
       allowed = beforeRoll(this, args);
@@ -629,9 +630,9 @@ export function installCastingRestrictionsRule() {
     }
     if (allowed === false) return Promise.resolve();
     return roll.apply(this, args);
-  }, roll);
+  });
 
-  itemProto.displayCard = markWrapper(async function (config, ...rest) {
+  wraps.wrap(itemProto, "displayCard", "casting-restrictions", async function (displayCard, config, ...rest) {
     const options = config?.options;
     const casting = isCastUse(options);
     try {
@@ -650,7 +651,7 @@ export function installCastingRestrictionsRule() {
       }
     }
     return result;
-  }, displayCard);
+  });
 
   try {
     installUseDialogGuard();

@@ -9,7 +9,8 @@
  * system's ND table) get 250 and 500 XP. The creature level (1, the book minimum) and everything derived from
  * it stay as the system computes them. Any other ND is untouched.
  */
-import { markWrapper, stripComments, unwrap } from "../utils.mjs";
+import { stripComments, unwrap } from "../utils.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 /** Fractional NDs handled by the patch, with the XP the book gives them (ND × 1000). */
 export const FRACTIONAL_XP = Object.freeze({ "1/4": 250, "1/2": 500 });
@@ -133,7 +134,7 @@ function apply() {
     console.warn("t20-community-patches | menace-xp-fraction: npc data model not found; nothing patched.");
     return;
   }
-  proto.prepareBaseData = markWrapper(function (...args) {
+  wraps.wrap(proto, "prepareBaseData", "menace-xp-fraction", function (prepareBaseData, ...args) {
     const result = prepareBaseData.apply(this, args);
     try {
       applyMenaceXp(this.attributes);
@@ -141,7 +142,7 @@ function apply() {
       console.warn("t20-community-patches | menace-xp-fraction: could not correct the XP.", err);
     }
     return result;
-  }, prepareBaseData);
+  });
 }
 
 export default {

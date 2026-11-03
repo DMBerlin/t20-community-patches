@@ -11,11 +11,12 @@
  * Three points: a synchronous check before rollPericia, a validator of the use dialog (use-dialog-guard) and the
  * card note in ActorT20#displayCard. Nothing is kept between calls.
  */
-import { MODULE_ID, markWrapper } from "../utils.mjs";
+import { MODULE_ID } from "../utils.mjs";
 import { installUseDialogGuard, registerUseValidator } from "./use-dialog-guard.mjs";
 import { automaticApplied } from "./mana-limit.mjs";
 import { skipsDialog } from "./usage-effect-max.mjs";
 import { appliedGrant, isTrainedFor, plainUseEffect, skillUseEffects, trainingGrants } from "./skill-training.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 export const TRAINED_ONLY_SETTING = "trainedOnlySkillsRule";
 export const TRAINED_ONLY_MODES = ["off", "warn", "block"];
@@ -189,7 +190,7 @@ export function installTrainedOnlyRule() {
   installUseDialogGuard();
   registerUseValidator(validate);
 
-  proto.rollPericia = markWrapper(function (...args) {
+  wraps.wrap(proto, "rollPericia", "trained-only-skills", function (roll, ...args) {
     let verdict = { action: "roll", notify: false };
     try {
       verdict = checkRoll(this, args[0], args[1]);
@@ -202,14 +203,14 @@ export function installTrainedOnlyRule() {
     }
     if (verdict.notify) ui.notifications.warn(verdict.message);
     return roll.apply(this, args);
-  }, roll);
+  });
 
-  proto.displayCard = markWrapper(function (params, ...rest) {
+  wraps.wrap(proto, "displayCard", "trained-only-skills", function (display, params, ...rest) {
     try {
       noteCard(this, params?.options);
     } catch (err) {
       console.error(`${LOG} failed to add the card note`, err);
     }
     return display.call(this, params, ...rest);
-  }, display);
+  });
 }

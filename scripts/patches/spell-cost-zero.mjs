@@ -11,7 +11,8 @@
  * the dialog form already sends it), the dialog gets the missing hidden cost input (empty value), and a checked
  * Truque locks the other enhancements and shows a total of 0.
  */
-import { MODULE_ID, markWrapper } from "../utils.mjs";
+import { MODULE_ID } from "../utils.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 export const CANTRIP_COST = "Truque";
 
@@ -227,7 +228,7 @@ function apply() {
   }
 
   // `this` is the rolled item's clone (ItemT20#roll). Only spells: the system's cantrip test checks item.type.
-  ItemClass.prototype._allApplicableOnUseEffects = markWrapper(function (...args) {
+  wraps.wrap(ItemClass.prototype, "_allApplicableOnUseEffects", "spell-cost-zero", function (allApplicable, ...args) {
     const effects = allApplicable.apply(this, args);
     if (this.type !== "magia" || !Array.isArray(effects)) return effects;
     return effects.map((effect) => {
@@ -238,10 +239,10 @@ function apply() {
         return effect;
       }
     });
-  }, allApplicable);
+  });
 
   // The total stays the one computed below (system or ability-dialog-cost); a checked Truque makes it 0.
-  AbilityUseDialog.prototype._onInputChange = markWrapper(function (html, ...args) {
+  wraps.wrap(AbilityUseDialog.prototype, "_onInputChange", "spell-cost-zero", function (onInputChange, html, ...args) {
     const result = onInputChange.call(this, html, ...args);
     try {
       const root = toElement(html);
@@ -253,7 +254,7 @@ function apply() {
       console.error(`${MODULE_ID} | spell-cost-zero: failed to show the cantrip cost`, err);
     }
     return result;
-  }, onInputChange);
+  });
 
   Hooks.on("renderAbilityUseDialog", (app, html) => {
     try {

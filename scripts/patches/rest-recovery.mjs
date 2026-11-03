@@ -8,7 +8,8 @@
  * Fix: when curaCP is set, the original method runs with curaCP off and one more extra HP per level, so the system
  * computes floor(level × (condition + extra HP)) + level. MP, chat cards and the other options stay the same.
  */
-import { markWrapper, stripComments, unwrap } from "../utils.mjs";
+import { stripComments, unwrap } from "../utils.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 /**
  * Start of ActorT20#descanso in tormenta20 1.6.5 (T20:7038-7050), comments removed and whitespace collapsed, up to
@@ -137,9 +138,9 @@ function apply() {
     console.warn("t20-community-patches | rest-recovery: Actor#descanso not found; nothing patched.");
     return;
   }
-  proto.descanso = markWrapper(function (...args) {
+  wraps.wrap(proto, "descanso", "rest-recovery", function (original, ...args) {
     return original.apply(this, correctRestArgs(args));
-  }, original);
+  });
 }
 
 export default {

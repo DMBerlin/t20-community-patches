@@ -8,11 +8,12 @@
  * no class or power fills them, so the proficiencies are derived here (initial class, recognized powers, Traits tab)
  * on every use, without writing anything. Characters only: threats have no proficiencies recorded.
  */
-import { MODULE_ID, addTooltipLine, markWrapper, sourceFingerprint, unwrap } from "../utils.mjs";
+import { MODULE_ID, addTooltipLine, sourceFingerprint, unwrap } from "../utils.mjs";
 import { APPLY_STATES } from "../registry.mjs";
 import { isArmorPenaltyReducer, parseReduction, resolveDataRefs } from "../patches/armor-penalty-reduction.mjs";
 import { keyAbility } from "../patches/condition-skill-lists.mjs";
 import { allActors } from "./source-stacking.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 export { sourceFingerprint };
 
@@ -419,7 +420,7 @@ function installAttack() {
   const original = proto?.getAttackToHit;
   if (typeof original !== "function") throw new Error("ItemT20#getAttackToHit not found");
   checkSource("getAttackToHit", original);
-  proto.getAttackToHit = markWrapper(function (...args) {
+  wraps.wrap(proto, "getAttackToHit", "non-proficiency-penalties", function (original, ...args) {
     const result = original.apply(this, args);
     try {
       if (result?.parts && this.isOwned && isOn() && weaponStatusOf(this) === "penalty") {
@@ -429,7 +430,7 @@ function installAttack() {
       warnOnce(err);
     }
     return result;
-  }, original);
+  });
 }
 
 function installSkills() {
@@ -438,7 +439,7 @@ function installSkills() {
   const original = proto?.prepareSkill;
   if (typeof original !== "function") throw new Error("prepareSkill not found");
   checkSource("prepareSkill", original);
-  proto.prepareSkill = markWrapper(function (skillId, options = {}, ...rest) {
+  wraps.wrap(proto, "prepareSkill", "non-proficiency-penalties", function (original, skillId, options = {}, ...rest) {
     const skill = original.call(this, skillId, options, ...rest);
     try {
       const actor = this.parent;
@@ -464,7 +465,7 @@ function installSkills() {
       warnOnce(err);
     }
     return skill;
-  }, original);
+  });
 }
 
 function installSkillTooltip() {
@@ -473,9 +474,11 @@ function installSkillTooltip() {
     console.warn(`${LOG} Handlebars helper fieldBonuses not found; the skill breakdown will not show the penalty`);
     return;
   }
-  Handlebars.registerHelper(
+  wraps.wrap(
+    Handlebars.helpers,
     "fieldBonuses",
-    markWrapper(function (path, options) {
+    "non-proficiency-penalties",
+    function (original, path, options) {
       const html = original.call(this, path, options);
       try {
         if (!isOn()) return html;
@@ -492,7 +495,8 @@ function installSkillTooltip() {
         warnOnce(err);
         return html;
       }
-    }, original)
+    },
+    { label: "Handlebars.helpers.fieldBonuses" }
   );
 }
 

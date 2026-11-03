@@ -13,6 +13,7 @@
  * when the actor had no class and it is the first class accepted in its creation operation.
  */
 import { markWrapper, stripComments, unwrap } from "../utils.mjs";
+import { fromFactory, wraps } from "../kernel/wrap.mjs";
 
 const LOG = "t20-community-patches | initial-class:";
 
@@ -210,7 +211,7 @@ function wrapPreCreateOperation(original) {
 function apply() {
   const parts = recognizeParts(readSources());
   const skipped = [];
-  for (const [name, wrap] of [
+  for (const [name, factory] of [
     ["_onUpdate", wrapOnUpdate],
     ["_onDelete", wrapOnDelete]
   ]) {
@@ -225,12 +226,12 @@ function apply() {
       skipped.push(name);
       continue;
     }
-    method.owner[name] = wrap(method.fn, parent);
+    wraps.wrap(method.owner, name, "initial-class", fromFactory((original) => factory(original, parent)));
   }
   // The system's class branch of _preCreate is empty; the creation rule goes in the operation-level hook.
   const itemClass = CONFIG.Item?.documentClass;
   if (parts._preCreate && typeof itemClass?._preCreateOperation === "function") {
-    itemClass._preCreateOperation = wrapPreCreateOperation(itemClass._preCreateOperation);
+    wraps.wrap(itemClass, "_preCreateOperation", "initial-class", fromFactory(wrapPreCreateOperation));
   } else skipped.push("_preCreate");
   if (skipped.length) console.warn(`${LOG} system code not recognized, left untouched: ${skipped.join(", ")}`);
 }

@@ -11,8 +11,9 @@
  * go through the core like the system's changes (shouldApplyChange, priority order). The condition is skipped when
  * it penalizes skills in any other way. Stored data is never changed.
  */
-import { markWrapper, statusEffectSources } from "../utils.mjs";
+import { statusEffectSources } from "../utils.mjs";
 import { findWithRetry } from "./petrified-damage-reduction.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 /** Attributes whose skills each condition penalizes (Tormenta20 JdA, Apêndice, pp. 394-395). */
 export const CONDITION_ABILITIES = Object.freeze({
@@ -199,7 +200,7 @@ function apply() {
   /** Phases being planned per actor: the core marks a phase as done only after the planning has run. */
   const planning = new WeakMap();
 
-  ActorClass.prototype.applyActiveEffects = markWrapper(function (phase, ...args) {
+  wraps.wrap(ActorClass.prototype, "applyActiveEffects", "condition-skill-lists", function (applyActiveEffects, phase, ...args) {
     // Invalid or repeated phases are left to the core, which warns and normalizes them.
     if (typeof phase !== "string" || this._completedActiveEffectPhases?.has(phase)) {
       return applyActiveEffects.call(this, phase, ...args);
@@ -221,7 +222,7 @@ function apply() {
     } finally {
       restore(swapped);
     }
-  }, applyActiveEffects);
+  });
 }
 
 function isNeeded() {

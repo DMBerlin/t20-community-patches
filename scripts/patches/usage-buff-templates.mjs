@@ -12,8 +12,9 @@
  * their description, and an official all-zero placeholder with the same name is hidden. A weapon buff asks for the
  * weapon when it is applied (a single wielded weapon is chosen silently) and is offered only on that weapon.
  */
-import { MODULE_ID, markWrapper } from "../utils.mjs";
+import { MODULE_ID } from "../utils.mjs";
 import { plainText } from "./linked-usage-effects.mjs";
+import { wraps } from "../kernel/wrap.mjs";
 
 export const WEAPON_FLAG = "buffWeapon";
 export const PENDING = "pending";
@@ -345,7 +346,7 @@ function apply() {
   if (typeof preCreate !== "function") throw new Error("ActiveEffect#_preCreate not found");
 
   // `this` is the rolled item's clone (ItemT20#roll) when the actor's item with the same id is another object.
-  ItemClass.prototype._allApplicableOnUseEffects = markWrapper(function (...args) {
+  wraps.wrap(ItemClass.prototype, "_allApplicableOnUseEffects", "usage-buff-templates", function (original, ...args) {
     const live = this.isEmbedded ? this.actor?.items?.get(this.id) : null;
     if (live && live !== this && this.effects) {
       try {
@@ -370,9 +371,9 @@ function apply() {
       console.warn(`${MODULE_ID} | usage-buff-templates: failed to filter weapon buffs`, err);
       return effects;
     }
-  }, original);
+  });
 
-  effectProto._preCreate = markWrapper(async function (...args) {
+  wraps.wrap(effectProto, "_preCreate", "usage-buff-templates", async function (preCreate, ...args) {
     const [data, , user] = args;
     if (!user || user.id === game.user?.id) {
       let allowed;
@@ -384,7 +385,7 @@ function apply() {
       if (allowed === false) return false;
     }
     return preCreate.apply(this, args);
-  }, preCreate);
+  });
 }
 
 /** applyOnUseEffects is module-local in the system bundle, so the card filter cannot be probed during init. */

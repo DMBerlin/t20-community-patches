@@ -101,7 +101,7 @@ Section: Fixed
 
 O texto deve ter uma linha só. A seção é uma de `Added|Changed|Fixed|Security|Removed`.
 
-Valide:
+Valide (na primeira vez, rode `npm ci` na worktree; o `make check` inclui o lint):
 
 ```bash
 make check

@@ -50,7 +50,7 @@ git -C <wt> rebase main
 - Se o rebase der conflito trivial (por exemplo, duas linhas novas na mesma tabela ou lista), resolva mantendo as duas mudanças.
 - Se não for trivial, rode `git rebase --abort` e pergunte com `ask_user`.
 
-Depois, rode `make -C <wt> check`. Ele precisa passar.
+Depois, rode `make -C <wt> check`. Ele inclui o lint e precisa passar sem erros (se faltar o ESLint, rode `npm ci` antes).
 
 Se a validação veio do `playtest`, o relatório vale para o commit testado. Anote esse commit antes do rebase (`git -C <wt> rev-parse HEAD`) e, depois dele, confira `git -C <wt> diff --name-only <commit testado> HEAD -- scripts lang templates styles module.json`. Se sair algum arquivo, mesmo que a branch não o tenha alterado, rode a skill `playtest` de novo antes do squash.
 
@@ -59,6 +59,7 @@ Se a validação veio do `playtest`, o relatório vale para o commit testado. An
 ```bash
 git -C <main> merge --squash issue/<n>-<slug>
 cd <main> && node tools/changelog.mjs add <Section> "<linha de .work/changelog.md>"
+(cd <main> && npm ci --silent)   # node_modules é por worktree; o make check roda o lint
 make -C <main> check
 git -C <main> add CHANGELOG.md
 git -C <main> commit -m "<type>(<scope>): <resumo da issue> (#<n>)"
@@ -78,7 +79,7 @@ git -C <main> push origin main
 Se o push for rejeitado porque a `main` remota avançou:
 1. `git -C <main> pull --rebase origin main`;
    - se a validação veio do `playtest` e o pull trouxe mudanças em `scripts lang templates styles module.json` (`git -C <main> diff --name-only <sha do squash> HEAD -- …`), pare antes do push e pergunte com `ask_user` se é preciso rodar o playtest de novo com a `main` ativa;
-2. `make check` de novo;
+2. `(cd <main> && npm ci --silent) && make -C <main> check` de novo (o pull pode ter mudado o `package-lock.json`);
 3. push de novo.
 
 Nunca use force.

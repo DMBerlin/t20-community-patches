@@ -2,7 +2,7 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
-.PHONY: help test check active active-status worktree package
+.PHONY: help test lint check active active-status worktree package
 
 help: ## List commands
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-15s %s\n", $$1, $$2}'
@@ -10,8 +10,12 @@ help: ## List commands
 test: ## Run unit tests
 	@node --test "tests/*.test.mjs"
 
-check: ## Syntax-check all scripts, then run tests
-	@for f in scripts/*.mjs scripts/**/*.mjs tools/*.mjs tests/*.mjs; do node --check "$$f" || exit 1; done
+lint: ## Lint (ESLint): layer boundaries, size and style
+	@npx --no-install eslint .
+
+check: ## Syntax-check all scripts, lint, then run tests
+	@find scripts tools tests -name '*.mjs' | sort | while read -r f; do node --check "$$f" || exit 1; done
+	@$(MAKE) --no-print-directory lint
 	@$(MAKE) --no-print-directory test
 
 active: ## Make Foundry load THIS worktree (symlink in Data/modules; FOUNDRY_DATA overrides the path)

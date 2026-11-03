@@ -39,8 +39,8 @@ jobs:
           fi
           grep -q "^## $GITHUB_REF_NAME - " CHANGELOG.md || { echo "::error::CHANGELOG.md has no $GITHUB_REF_NAME section"; exit 1; }
 
-      - name: Test
-        run: node --test "tests/*.test.mjs"
+      - name: Check
+        run: npm ci && make check
 
       - name: Package
         run: |

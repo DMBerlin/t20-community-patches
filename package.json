@@ -1,0 +1,7 @@
+{
+  "name": "t20-community-patches",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node --test \"tests/*.test.mjs\"", "lint": "eslint ." },
+  "devDependencies": { "eslint": "^9", "@eslint/js": "^9", "globals": "^16" }
+}

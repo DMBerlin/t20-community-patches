@@ -10,6 +10,10 @@ Não edite as seções de versão à mão.
 
 ## Unreleased
 
+### Changed
+
+- Lint de fronteiras entre camadas e CI em push e PR (#83).
+
 ## v1.1.0 - 2026-10-27
 
 **Compatibilidade:** Foundry VTT (mínimo 14, verificado 14.369) · Tormenta20 (mínimo 1.6.5, verificado 1.6.6)

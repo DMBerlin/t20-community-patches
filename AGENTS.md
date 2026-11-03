@@ -49,12 +49,26 @@ t20-community-patches/
 | Comando | O que faz |
 |---|---|
 | `make test` | Testes unitários (`node --test "tests/*.test.mjs"`) |
-| `make check` | `node --check` em todos os scripts + testes |
+| `make lint` | ESLint: fronteiras entre camadas, tamanho e estilo (precisa de `npm ci` na worktree) |
+| `make check` | `node --check` em todos os scripts, lint e testes; o CI roda o mesmo em push e PR |
 | `make active` | Faz o Foundry carregar **esta** worktree (link simbólico em `Data/modules`) |
 | `make active-status` | Mostra qual worktree o Foundry está carregando |
 | `make worktree ISSUE=n` | Cria ou reutiliza a worktree da issue |
 | `make package` | Gera `dist/module.zip` e `dist/module.json` |
 | `node tools/changelog.mjs …` | `add`, `next`, `release`, `notes` (ver o cabeçalho do arquivo) |
+
+## Camadas e fronteiras
+
+O `eslint.config.mjs` garante as fronteiras da arquitetura em camadas (épico #82). Rode `npm ci` uma vez em cada worktree; depois, `make lint` ou `make check`.
+
+- Camadas: `scripts/kernel`, `scripts/platform`, `scripts/services`, `scripts/lib` e `scripts/features/<feature>`.
+- Globais do Foundry (`game`, `CONFIG`, `ui`, `foundry`, `canvas`, `Hooks`, `CONST`, `Roll`, `ChatMessage`, `Actor`, `Item`, `Handlebars`) são proibidos nas camadas puras: `kernel`, `services`, `lib` e o domínio das features (`domain.mjs` ou `domain/`). Isso vale também para `globalThis.<global>`, `window.<global>` e `self.<global>`, para cadeias como `globalThis.window.game` e para desestruturação (`const { game } = window`), via a regra local `t20/no-foundry-globals`.
+- A regra local `t20/layer-boundaries` (`tools/eslint/layer-boundaries.mjs`) resolve cada importação relativa a partir do arquivo, em qualquer profundidade de pasta. Importações dentro da mesma feature são livres, salvo as do domínio abaixo. Ela também verifica `export … from` e `import()`; nas features e em `scripts/lib`, `import()` só aceita caminho literal. Nas camadas, só caminhos relativos (`./`, `../`): caminho absoluto, URL ou pacote é erro.
+- Uma feature não importa outra feature nem `scripts/platform`; ela recebe a plataforma por `ctx`. Código comum vai para `scripts/lib` ou `scripts/services`.
+- O domínio de uma feature (`domain.mjs` ou `domain/`) e `scripts/lib` não importam `integration`, `ui`, `scripts/platform` nem `scripts/services`; `scripts/lib` também não importa features. Os dois também não importam o código legado de `scripts/` (raiz, `patches`, `rules`, `apps`): mova o código puro para `scripts/lib`.
+- No máximo 300 linhas por arquivo nas camadas. Um domínio maior vira uma pasta `domain/`.
+- Estilo: retorno antecipado (`no-else-return`), profundidade de blocos até 3, `===` (exceto com `null`), `const` e nenhum `var`. Complexidade acima de 12 e mais de 4 parâmetros geram aviso.
+- Pastas legadas (`scripts/patches`, `scripts/rules`, `scripts/apps` e a raiz de `scripts/`) e os testes só geram avisos até as fases de migração (#88, #89). Não rode `eslint --fix` nelas fora dessas fases.
 
 ## GitHub e git
 

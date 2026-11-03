@@ -41,6 +41,7 @@ node tools/changelog.mjs compat                            # compatibilidade dec
 data="${FOUNDRY_DATA:-$HOME/Library/Application Support/FoundryVTT/Data}"
 node -p "require('$data/systems/tormenta20/system.json').version"   # Tormenta20 instalado
 gh run list -R DMBerlin/t20-community-patches --workflow release.yml --limit 3
+npm ci --silent                                            # node_modules é por worktree; o make check roda o lint
 make check
 ```
 

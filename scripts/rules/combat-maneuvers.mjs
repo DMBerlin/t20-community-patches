@@ -891,18 +891,17 @@ function redrawAll() {
   }
 }
 
-export function registerCombatManeuversSetting() {
-  game.settings.register(MODULE_ID, COMBAT_MANEUVERS_SETTING, {
-    name: "T20CP.CombatManeuvers.Setting.Name",
-    hint: "T20CP.CombatManeuvers.Setting.Hint",
-    scope: "world",
-    config: false,
-    type: String,
-    choices: { off: "T20CP.CombatManeuvers.Setting.off", on: "T20CP.CombatManeuvers.Setting.on" },
-    default: "off",
-    onChange: () => redrawAll()
-  });
-}
+/** @type {import("../kernel/feature.mjs").SettingSpec} */
+const SETTING_SPEC = {
+  key: COMBAT_MANEUVERS_SETTING,
+  name: "T20CP.CombatManeuvers.Setting.Name",
+  hint: "T20CP.CombatManeuvers.Setting.Hint",
+  scope: "world",
+  type: String,
+  choices: { off: "T20CP.CombatManeuvers.Setting.off", on: "T20CP.CombatManeuvers.Setting.on" },
+  default: "off",
+  onChange: () => redrawAll()
+};
 
 /** Installs the rule. The settings are read on every use, render and click, so a change applies without reloading. */
 export function installCombatManeuversRule() {
@@ -964,3 +963,13 @@ export function installCombatManeuversRule() {
   Hooks.on("updateChatMessage", onResultChanged);
   Hooks.on("deleteChatMessage", onResultChanged);
 }
+
+/** @type {import("../kernel/feature.mjs").Feature} */
+export default {
+  id: "combat-maneuvers",
+  kind: "rule",
+  group: "combat",
+  system: { id: "tormenta20" },
+  settings: [SETTING_SPEC],
+  install: () => installCombatManeuversRule()
+};

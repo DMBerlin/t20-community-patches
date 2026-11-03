@@ -1114,20 +1114,21 @@ export function renderChatMessage(message, html) {
 /*  Setting and installation                    */
 /* -------------------------------------------- */
 
-/** Registers the world setting. Runs on "init" for every system, so the setting always exists. */
-export function registerItemEffectiveStatsSetting() {
-  game.settings.register(MODULE_ID, ITEM_EFFECTIVE_STATS_SETTING, {
-    name: `${I18N}.Setting.Name`,
-    hint: `${I18N}.Setting.Hint`,
-    scope: "world",
-    config: false,
-    type: String,
-    choices: Object.fromEntries(MODES.map((m) => [m, `${I18N}.Setting.${m}`])),
-    default: DEFAULT_MODE,
-    // Derived data only changes on a new preparation: a reload prepares every document again.
-    requiresReload: true
-  });
-}
+/**
+ * World setting. The lifecycle registers it on "init" for every system, so it always exists.
+ * @type {import("../kernel/feature.mjs").SettingSpec}
+ */
+const SETTING_SPEC = {
+  key: ITEM_EFFECTIVE_STATS_SETTING,
+  name: `${I18N}.Setting.Name`,
+  hint: `${I18N}.Setting.Hint`,
+  scope: "world",
+  type: String,
+  choices: Object.fromEntries(MODES.map((m) => [m, `${I18N}.Setting.${m}`])),
+  default: DEFAULT_MODE,
+  // Derived data only changes on a new preparation: a reload prepares every document again.
+  requiresReload: true
+};
 
 function guarded(label, fn) {
   return (...args) => {
@@ -1220,3 +1221,14 @@ export function installItemEffectiveStatsRule() {
   Hooks.on("preCreateChatMessage", guarded("failed to snapshot the chat card", onPreCreateChatMessage));
   Hooks.on("renderChatMessageHTML", guarded("failed to draw the chat card", renderChatMessage));
 }
+
+/** @type {import("../kernel/feature.mjs").Feature} */
+export default {
+  id: "item-effective-stats",
+  kind: "rule",
+  group: "items",
+  system: { id: "tormenta20" },
+  settings: [SETTING_SPEC],
+  after: ["*"],
+  install: () => installItemEffectiveStatsRule()
+};

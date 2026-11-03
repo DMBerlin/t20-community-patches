@@ -83,22 +83,44 @@ O `eslint.config.mjs` garante as fronteiras da arquitetura em camadas (épico #8
 - Título de issue: descrição em português; issues de patch terminam com o id do patch entre parênteses, por exemplo `Efeitos de uso … (suppressed-usage-effects)`.
 - Upstream: https://gitlab.com/vizael/Tormenta20 (issues e branches).
 
-## Contrato de um patch
+## Contrato de uma feature
 
-Cada correção fica em `scripts/patches/<id>.mjs` e é registrada em `PATCHES`, em `scripts/patches/index.mjs`:
+Patches (correções) e regras opcionais seguem um contrato único, `Feature` (`scripts/kernel/feature.mjs`), com `kind: "patch" | "rule"`. A lista `FEATURES`, em `scripts/features/index.mjs`, define a ordem de instalação: primeiro os patches (`PATCHES`, de `scripts/patches/index.mjs`), depois as regras. Quem vem antes fica mais perto do original em cada cadeia de wrappers. O ciclo de vida (`bootFeatures`, em `scripts/kernel/lifecycle.mjs`) é o único ponto que instala features e isola erros: uma feature que lança vira `error` e não impede as outras. O `main.mjs` não conhece nenhuma feature específica.
+
+Cada correção fica em `scripts/patches/<id>.mjs` e é registrada em `PATCHES`, em `scripts/patches/index.mjs` (o `apply()` vira `install()` em `patchFeature`):
 
 ```js
 export default {
   id: "<id>",                       // também é a chave de i18n: T20CP.Patches.<id>.Name/Hint
-  group: "<um de GROUPS>",          // conditions | sheet-effects | usage-effects | items | settings
+  group: "<um de GROUPS>",          // conditions | sheet-effects | usage-effects | items | settings | actor | combat
   issue: <n>,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.5" } },
   guarded: false,                   // opcional: true se o apply() só age quando o bug aparece
+  settings: [/* opcional: SettingSpec, registradas só quando o patch é aplicado */],
   isNeeded() { /* síncrono, seguro no init, roda antes do apply(): devolve um Diagnosis */ },
   async lateProbe() { /* opcional: diagnóstico depois do ready; só atualiza selo e aviso */ },
   apply() { /* instala os wrappers; chamado uma vez no init */ }
 };
 ```
+
+Cada regra opcional fica em `scripts/rules/<arquivo>.mjs`, exporta uma feature como `default` e é adicionada a `FEATURES`, na posição certa:
+
+```js
+export default {
+  id: "<id>",                       // id da entrada na Central (T20CP.Manager.Rules.<id> quando há várias chaves)
+  kind: "rule",
+  group: "<um de GROUPS>",
+  system: { id: "tormenta20" },     // outro sistema → estado "incompatible", sem install
+  settings: [{ key: "<chave>", scope: "world", type: String, choices: {…}, default: "off", name, hint, onChange }],
+  after: ["<id>"],                  // opcional: ids que precisam vir ANTES em FEATURES; "*" = a última
+  install(ctx) { /* lê a própria configuração a cada uso; ctx = { id, wrap } */ }
+};
+```
+
+- `SettingSpec`: o objeto passado a `game.settings.register`, mais `key`. O registro força `config: false`. A Central mostra a configuração na aba "Regras opcionais" (`centerSettings(FEATURES)`, em `scripts/kernel/settings.mjs`), agrupada por `centerId ?? id`; `center: false` a esconde. **Nunca** renomeie uma chave existente.
+- As configurações das regras são registradas antes de qualquer `install`, em qualquer sistema.
+- `after` não reordena nada: é uma restrição verificada por `validateFeatures` (no `init` e em `tests/kernel-feature.test.mjs`). Ao incluir uma regra, escolha a posição em `FEATURES` e declare em `after` as dependências de ordem, com um comentário que explique o motivo.
+- `api.status` lista patches e regras (`kind`); as regras têm estado `installed`, `incompatible` ou `error`. Avisos e a aba de correções da Central só usam os patches.
 
 Diagnóstico (`Diagnosis`, em `scripts/registry.mjs`): `{ bug: "present" | "fixed" | "unknown", confidence: "high" | "low", evidence?: string }`.
 - `confidence: "high"` só quando a evidência cobre **tudo** o que o patch corrige. Em Automático, só `fixed`/high deixa de aplicar a correção; `fixed`/low vira `suspected-fixed` e a correção continua aplicada.
@@ -107,7 +129,7 @@ Diagnóstico (`Diagnosis`, em `scripts/registry.mjs`): `{ bug: "present" | "fixe
 - `guarded: true` permite aplicar a correção numa versão não verificada sem confirmar o bug (`applied-guarded`).
 - `lateProbe()` só roda quando o patch foi aplicado, não pode medir o efeito do próprio patch e devolve `undefined` quando não aprendeu nada.
 
-Regras:
+Regras (patches e regras opcionais):
 - Lógica de decisão em **funções puras exportadas**, testadas em `tests/<id>.test.mjs`. A integração com o Foundry fica fina.
 - Wrappers preservam `this`, argumentos e o valor de retorno, e falham de forma segura (sem quebrar o sistema).
 - Todo wrapper de método passa por `wraps.wrap(alvo, "método", "<id>", function (original, ...args) { … })`, de `scripts/kernel/wrap.mjs`; nunca atribua direto ao protótipo. O dono é o id do patch ou da regra (ou o nome do serviço compartilhado). Quem registra primeiro fica mais perto do original, e a ordem aparece em `api.wraps()` e no snapshot `tests/fixtures/wrap-order.json` (regerar com `UPDATE_WRAP_ORDER=1 node --test tests/wrap-order.test.mjs` quando a ordem mudar de propósito). Para uma fábrica pura `(original) => substituta`, use `fromFactory`. `scripts/kernel/` não lê globais do Foundry.

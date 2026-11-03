@@ -163,22 +163,23 @@ function noteCard(actor, options) {
   options.chatFlavor = options.chatFlavor ? `${options.chatFlavor} ${span}` : span;
 }
 
-/** Registers the world setting. Runs on "init" for every system, so the setting always exists. */
-export function registerTrainedOnlySetting() {
-  game.settings.register(MODULE_ID, TRAINED_ONLY_SETTING, {
-    name: "T20CP.TrainedOnly.Setting.Name",
-    hint: "T20CP.TrainedOnly.Setting.Hint",
-    scope: "world",
-    config: false,
-    type: String,
-    choices: {
-      off: "T20CP.TrainedOnly.Setting.off",
-      warn: "T20CP.TrainedOnly.Setting.warn",
-      block: "T20CP.TrainedOnly.Setting.block"
-    },
-    default: "off"
-  });
-}
+/**
+ * World setting. The lifecycle registers it on "init" for every system, so it always exists.
+ * @type {import("../kernel/feature.mjs").SettingSpec}
+ */
+const SETTING_SPEC = {
+  key: TRAINED_ONLY_SETTING,
+  name: "T20CP.TrainedOnly.Setting.Name",
+  hint: "T20CP.TrainedOnly.Setting.Hint",
+  scope: "world",
+  type: String,
+  choices: {
+    off: "T20CP.TrainedOnly.Setting.off",
+    warn: "T20CP.TrainedOnly.Setting.warn",
+    block: "T20CP.TrainedOnly.Setting.block"
+  },
+  default: "off"
+};
 
 /** Installs the rule. The mode is read on every use, so a change applies without reloading. */
 export function installTrainedOnlyRule() {
@@ -214,3 +215,14 @@ export function installTrainedOnlyRule() {
     return display.call(this, params, ...rest);
   });
 }
+
+/** @type {import("../kernel/feature.mjs").Feature} */
+export default {
+  id: "trained-only-skills",
+  kind: "rule",
+  group: "actor",
+  system: { id: "tormenta20" },
+  settings: [SETTING_SPEC],
+  after: ["usage-effect-max"],
+  install: () => installTrainedOnlyRule()
+};

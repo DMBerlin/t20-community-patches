@@ -412,22 +412,23 @@ function wrapBefore(proto, method, check) {
   });
 }
 
-/** Registers the world setting. Runs on "init" for every system, so the setting always exists. */
-export function registerUsageEffectMaxSetting() {
-  game.settings.register(MODULE_ID, USAGE_EFFECT_MAX_SETTING, {
-    name: "T20CP.UsageEffectMax.Setting.Name",
-    hint: "T20CP.UsageEffectMax.Setting.Hint",
-    scope: "world",
-    config: false,
-    type: String,
-    choices: {
-      off: "T20CP.UsageEffectMax.Setting.off",
-      warn: "T20CP.UsageEffectMax.Setting.warn",
-      block: "T20CP.UsageEffectMax.Setting.block"
-    },
-    default: "warn"
-  });
-}
+/**
+ * World setting. The lifecycle registers it on "init" for every system, so it always exists.
+ * @type {import("../kernel/feature.mjs").SettingSpec}
+ */
+const SETTING_SPEC = {
+  key: USAGE_EFFECT_MAX_SETTING,
+  name: "T20CP.UsageEffectMax.Setting.Name",
+  hint: "T20CP.UsageEffectMax.Setting.Hint",
+  scope: "world",
+  type: String,
+  choices: {
+    off: "T20CP.UsageEffectMax.Setting.off",
+    warn: "T20CP.UsageEffectMax.Setting.warn",
+    block: "T20CP.UsageEffectMax.Setting.block"
+  },
+  default: "warn"
+};
 
 /** Installs the rule. The mode is read on every use, so a change applies without reloading. */
 export function installUsageEffectMaxRule() {
@@ -454,3 +455,13 @@ export function installUsageEffectMaxRule() {
     wrapActorRoll(actorProto, "rollAtributo", "ability", (actor, key) => actor.system?.atributos?.[key]?.name);
   }
 }
+
+/** @type {import("../kernel/feature.mjs").Feature} */
+export default {
+  id: "usage-effect-max",
+  kind: "rule",
+  group: "usage-effects",
+  system: { id: "tormenta20" },
+  settings: [SETTING_SPEC],
+  install: () => installUsageEffectMaxRule()
+};

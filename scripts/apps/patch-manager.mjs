@@ -1,5 +1,6 @@
 import { MODULE_ID } from "../utils.mjs";
-import { RULE_SETTINGS, getPatchMode } from "../settings.mjs";
+import { getPatchMode } from "../settings.mjs";
+import { centerSettings } from "../kernel/settings.mjs";
 import {
   STATE_CATEGORIES,
   controlsFromMode,
@@ -11,7 +12,7 @@ import {
   stateCategory,
   nextFocusIndex
 } from "../registry.mjs";
-import { GROUPS, PATCHES } from "../patches/index.mjs";
+import { FEATURES, GROUPS, PATCH_FEATURES } from "../features/index.mjs";
 import { PATCH_FILTERS, RULE_FILTERS, facetCounts, matchesView, patchBucket, ruleBucket } from "./center-view.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -84,7 +85,7 @@ export class PatchManager extends HandlebarsApplicationMixin(ApplicationV2) {
     const bugs = game.modules.get(MODULE_ID).bugs;
     const versions = { system: game.system.version, foundry: game.version, module: game.modules.get(MODULE_ID).version };
 
-    const rows = PATCHES.map((patch) => {
+    const rows = PATCH_FEATURES.map((patch) => {
       const { state = "disabled", diagnosis, reason, changed } = status.get(patch.id) ?? {};
       const shown = displayState(state, diagnosis);
       const category = stateCategory(shown);
@@ -153,7 +154,7 @@ export class PatchManager extends HandlebarsApplicationMixin(ApplicationV2) {
   #prepareRules() {
     this.#ruleSnapshot = {};
     const rules = [];
-    for (const { id, group, keys } of RULE_SETTINGS) {
+    for (const { id, group, keys } of centerSettings(FEATURES)) {
       const entries = keys.map((key) => this.#prepareSetting(key)).filter(Boolean);
       if (!entries.length) continue;
       const view = { id, group, bucket: ruleBucket(entries.map((e) => e.value)) };
@@ -363,7 +364,7 @@ export class PatchManager extends HandlebarsApplicationMixin(ApplicationV2) {
    */
   #collectChanges(submitted) {
     const patches = [];
-    for (const patch of PATCHES) {
+    for (const patch of PATCH_FEATURES) {
       const key = `${PATCH_INPUT}${patch.id}`;
       if (!(key in submitted)) continue;
       const mode = modeFromControls({ enabled: !!submitted[key], always: !!submitted[`${ALWAYS_INPUT}${patch.id}`] });

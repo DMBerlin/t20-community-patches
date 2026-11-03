@@ -72,3 +72,12 @@ export function installManaQueue(proto = globalThis.CONFIG?.Actor?.documentClass
     });
   });
 }
+
+/** @type {import("../kernel/feature.mjs").Feature} */
+export default {
+  id: "mana-queue",
+  kind: "rule",
+  group: "usage-effects",
+  system: { id: "tormenta20" },
+  install: () => installManaQueue()
+};

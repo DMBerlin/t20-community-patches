@@ -550,19 +550,20 @@ function refreshActors() {
   }
 }
 
-/** Registers the world setting. Runs on "init" for every system, so the setting always exists. */
-export function registerSourceStackingSetting() {
-  game.settings.register(MODULE_ID, SOURCE_STACKING_SETTING, {
-    name: "T20CP.SourceStacking.Setting.Name",
-    hint: "T20CP.SourceStacking.Setting.Hint",
-    scope: "world",
-    config: false,
-    type: String,
-    choices: { off: "T20CP.SourceStacking.Setting.off", on: "T20CP.SourceStacking.Setting.on" },
-    default: "off",
-    onChange: () => refreshActors()
-  });
-}
+/**
+ * World setting. The lifecycle registers it on "init" for every system, so it always exists.
+ * @type {import("../kernel/feature.mjs").SettingSpec}
+ */
+const SETTING_SPEC = {
+  key: SOURCE_STACKING_SETTING,
+  name: "T20CP.SourceStacking.Setting.Name",
+  hint: "T20CP.SourceStacking.Setting.Hint",
+  scope: "world",
+  type: String,
+  choices: { off: "T20CP.SourceStacking.Setting.off", on: "T20CP.SourceStacking.Setting.on" },
+  default: "off",
+  onChange: () => refreshActors()
+};
 
 /**
  * Installs the rule. Must run after the patches: the stamp sees the effects linked-usage-effects injects, and the
@@ -680,3 +681,13 @@ export function installSourceStackingRule() {
     }
   });
 }
+
+/** @type {import("../kernel/feature.mjs").Feature} */
+export default {
+  id: "source-stacking",
+  kind: "rule",
+  group: "sheet-effects",
+  system: { id: "tormenta20" },
+  settings: [SETTING_SPEC],
+  install: () => installSourceStackingRule()
+};

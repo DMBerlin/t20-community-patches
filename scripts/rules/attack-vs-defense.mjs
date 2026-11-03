@@ -312,28 +312,31 @@ export function decorate(message, html) {
   }
 }
 
-/** Registers the world setting. Runs on "init" for every system, so the setting always exists. */
-export function registerAttackVsDefenseSetting() {
-  game.settings.register(MODULE_ID, ATTACK_VS_DEFENSE_SETTING, {
-    name: "T20CP.AttackVsDefense.Setting.Name",
-    hint: "T20CP.AttackVsDefense.Setting.Hint",
-    scope: "world",
-    config: false,
-    type: String,
-    choices: { off: "T20CP.AttackVsDefense.Setting.off", on: "T20CP.AttackVsDefense.Setting.on" },
-    default: "off"
-  });
-  game.settings.register(MODULE_ID, ATTACK_VS_DEFENSE_VISIBILITY_SETTING, {
-    name: "T20CP.AttackVsDefense.Visibility.Name",
-    hint: "T20CP.AttackVsDefense.Visibility.Hint",
-    scope: "world",
-    config: false,
-    type: String,
-    choices: Object.fromEntries(VISIBILITY_MODES.map((m) => [m, `T20CP.AttackVsDefense.Visibility.${m}`])),
-    default: "show",
-    onChange: () => redrawDecorated()
-  });
-}
+/**
+ * World settings. The lifecycle registers them on "init" for every system, so they always exist.
+ * @type {import("../kernel/feature.mjs").SettingSpec}
+ */
+const SETTING_SPEC = {
+  key: ATTACK_VS_DEFENSE_SETTING,
+  name: "T20CP.AttackVsDefense.Setting.Name",
+  hint: "T20CP.AttackVsDefense.Setting.Hint",
+  scope: "world",
+  type: String,
+  choices: { off: "T20CP.AttackVsDefense.Setting.off", on: "T20CP.AttackVsDefense.Setting.on" },
+  default: "off"
+};
+
+/** @type {import("../kernel/feature.mjs").SettingSpec} */
+const VISIBILITY_SPEC = {
+  key: ATTACK_VS_DEFENSE_VISIBILITY_SETTING,
+  name: "T20CP.AttackVsDefense.Visibility.Name",
+  hint: "T20CP.AttackVsDefense.Visibility.Hint",
+  scope: "world",
+  type: String,
+  choices: Object.fromEntries(VISIBILITY_MODES.map((m) => [m, `T20CP.AttackVsDefense.Visibility.${m}`])),
+  default: "show",
+  onChange: () => redrawDecorated()
+};
 
 /** Installs the rule. The setting is read on every attack, so a change applies without reloading. */
 export function installAttackVsDefenseRule() {
@@ -380,3 +383,13 @@ export function installAttackVsDefenseRule() {
     return html;
   });
 }
+
+/** @type {import("../kernel/feature.mjs").Feature} */
+export default {
+  id: "attack-vs-defense",
+  kind: "rule",
+  group: "combat",
+  system: { id: "tormenta20" },
+  settings: [SETTING_SPEC, VISIBILITY_SPEC],
+  install: () => installAttackVsDefenseRule()
+};

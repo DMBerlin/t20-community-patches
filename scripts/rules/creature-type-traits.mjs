@@ -369,19 +369,20 @@ function refreshActors() {
   }
 }
 
-/** Registers the world setting. Runs on "init" for every system, so the setting always exists. */
-export function registerCreatureTypeTraitsSetting() {
-  game.settings.register(MODULE_ID, CREATURE_TYPE_TRAITS_SETTING, {
-    name: "T20CP.CreatureTypeTraits.Setting.Name",
-    hint: "T20CP.CreatureTypeTraits.Setting.Hint",
-    scope: "world",
-    config: false,
-    type: String,
-    choices: { off: "T20CP.CreatureTypeTraits.Setting.off", on: "T20CP.CreatureTypeTraits.Setting.on" },
-    default: "off",
-    onChange: () => refreshActors()
-  });
-}
+/**
+ * World setting. The lifecycle registers it on "init" for every system, so it always exists.
+ * @type {import("../kernel/feature.mjs").SettingSpec}
+ */
+const SETTING_SPEC = {
+  key: CREATURE_TYPE_TRAITS_SETTING,
+  name: "T20CP.CreatureTypeTraits.Setting.Name",
+  hint: "T20CP.CreatureTypeTraits.Setting.Hint",
+  scope: "world",
+  type: String,
+  choices: { off: "T20CP.CreatureTypeTraits.Setting.off", on: "T20CP.CreatureTypeTraits.Setting.on" },
+  default: "off",
+  onChange: () => refreshActors()
+};
 
 function findDescriptor(proto, key) {
   for (let p = proto; p; p = Object.getPrototypeOf(p)) {
@@ -414,3 +415,14 @@ export function installCreatureTypeTraitsRule() {
 
   Hooks.on("createActiveEffect", onCreateActiveEffect);
 }
+
+/** @type {import("../kernel/feature.mjs").Feature} */
+export default {
+  id: "creature-type-traits",
+  kind: "rule",
+  group: "actor",
+  system: { id: "tormenta20" },
+  settings: [SETTING_SPEC],
+  after: ["death-threshold-floor", "nonlethal-damage"],
+  install: () => installCreatureTypeTraitsRule()
+};

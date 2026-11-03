@@ -594,22 +594,23 @@ async function postConcentration(item, options, rollMode) {
   await ChatMessage.create(data);
 }
 
-/** Registers the world settings. Runs on "init" for every system, so the settings always exist. */
-export function registerCastingRestrictionsSettings() {
-  const register = (key, prefix, modes) =>
-    game.settings.register(MODULE_ID, key, {
-      name: `T20CP.CastingRestrictions.${prefix}.Setting.Name`,
-      hint: `T20CP.CastingRestrictions.${prefix}.Setting.Hint`,
-      scope: "world",
-      config: false,
-      type: String,
-      choices: Object.fromEntries(modes.map((m) => [m, `T20CP.CastingRestrictions.${prefix}.Setting.${m}`])),
-      default: "off"
-    });
-  register(SUSTAINED_SPELL_SETTING, "Sustained", SUSTAINED_SPELL_MODES);
-  register(CASTING_CONDITION_SETTING, "Conditions", CASTING_CONDITION_MODES);
-  register(CONCENTRATION_SETTING, "Concentration", CONCENTRATION_MODES);
-}
+/** @returns {import("../kernel/feature.mjs").SettingSpec} */
+const settingSpec = (key, prefix, modes) => ({
+  key,
+  name: `T20CP.CastingRestrictions.${prefix}.Setting.Name`,
+  hint: `T20CP.CastingRestrictions.${prefix}.Setting.Hint`,
+  scope: "world",
+  type: String,
+  choices: Object.fromEntries(modes.map((m) => [m, `T20CP.CastingRestrictions.${prefix}.Setting.${m}`])),
+  default: "off"
+});
+
+/** World settings. The lifecycle registers them on "init" for every system, so they always exist. */
+const SETTING_SPECS = [
+  settingSpec(SUSTAINED_SPELL_SETTING, "Sustained", SUSTAINED_SPELL_MODES),
+  settingSpec(CASTING_CONDITION_SETTING, "Conditions", CASTING_CONDITION_MODES),
+  settingSpec(CONCENTRATION_SETTING, "Concentration", CONCENTRATION_MODES)
+];
 
 /**
  * Installs the rules. Must run after the patches and the other rules, arcane-armor-casting included (it stays inside
@@ -668,3 +669,14 @@ export function installCastingRestrictionsRule() {
     }
   });
 }
+
+/** @type {import("../kernel/feature.mjs").Feature} */
+export default {
+  id: "casting-restrictions",
+  kind: "rule",
+  group: "usage-effects",
+  system: { id: "tormenta20" },
+  settings: SETTING_SPECS,
+  after: ["save-button", "attack-vs-defense", "situational-modifiers", "concealment-miss-chance", "combat-maneuvers", "arcane-armor", "usage-effect-max"],
+  install: () => installCastingRestrictionsRule()
+};

@@ -314,22 +314,23 @@ async function removeOrphanMarker(effect) {
   await deletion;
 }
 
-/** Registers the world setting. Runs on "init" for every system, so the setting always exists. */
-export function registerSameAbilitySetting() {
-  game.settings.register(MODULE_ID, SAME_ABILITY_SETTING, {
-    name: "T20CP.SameAbility.Setting.Name",
-    hint: "T20CP.SameAbility.Setting.Hint",
-    scope: "world",
-    config: false,
-    type: String,
-    choices: {
-      off: "T20CP.SameAbility.Setting.off",
-      replace: "T20CP.SameAbility.Setting.replace",
-      highest: "T20CP.SameAbility.Setting.highest"
-    },
-    default: "off"
-  });
-}
+/**
+ * World setting. The lifecycle registers it on "init" for every system, so it always exists.
+ * @type {import("../kernel/feature.mjs").SettingSpec}
+ */
+const SETTING_SPEC = {
+  key: SAME_ABILITY_SETTING,
+  name: "T20CP.SameAbility.Setting.Name",
+  hint: "T20CP.SameAbility.Setting.Hint",
+  scope: "world",
+  type: String,
+  choices: {
+    off: "T20CP.SameAbility.Setting.off",
+    replace: "T20CP.SameAbility.Setting.replace",
+    highest: "T20CP.SameAbility.Setting.highest"
+  },
+  default: "off"
+};
 
 /**
  * Installs the rule. Must run after the patches, so the stamp sees the effects linked-usage-effects injects.
@@ -372,3 +373,13 @@ export function installSameAbilityRule() {
     }
   });
 }
+
+/** @type {import("../kernel/feature.mjs").Feature} */
+export default {
+  id: "same-ability-stacking",
+  kind: "rule",
+  group: "usage-effects",
+  system: { id: "tormenta20" },
+  settings: [SETTING_SPEC],
+  install: () => installSameAbilityRule()
+};

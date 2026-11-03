@@ -455,18 +455,19 @@ function renderItemField(app, html) {
   anchor.after(row);
 }
 
-/** Registers the world setting. Runs on "init" for every system, so the setting always exists. */
-export function registerArcaneArmorSetting() {
-  game.settings.register(MODULE_ID, ARCANE_ARMOR_SETTING, {
-    name: "T20CP.ArcaneArmor.Setting.Name",
-    hint: "T20CP.ArcaneArmor.Setting.Hint",
-    scope: "world",
-    config: false,
-    type: String,
-    choices: { off: "T20CP.ArcaneArmor.Setting.off", roll: "T20CP.ArcaneArmor.Setting.roll" },
-    default: "off"
-  });
-}
+/**
+ * World setting. The lifecycle registers it on "init" for every system, so it always exists.
+ * @type {import("../kernel/feature.mjs").SettingSpec}
+ */
+const SETTING_SPEC = {
+  key: ARCANE_ARMOR_SETTING,
+  name: "T20CP.ArcaneArmor.Setting.Name",
+  hint: "T20CP.ArcaneArmor.Setting.Hint",
+  scope: "world",
+  type: String,
+  choices: { off: "T20CP.ArcaneArmor.Setting.off", roll: "T20CP.ArcaneArmor.Setting.roll" },
+  default: "off"
+};
 
 /**
  * Installs the rule. Must run before installCastingRestrictionsRule, so this displayCard wrapper sits inside that one
@@ -515,3 +516,13 @@ export function installArcaneArmorRule() {
     }
   });
 }
+
+/** @type {import("../kernel/feature.mjs").Feature} */
+export default {
+  id: "arcane-armor",
+  kind: "rule",
+  group: "usage-effects",
+  system: { id: "tormenta20" },
+  settings: [SETTING_SPEC],
+  install: () => installArcaneArmorRule()
+};

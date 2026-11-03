@@ -234,7 +234,8 @@ async function installAll() {
   const list = api.wraps();
   const owners = new Set(list.flatMap((w) => w.owners));
   const skipped = api.status.filter((s) => s.state === "error").map((s) => ({ id: s.id, reason: s.reason }));
-  const noWraps = api.status.filter((s) => s.state !== "error" && !owners.has(s.id)).map((s) => s.id);
+  // Patches only: the rules without wrappers (hooks only) and death-threshold-floor (owner death-threshold) are not listed.
+  const noWraps = api.status.filter((s) => s.kind === "patch" && s.state !== "error" && !owners.has(s.id)).map((s) => s.id);
   return { wraps: list, skipped, noWraps, errors, warnings };
 }
 

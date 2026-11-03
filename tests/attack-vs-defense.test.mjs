@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import {
+import attackVsDefense, {
   attackKind,
   buildTargetResult,
   canSeeDefense,
@@ -10,7 +10,6 @@ import {
   describeTarget,
   effectiveDefense,
   installAttackVsDefenseRule,
-  registerAttackVsDefenseSetting,
   resolveAttack,
   resultVisibility
 } from "../scripts/rules/attack-vs-defense.mjs";
@@ -652,7 +651,6 @@ test("changing the visibility setting rebuilds the block in place on every displ
   const old = message(env, data);
   old.id = "old";
   game.messages = { contents: [old, msg, { id: "b", rolls: [{ options: {} }] }, { id: "c" }] };
-  game.settings.register = (scope, key, config) => (registered[key] = config);
   const queried = [];
   globalThis.document.querySelectorAll = (sel) => {
     const id = sel.match(/data-message-id="(\w+)"/)[1];
@@ -661,7 +659,7 @@ test("changing the visibility setting rebuilds the block in place on every displ
   };
   const reposted = [];
   globalThis.ui = { chat: { updateMessage: (m) => reposted.push(m.id) } };
-  registerAttackVsDefenseSetting();
+  for (const spec of attackVsDefense.settings) registered[spec.key] = spec;
   assert.deepEqual(Object.keys(registered.attackVsDefenseVisibility.choices), ["show", "announce", "hide"]);
   assert.equal(registered.attackVsDefenseVisibility.default, "show");
   const block = (c) => c.container.querySelectorAll(".t20cp-attack-vs-defense");

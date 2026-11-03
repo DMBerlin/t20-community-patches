@@ -338,18 +338,19 @@ async function syncDyingStates(actor, before, after) {
   }
 }
 
-/** Registers the world setting. Runs on "init" for every system, so the setting always exists. */
-export function registerDyingStatesSetting() {
-  game.settings.register(MODULE_ID, DYING_STATES_SETTING, {
-    name: "T20CP.DyingStates.Setting.Name",
-    hint: "T20CP.DyingStates.Setting.Hint",
-    scope: "world",
-    config: false,
-    type: String,
-    choices: Object.fromEntries(DYING_STATES_MODES.map((m) => [m, `T20CP.DyingStates.Setting.${m}`])),
-    default: "off"
-  });
-}
+/**
+ * World setting. The lifecycle registers it on "init" for every system, so it always exists.
+ * @type {import("../kernel/feature.mjs").SettingSpec}
+ */
+const SETTING_SPEC = {
+  key: DYING_STATES_SETTING,
+  name: "T20CP.DyingStates.Setting.Name",
+  hint: "T20CP.DyingStates.Setting.Hint",
+  scope: "world",
+  type: String,
+  choices: Object.fromEntries(DYING_STATES_MODES.map((m) => [m, `T20CP.DyingStates.Setting.${m}`])),
+  default: "off"
+};
 
 /** Installs the hooks. They stay installed and read the setting on every change. */
 export function installDyingStatesRule() {
@@ -358,3 +359,13 @@ export function installDyingStatesRule() {
   Hooks.on("createActiveEffect", onCreateActiveEffect);
   Hooks.on("deleteActiveEffect", onDeleteActiveEffect);
 }
+
+/** @type {import("../kernel/feature.mjs").Feature} */
+export default {
+  id: "dying-states",
+  kind: "rule",
+  group: "actor",
+  system: { id: "tormenta20" },
+  settings: [SETTING_SPEC],
+  install: () => installDyingStatesRule()
+};

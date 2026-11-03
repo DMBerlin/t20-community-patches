@@ -20,7 +20,7 @@ export function patchBucket(category) {
 
 /**
  * Whether a rule counts as on: its first setting is not "off". Settings without an "off" choice are on.
- * @param {unknown[]} values  Saved values of the rule's settings, in RULE_SETTINGS order.
+ * @param {unknown[]} values  Saved values of the rule's settings, in the order of centerSettings (scripts/kernel/settings.mjs).
  * @returns {"on"|"off"}
  */
 export function ruleBucket(values) {

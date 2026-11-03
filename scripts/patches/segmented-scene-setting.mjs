@@ -150,21 +150,30 @@ function createConfigClass() {
   };
 }
 
+/**
+ * The scene limit. The lifecycle registers it only while this patch is applied (before apply()).
+ * @type {import("../kernel/feature.mjs").SettingSpec}
+ */
+const LIMIT_SPEC = {
+  key: LIMIT_KEY,
+  name: "T20CP.SegmentedScene.Limit.Name",
+  hint: "T20CP.SegmentedScene.Limit.Hint",
+  scope: "world",
+  // Built on registration, during "init": foundry is not available when the module is imported by the tests.
+  get type() {
+    return new foundry.data.fields.NumberField({ required: true, nullable: false, integer: true, min: 1, initial: DEFAULT_LIMIT });
+  },
+  default: DEFAULT_LIMIT,
+  onChange: warnIfOverLimit,
+  centerId: "segmented-scene-limit"
+};
+
 function apply() {
   const setting = getSetting();
   if (!setting) throw new Error(`${SETTING_NAMESPACE}.${SETTING_KEY} is not registered`);
   if (!needsFix(setting, foundry.data.fields.DataField)) return;
 
   setting.config = false;
-  game.settings.register(MODULE_ID, LIMIT_KEY, {
-    name: "T20CP.SegmentedScene.Limit.Name",
-    hint: "T20CP.SegmentedScene.Limit.Hint",
-    scope: "world",
-    config: false,
-    type: new foundry.data.fields.NumberField({ required: true, nullable: false, integer: true, min: 1, initial: DEFAULT_LIMIT }),
-    default: DEFAULT_LIMIT,
-    onChange: warnIfOverLimit
-  });
   game.settings.registerMenu(SETTING_NAMESPACE, MENU_KEY, {
     name: "T20CP.SegmentedScene.Name",
     label: "T20CP.SegmentedScene.Button",
@@ -199,6 +208,7 @@ export default {
   group: "settings",
   issue: 9,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  settings: [LIMIT_SPEC],
   isNeeded,
   apply
 };

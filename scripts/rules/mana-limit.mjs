@@ -268,22 +268,23 @@ function renderItemField(app, html) {
   anchor.after(row);
 }
 
-/** Registers the world setting. Runs on "init" for every system, so the setting always exists. */
-export function registerManaLimitSetting() {
-  game.settings.register(MODULE_ID, MANA_LIMIT_SETTING, {
-    name: "T20CP.ManaLimit.Setting.Name",
-    hint: "T20CP.ManaLimit.Setting.Hint",
-    scope: "world",
-    config: false,
-    type: String,
-    choices: {
-      off: "T20CP.ManaLimit.Setting.off",
-      warn: "T20CP.ManaLimit.Setting.warn",
-      block: "T20CP.ManaLimit.Setting.block"
-    },
-    default: "warn"
-  });
-}
+/**
+ * World setting. The lifecycle registers it on "init" for every system, so it always exists.
+ * @type {import("../kernel/feature.mjs").SettingSpec}
+ */
+const SETTING_SPEC = {
+  key: MANA_LIMIT_SETTING,
+  name: "T20CP.ManaLimit.Setting.Name",
+  hint: "T20CP.ManaLimit.Setting.Hint",
+  scope: "world",
+  type: String,
+  choices: {
+    off: "T20CP.ManaLimit.Setting.off",
+    warn: "T20CP.ManaLimit.Setting.warn",
+    block: "T20CP.ManaLimit.Setting.block"
+  },
+  default: "warn"
+};
 
 /** Installs the rule. The mode is read on every use, so a change applies without reloading. */
 export function installManaLimitRule() {
@@ -304,3 +305,13 @@ export function installManaLimitRule() {
     }
   });
 }
+
+/** @type {import("../kernel/feature.mjs").Feature} */
+export default {
+  id: "mana-limit",
+  kind: "rule",
+  group: "usage-effects",
+  system: { id: "tormenta20" },
+  settings: [SETTING_SPEC],
+  install: () => installManaLimitRule()
+};

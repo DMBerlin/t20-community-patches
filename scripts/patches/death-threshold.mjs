@@ -14,7 +14,7 @@
  * the "Zero HP states" rule below pv.min, which then marks them Dead. Installed by main.mjs, so the patch never
  * imports the rule.
  */
-import { MODULE_ID, markWrapper, stripComments, unwrap } from "../utils.mjs";
+import { markWrapper, stripComments, unwrap } from "../utils.mjs";
 import { fromFactory, wraps } from "../kernel/wrap.mjs";
 
 const LOG = "t20-community-patches | death-threshold:";
@@ -100,19 +100,6 @@ export function diagnoseSamples(samples, required) {
 
 export const DEATH_FLOOR_SETTING = "deathThresholdFloor";
 export const DEATH_FLOOR_MODES = ["unbounded", "clamp"];
-
-/** Registers the world setting. Runs on "init" whatever the patch state: the system's clamp always exists. */
-export function registerDeathThresholdFloorSetting() {
-  game.settings.register(MODULE_ID, DEATH_FLOOR_SETTING, {
-    name: "T20CP.Patches.death-threshold.Floor.Name",
-    hint: "T20CP.Patches.death-threshold.Floor.Hint",
-    scope: "world",
-    config: false,
-    type: String,
-    choices: Object.fromEntries(DEATH_FLOOR_MODES.map((m) => [m, `T20CP.Patches.death-threshold.Floor.${m}`])),
-    default: "unbounded"
-  });
-}
 
 /** Whether damage may take this actor below the death threshold. */
 export function allowsBelowThreshold({ floor, covered }) {

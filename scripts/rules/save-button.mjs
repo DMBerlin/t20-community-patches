@@ -403,18 +403,17 @@ function redrawAll() {
   }
 }
 
-export function registerSaveButtonSetting() {
-  game.settings.register(MODULE_ID, SAVE_BUTTON_SETTING, {
-    name: "T20CP.SaveButton.Setting.Name",
-    hint: "T20CP.SaveButton.Setting.Hint",
-    scope: "world",
-    config: false,
-    type: String,
-    choices: { off: "T20CP.SaveButton.Setting.off", on: "T20CP.SaveButton.Setting.on" },
-    default: "on",
-    onChange: () => redrawAll()
-  });
-}
+/** @type {import("../kernel/feature.mjs").SettingSpec} */
+const SETTING_SPEC = {
+  key: SAVE_BUTTON_SETTING,
+  name: "T20CP.SaveButton.Setting.Name",
+  hint: "T20CP.SaveButton.Setting.Hint",
+  scope: "world",
+  type: String,
+  choices: { off: "T20CP.SaveButton.Setting.off", on: "T20CP.SaveButton.Setting.on" },
+  default: "on",
+  onChange: () => redrawAll()
+};
 
 export function installSaveButtonRule() {
   resultIndex = null;
@@ -453,3 +452,13 @@ export function installSaveButtonRule() {
   Hooks.on("updateChatMessage", onResultChanged);
   Hooks.on("deleteChatMessage", onResultDeleted);
 }
+
+/** @type {import("../kernel/feature.mjs").Feature} */
+export default {
+  id: "save-button",
+  kind: "rule",
+  group: "combat",
+  system: { id: "tormenta20" },
+  settings: [SETTING_SPEC],
+  install: () => installSaveButtonRule()
+};

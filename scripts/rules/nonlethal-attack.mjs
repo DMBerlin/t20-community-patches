@@ -317,3 +317,13 @@ export function installNonlethalAttackRule() {
     }
   });
 }
+
+/** @type {import("../kernel/feature.mjs").Feature} */
+export default {
+  id: "nonlethal-attack",
+  kind: "rule",
+  group: "combat",
+  system: { id: "tormenta20" },
+  after: ["situational-modifiers"],
+  install: () => installNonlethalAttackRule()
+};

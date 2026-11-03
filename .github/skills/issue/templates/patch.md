@@ -36,8 +36,9 @@
 ### Arquivos
 
 - Novo: `scripts/patches/<patch-id>.mjs`, no modelo dos patches existentes.
-- `scripts/patches/index.mjs`: importar e adicionar a `PATCHES`.
-- `group`: `<conditions|sheet-effects|usage-effects|items|settings>`; `issue`: <n>.
+- `scripts/patches/index.mjs`: importar e adicionar a `PATCHES` (contrato `Feature`, ver "Contrato de uma feature" no `AGENTS.md`).
+- `group`: `<conditions|sheet-effects|usage-effects|items|settings|actor|combat>`; `issue`: <n>.
+- Configurações próprias, se houver: `settings: [{ key, scope, type, default, … }]`, registradas só quando o patch é aplicado.
 - Faixa: `system: { id: "tormenta20", affected: { minimum: "<v>", maximum: "<v>" } }`.
 
 ### Pontos de interceptação e por que são seguros

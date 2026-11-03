@@ -372,18 +372,19 @@ export function decorate(message, html) {
   }
 }
 
-/** Registers the world setting. Runs on "init" for every system, so the setting always exists. */
-export function registerConcealmentSetting() {
-  game.settings.register(MODULE_ID, CONCEALMENT_SETTING, {
-    name: "T20CP.Concealment.Setting.Name",
-    hint: "T20CP.Concealment.Setting.Hint",
-    scope: "world",
-    config: false,
-    type: String,
-    choices: { off: "T20CP.Concealment.Setting.off", on: "T20CP.Concealment.Setting.on" },
-    default: "off"
-  });
-}
+/**
+ * World setting. The lifecycle registers it on "init" for every system, so it always exists.
+ * @type {import("../kernel/feature.mjs").SettingSpec}
+ */
+const SETTING_SPEC = {
+  key: CONCEALMENT_SETTING,
+  name: "T20CP.Concealment.Setting.Name",
+  hint: "T20CP.Concealment.Setting.Hint",
+  scope: "world",
+  type: String,
+  choices: { off: "T20CP.Concealment.Setting.off", on: "T20CP.Concealment.Setting.on" },
+  default: "off"
+};
 
 /** Installs the rule. The setting is read on every use, so a change applies without reloading. */
 export function installConcealmentRule() {
@@ -444,3 +445,13 @@ export function installConcealmentRule() {
     }
   });
 }
+
+/** @type {import("../kernel/feature.mjs").Feature} */
+export default {
+  id: "concealment-miss-chance",
+  kind: "rule",
+  group: "combat",
+  system: { id: "tormenta20" },
+  settings: [SETTING_SPEC],
+  install: () => installConcealmentRule()
+};

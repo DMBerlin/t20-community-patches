@@ -447,25 +447,24 @@ function mode() {
   return game.settings.get(MODULE_ID, XP_AWARDS_SETTING);
 }
 
-export function registerEncounterXpSetting() {
-  game.settings.register(MODULE_ID, XP_AWARDS_SETTING, {
-    name: "T20CP.EncounterXp.Setting.Name",
-    hint: "T20CP.EncounterXp.Setting.Hint",
-    scope: "world",
-    config: false,
-    type: String,
-    choices: {
-      off: "T20CP.EncounterXp.Setting.off",
-      button: "T20CP.EncounterXp.Setting.button",
-      combat: "T20CP.EncounterXp.Setting.combat"
-    },
-    default: "off",
-    onChange: (value) => {
-      ui.controls?.render({ reset: true });
-      if (value === "off") closeRewardsDialog();
-    }
-  });
-}
+/** @type {import("../kernel/feature.mjs").SettingSpec} */
+const SETTING_SPEC = {
+  key: XP_AWARDS_SETTING,
+  name: "T20CP.EncounterXp.Setting.Name",
+  hint: "T20CP.EncounterXp.Setting.Hint",
+  scope: "world",
+  type: String,
+  choices: {
+    off: "T20CP.EncounterXp.Setting.off",
+    button: "T20CP.EncounterXp.Setting.button",
+    combat: "T20CP.EncounterXp.Setting.combat"
+  },
+  default: "off",
+  onChange: (value) => {
+    ui.controls?.render({ reset: true });
+    if (value === "off") closeRewardsDialog();
+  }
+};
 
 /** Synchronous lookup (core helpers.mjs:189): no await between the guard and actor.update. */
 function actorOf(uuid) {
@@ -700,3 +699,13 @@ export function installEncounterXpRule() {
     ui.notifications.error(game.i18n.format("T20CP.EncounterXp.Warn.Diverged", { name: actor.name, xp: xpOf(actor), expected: audit.expected ?? "?" }), { permanent: true });
   });
 }
+
+/** @type {import("../kernel/feature.mjs").Feature} */
+export default {
+  id: "encounter-xp",
+  kind: "rule",
+  group: "settings",
+  system: { id: "tormenta20" },
+  settings: [SETTING_SPEC],
+  install: () => installEncounterXpRule()
+};

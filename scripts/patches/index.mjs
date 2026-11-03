@@ -62,6 +62,8 @@ export const GROUPS = ["conditions", "sheet-effects", "usage-effects", "items", 
  *                                               Returns a Diagnosis, or a legacy boolean: true = present/high,
  *                                               false = fixed/low, undefined = unknown. A probe that only reads
  *                                               source code never returns fixed/high.
+ * @property {import("../kernel/feature.mjs").SettingSpec[]} [settings]
+ *                                               Settings registered only when the patch is applied, before apply().
  * @property {boolean} [guarded]                 apply() only acts when the bug shows up, so it is safe to apply on
  *                                               an unverified system version without confirming the bug.
  * @property {() => Promise<import("../registry.mjs").Diagnosis|boolean|undefined>} [lateProbe]
@@ -69,7 +71,8 @@ export const GROUPS = ["conditions", "sheet-effects", "usage-effects", "items", 
  *                                               during "init". Only runs when the patch was applied; it updates the
  *                                               badge and notifications, never installs or removes wrappers. It
  *                                               must not measure the patch's own effect. undefined = no news.
- * @property {() => void} apply                  Installs the fix. Called once during "init".
+ * @property {() => void} apply                  Installs the fix. Called once during "init" (install() of the
+ *                                               Feature, see patchFeature in scripts/kernel/feature.mjs).
  */
 
 /** @type {Patch[]} */

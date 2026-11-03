@@ -544,22 +544,23 @@ function refreshActors() {
   }
 }
 
-/** Registers the world setting. Runs on "init" for every system, so the setting always exists. */
-export function registerNonProficiencySetting() {
-  game.settings.register(MODULE_ID, NON_PROFICIENCY_SETTING, {
-    name: "T20CP.NonProficiency.Setting.Name",
-    hint: "T20CP.NonProficiency.Setting.Hint",
-    scope: "world",
-    config: false,
-    type: String,
-    choices: { off: "T20CP.NonProficiency.Setting.off", on: "T20CP.NonProficiency.Setting.on" },
-    default: "off",
-    onChange: () => {
-      refreshActors();
-      notifyUnrecognized();
-    }
-  });
-}
+/**
+ * World setting. The lifecycle registers it on "init" for every system, so it always exists.
+ * @type {import("../kernel/feature.mjs").SettingSpec}
+ */
+const SETTING_SPEC = {
+  key: NON_PROFICIENCY_SETTING,
+  name: "T20CP.NonProficiency.Setting.Name",
+  hint: "T20CP.NonProficiency.Setting.Hint",
+  scope: "world",
+  type: String,
+  choices: { off: "T20CP.NonProficiency.Setting.off", on: "T20CP.NonProficiency.Setting.on" },
+  default: "off",
+  onChange: () => {
+    refreshActors();
+    notifyUnrecognized();
+  }
+};
 
 /** Installs both wrappers and the sheet marker. The wrappers are inert while the setting is off. */
 export function installNonProficiencyRule() {
@@ -575,3 +576,13 @@ export function installNonProficiencyRule() {
     }
   });
 }
+
+/** @type {import("../kernel/feature.mjs").Feature} */
+export default {
+  id: "non-proficiency",
+  kind: "rule",
+  group: "items",
+  system: { id: "tormenta20" },
+  settings: [SETTING_SPEC],
+  install: () => installNonProficiencyRule()
+};

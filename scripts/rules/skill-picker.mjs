@@ -332,18 +332,19 @@ async function askAndStore(item, actor, spec, chosen) {
   });
 }
 
-/** Registers the world setting. Runs on "init" for every system, so the setting always exists. */
-export function registerSkillPickerSetting() {
-  game.settings.register(MODULE_ID, SKILL_PICKER_SETTING, {
-    name: "T20CP.SkillPicker.Setting.Name",
-    hint: "T20CP.SkillPicker.Setting.Hint",
-    scope: "world",
-    config: false,
-    type: String,
-    choices: { off: "T20CP.SkillPicker.Setting.off", on: "T20CP.SkillPicker.Setting.on" },
-    default: "off"
-  });
-}
+/**
+ * World setting. The lifecycle registers it on "init" for every system, so it always exists.
+ * @type {import("../kernel/feature.mjs").SettingSpec}
+ */
+const SETTING_SPEC = {
+  key: SKILL_PICKER_SETTING,
+  name: "T20CP.SkillPicker.Setting.Name",
+  hint: "T20CP.SkillPicker.Setting.Hint",
+  scope: "world",
+  type: String,
+  choices: { off: "T20CP.SkillPicker.Setting.off", on: "T20CP.SkillPicker.Setting.on" },
+  default: "off"
+};
 
 /**
  * Installs the rule.
@@ -388,3 +389,14 @@ export function installSkillPickerRule() {
     }
   });
 }
+
+/** @type {import("../kernel/feature.mjs").Feature} */
+export default {
+  id: "skill-picker",
+  kind: "rule",
+  group: "actor",
+  system: { id: "tormenta20" },
+  settings: [SETTING_SPEC],
+  after: ["initial-class"],
+  install: () => installSkillPickerRule()
+};

@@ -1,262 +1,53 @@
-import { GROUPS, PATCHES } from "./patches/index.mjs";
+import { FEATURES, GROUPS, PATCH_FEATURES } from "./features/index.mjs";
 import { MODULE_ID } from "./utils.mjs";
 import { wraps } from "./kernel/wrap.mjs";
+import { validateFeatures } from "./kernel/feature.mjs";
+import { bootFeatures, describeDiagnosis as describe } from "./kernel/lifecycle.mjs";
+import { registerFeatureSetting } from "./kernel/settings.mjs";
 import {
   APPLY_STATES,
   applyLateDiagnosis,
   createLateSummary,
   pickLateNotification,
   pickNotification,
-  resolvePatchState,
   statusRecord,
   summarizeNotifications,
   summaryMessage
 } from "./registry.mjs";
 import { SETTINGS, getPatchMode, migrateLegacySettings, registerSettings } from "./settings.mjs";
-import { installManaLimitRule, registerManaLimitSetting } from "./rules/mana-limit.mjs";
-import { installUsageEffectMaxRule, registerUsageEffectMaxSetting } from "./rules/usage-effect-max.mjs";
-import { installSameAbilityRule, registerSameAbilitySetting } from "./rules/same-ability-stacking.mjs";
-import { installSourceStackingRule, registerSourceStackingSetting } from "./rules/source-stacking.mjs";
-import { installItemEffectiveStatsRule, registerItemEffectiveStatsSetting } from "./rules/item-effective-stats.mjs";
-import { installArcaneArmorRule, registerArcaneArmorSetting } from "./rules/arcane-armor-casting.mjs";
-import { installCastingRestrictionsRule, registerCastingRestrictionsSettings } from "./rules/casting-restrictions.mjs";
-import { installNonProficiencyRule, registerNonProficiencySetting } from "./rules/non-proficiency-penalties.mjs";
-import { installSaveButtonRule, registerSaveButtonSetting } from "./rules/save-button.mjs";
-import { installAttackVsDefenseRule, registerAttackVsDefenseSetting } from "./rules/attack-vs-defense.mjs";
-import { installTrainedOnlyRule, registerTrainedOnlySetting } from "./rules/trained-only-skills.mjs";
-import { installSkillPickerRule, registerSkillPickerSetting } from "./rules/skill-picker.mjs";
-import {
-  installSituationalModifiersRule,
-  registerSituationalModifiersSetting
-} from "./rules/situational-modifiers.mjs";
-import { installConcealmentRule, registerConcealmentSetting } from "./rules/concealment-miss-chance.mjs";
-import { installManaQueue } from "./rules/mana-queue.mjs";
-import { installNonlethalRule, registerNonlethalSetting } from "./rules/nonlethal-damage.mjs";
-import { installNonlethalAttackRule } from "./rules/nonlethal-attack.mjs";
-import { installCombatManeuversRule, registerCombatManeuversSetting } from "./rules/combat-maneuvers.mjs";
-import {
-  installCreatureTypeTraitsRule,
-  registerCreatureTypeTraitsSetting
-} from "./rules/creature-type-traits.mjs";
-import {
-  installEncounterXpRule,
-  listDivergences,
-  listPending,
-  openRewards,
-  registerEncounterXpSetting,
-  resumeRewards
-} from "./rules/encounter-xp.mjs";
-import { coversActor, installDyingStatesRule, registerDyingStatesSetting } from "./rules/dying-states.mjs";
-import {
-  DEATH_FLOOR_SETTING,
-  allowsBelowThreshold,
-  installDamageFloor,
-  registerDeathThresholdFloorSetting
-} from "./patches/death-threshold.mjs";
+import { listDivergences, listPending, openRewards, resumeRewards } from "./rules/encounter-xp.mjs";
 
 /**
- * @type {{id: string, group: string, mode: import("./registry.mjs").PatchMode, state: import("./registry.mjs").PatchState,
- *   diagnosis?: import("./registry.mjs").Diagnosis, reason?: string, changed?: boolean}[]}
- * `changed` marks the patches cited in a notification on this load.
+ * Patches and rules, in install order (scripts/kernel/lifecycle.mjs). Notifications and the Center only use patches.
+ * @type {import("./kernel/lifecycle.mjs").StatusEntry[]}
  */
 const status = [];
 
-/** @param {import("./registry.mjs").Diagnosis|undefined} diagnosis */
-function describe(diagnosis) {
-  if (!diagnosis) return "";
-  return `; bug ${diagnosis.bug}/${diagnosis.confidence}${diagnosis.evidence ? `: ${diagnosis.evidence}` : ""}`;
-}
+/** Status entries of the patches. */
+const patchStatus = () => status.filter((s) => s.kind === "patch");
 
 Hooks.once("init", () => {
-  registerSettings(PATCHES);
+  registerSettings(PATCH_FEATURES);
+  validateFeatures(FEATURES, GROUPS);
 
-  // Patches are installed during "init": the system has already registered its classes in CONFIG,
-  // and world documents are only prepared after this hook.
-  for (const patch of PATCHES) {
-    const mode = getPatchMode(patch.id);
-    let { state, diagnosis, reason } = resolvePatchState({
-      patch,
-      mode,
-      systemId: game.system.id,
-      systemVersion: game.system.version,
-      probe: patch.isNeeded
-    });
-
-    if (APPLY_STATES.has(state)) {
-      try {
-        patch.apply();
-        console.log(`${MODULE_ID} | Patch applied: ${patch.id} (${state}${describe(diagnosis)})`);
-      } catch (err) {
-        state = "error";
-        reason = err.message;
-        console.error(`${MODULE_ID} | Failed to apply patch: ${patch.id}`, err);
+  // Features are installed during "init": the system has already registered its classes in CONFIG, and world
+  // documents are only prepared after this hook.
+  status.push(
+    ...bootFeatures({
+      features: FEATURES,
+      modeOf: (feature) => getPatchMode(feature.id),
+      system: { id: game.system.id, version: game.system.version },
+      contextFor: (feature) => ({
+        id: feature.id,
+        wrap: (target, method, wrapper, options) => wraps.wrap(target, method, feature.id, wrapper, options)
+      }),
+      registerSetting: (spec) => registerFeatureSetting((key, config) => game.settings.register(MODULE_ID, key, config), spec),
+      log: {
+        info: (message) => console.log(`${MODULE_ID} | ${message}`),
+        error: (message, err) => console.error(`${MODULE_ID} | ${message}`, err)
       }
-    } else {
-      console.log(`${MODULE_ID} | Patch not applied: ${patch.id} (${state}${reason ? `: ${reason}` : ""}${describe(diagnosis)})`);
-    }
-    status.push({ id: patch.id, group: patch.group, mode, state, diagnosis, reason });
-  }
-
-  // Optional rules are not bug fixes: they stay installed and read their own setting on every use.
-  registerManaLimitSetting();
-  registerUsageEffectMaxSetting();
-  registerSameAbilitySetting();
-  registerSourceStackingSetting();
-  registerItemEffectiveStatsSetting();
-  registerArcaneArmorSetting();
-  registerCastingRestrictionsSettings();
-  registerNonProficiencySetting();
-  registerSaveButtonSetting();
-  registerAttackVsDefenseSetting();
-  registerTrainedOnlySetting();
-  registerSkillPickerSetting();
-  registerSituationalModifiersSetting();
-  registerConcealmentSetting();
-  registerNonlethalSetting();
-  registerCombatManeuversSetting();
-  registerCreatureTypeTraitsSetting();
-  registerDyingStatesSetting();
-  registerEncounterXpSetting();
-  // Belongs to the death-threshold patch, but exists in every patch mode: the system's damage clamp always does.
-  registerDeathThresholdFloorSetting();
-  if (game.system.id === "tormenta20") {
-    // Transparent (only orders each actor's spendMana calls) and installed with every rule off.
-    try {
-      installManaQueue();
-    } catch (err) {
-      console.error(`${MODULE_ID} | Failed to install the mana queue`, err);
-    }
-    try {
-      installManaLimitRule();
-    } catch (err) {
-      console.error(`${MODULE_ID} | Failed to install the mana limit rule`, err);
-    }
-    try {
-      installUsageEffectMaxRule();
-    } catch (err) {
-      console.error(`${MODULE_ID} | Failed to install the usage effect maximum rule`, err);
-    }
-    try {
-      installSameAbilityRule();
-    } catch (err) {
-      console.error(`${MODULE_ID} | Failed to install the same ability stacking rule`, err);
-    }
-    try {
-      installSourceStackingRule();
-    } catch (err) {
-      console.error(`${MODULE_ID} | Failed to install the item and spell stacking rule`, err);
-    }
-    try {
-      installNonProficiencyRule();
-    } catch (err) {
-      console.error(`${MODULE_ID} | Failed to install the non-proficiency penalties rule`, err);
-    }
-    // Before casting-restrictions: its ItemT20#roll wrapper clones the item before calling the next one, so the shared
-    // use-target wrappers (scripts/rules/shared/targets.mjs) must sit inside it to bind the system's clone.
-    try {
-      installSaveButtonRule();
-    } catch (err) {
-      console.error(`${MODULE_ID} | Failed to install the save button rule`, err);
-    }
-    // Also before casting-restrictions, for the same reason (it may be the first to call installUseTargets).
-    try {
-      installAttackVsDefenseRule();
-    } catch (err) {
-      console.error(`${MODULE_ID} | Failed to install the attack versus Defense rule`, err);
-    }
-    // Also before casting-restrictions; the order relative to attack-vs-defense does not matter (adjustments are
-    // registered before the original rollAttack and read after it).
-    try {
-      installSituationalModifiersRule();
-    } catch (err) {
-      console.error(`${MODULE_ID} | Failed to install the situational modifiers rule`, err);
-    }
-    // Also before casting-restrictions (use-target wrappers). Its rollAttack wrapper composes with attack-vs-defense in
-    // either order: the d10 are published before the original rollAttack and the critical is only ever cancelled.
-    try {
-      installConcealmentRule();
-    } catch (err) {
-      console.error(`${MODULE_ID} | Failed to install the concealment miss chance rule`, err);
-    }
-    // Also before casting-restrictions (use-target wrappers): without a declared maneuver, its displayCard wrapper only
-    // calls the original.
-    try {
-      installCombatManeuversRule();
-    } catch (err) {
-      console.error(`${MODULE_ID} | Failed to install the combat maneuvers rule`, err);
-    }
-    // Before casting-restrictions: this displayCard wrapper sits inside that one, which only counts a cast through
-    // castCompleted (scripts/rules/cast-outcome.mjs), so a failed armor test never ends a sustained spell.
-    try {
-      installArcaneArmorRule();
-    } catch (err) {
-      console.error(`${MODULE_ID} | Failed to install the arcane armor rule`, err);
-    }
-    // After the other ItemT20#roll/displayCard wrappers (usage-effect-max): a blocked use never reaches them.
-    try {
-      installCastingRestrictionsRule();
-    } catch (err) {
-      console.error(`${MODULE_ID} | Failed to install the casting restrictions rule`, err);
-    }
-    // After usage-effect-max and the patches that wrap rollPericia: a blocked test never reaches them.
-    try {
-      installTrainedOnlyRule();
-    } catch (err) {
-      console.error(`${MODULE_ID} | Failed to install the trained-only skills rule`, err);
-    }
-    // After the patches: its prepareDerivedData wrappers sit outside death-threshold's and widen the floor it sets.
-    try {
-      installNonlethalRule();
-    } catch (err) {
-      console.error(`${MODULE_ID} | Failed to install the nonlethal damage rule`, err);
-    }
-    // After situational-modifiers: both dialog hooks anchor on "Melhor/Pior de 2d20", and the later one ends up first.
-    try {
-      installNonlethalAttackRule();
-    } catch (err) {
-      console.error(`${MODULE_ID} | Failed to install the nonlethal attack choice`, err);
-    }
-    try {
-      installDyingStatesRule();
-    } catch (err) {
-      console.error(`${MODULE_ID} | Failed to install the dying states rule`, err);
-    }
-    // Before creature-type-traits: its applyDamageV2 wrapper may await a dialog before calling the inner chain, so the
-    // floor must sit inside it to stay lifted while the system clamps synchronously.
-    try {
-      installDamageFloor((actor) => allowsBelowThreshold({
-        floor: game.settings.get(MODULE_ID, DEATH_FLOOR_SETTING),
-        covered: coversActor(actor)
-      }));
-    } catch (err) {
-      console.error(`${MODULE_ID} | Failed to install the death threshold floor`, err);
-    }
-    // After the patches and the other rules: its applyDamageV2 wrapper sits outside theirs and makes a single inner
-    // call, so their floors and reductions see one HP change.
-    try {
-      installCreatureTypeTraitsRule();
-    } catch (err) {
-      console.error(`${MODULE_ID} | Failed to install the creature type traits rule`, err);
-    }
-    // Hooks only (scene controls, combat end, user connection, actor updates): no wrapper to order.
-    try {
-      installEncounterXpRule();
-    } catch (err) {
-      console.error(`${MODULE_ID} | Failed to install the encounter rewards tool`, err);
-    }
-    // After the patches: its Item._preCreateOperation wrapper sits outside initial-class's (#54); either order chains.
-    try {
-      installSkillPickerRule();
-    } catch (err) {
-      console.error(`${MODULE_ID} | Failed to install the skill picker rule`, err);
-    }
-    // Last on purpose: its wrappers must sit outside those of the patches and the other rules.
-    try {
-      installItemEffectiveStatsRule();
-    } catch (err) {
-      console.error(`${MODULE_ID} | Failed to install the effective item values rule`, err);
-    }
-  }
+    })
+  );
 
   game.modules.get(MODULE_ID).api = {
     status,
@@ -272,7 +63,7 @@ const LATE_SUMMARY_DELAY = 10000;
 
 /**
  * A notification entry for the summary, or null.
- * @param {(typeof status)[number]} entry
+ * @param {import("./kernel/lifecycle.mjs").StatusEntry} entry
  * @param {{key: string, level: "info"|"warn"|"error"} | null} notification
  */
 function noteFor(entry, notification) {
@@ -288,7 +79,7 @@ function notify(notes) {
   const summary = summarizeNotifications(notes);
   if (!summary) return;
   for (const id of summary.ids) {
-    const entry = status.find((s) => s.id === id);
+    const entry = patchStatus().find((s) => s.id === id);
     if (entry) entry.changed = true;
   }
   const message = summaryMessage(summary, `${game.system.title} ${game.system.version}`, (key, data) =>
@@ -302,7 +93,7 @@ Hooks.once("ready", async () => {
   // Each step fails on its own: a broken migration or setting must never hide the notifications.
   if (game.user.isActiveGM) {
     try {
-      await migrateLegacySettings(PATCHES);
+      await migrateLegacySettings(PATCH_FEATURES);
     } catch (err) {
       console.error(`${MODULE_ID} | Failed to migrate patch preferences`, err);
     }
@@ -315,7 +106,7 @@ Hooks.once("ready", async () => {
   }
   const records = {};
   const notes = [];
-  for (const entry of status) {
+  for (const entry of patchStatus()) {
     const record = statusRecord(entry, game.system.version);
     records[entry.id] = record;
     try {
@@ -330,7 +121,7 @@ Hooks.once("ready", async () => {
     console.error(`${MODULE_ID} | Failed to notify about the patches`, err);
   }
   await saveRecords(records);
-  const probed = PATCHES.filter(hasLateProbe);
+  const probed = PATCH_FEATURES.filter(hasLateProbe);
   const late = createLateSummary({
     pending: probed.length,
     emit: (batch) => {
@@ -359,7 +150,7 @@ async function saveRecords(records) {
 
 /**
  * Whether a patch has a lateProbe to run on this load (only applied patches run it).
- * @param {import("./patches/index.mjs").Patch} patch
+ * @param {import("./kernel/feature.mjs").Feature} patch
  */
 function hasLateProbe(patch) {
   const entry = status.find((s) => s.id === patch.id);
@@ -369,7 +160,7 @@ function hasLateProbe(patch) {
 /**
  * Runs an applied patch's lateProbe without blocking "ready", then updates its status and hands any news to the late
  * summary. The summary is always settled, even when the probe fails or learns nothing.
- * @param {import("./patches/index.mjs").Patch} patch
+ * @param {import("./kernel/feature.mjs").Feature} patch
  * @param {import("./registry.mjs").StatusRecord} [initial]  Record saved on "ready" for this load.
  * @param {unknown} [previous]                                 Record saved by the previous load.
  * @param {{settle: (entry?: object|null) => void}} summary

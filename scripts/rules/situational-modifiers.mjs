@@ -363,18 +363,19 @@ export function decorate(message, html) {
   }
 }
 
-/** Registers the world setting. Runs on "init" for every system, so the setting always exists. */
-export function registerSituationalModifiersSetting() {
-  game.settings.register(MODULE_ID, SITUATIONAL_SETTING, {
-    name: "T20CP.SituationalModifiers.Setting.Name",
-    hint: "T20CP.SituationalModifiers.Setting.Hint",
-    scope: "world",
-    config: false,
-    type: String,
-    choices: { off: "T20CP.SituationalModifiers.Setting.off", on: "T20CP.SituationalModifiers.Setting.on" },
-    default: "off"
-  });
-}
+/**
+ * World setting. The lifecycle registers it on "init" for every system, so it always exists.
+ * @type {import("../kernel/feature.mjs").SettingSpec}
+ */
+const SETTING_SPEC = {
+  key: SITUATIONAL_SETTING,
+  name: "T20CP.SituationalModifiers.Setting.Name",
+  hint: "T20CP.SituationalModifiers.Setting.Hint",
+  scope: "world",
+  type: String,
+  choices: { off: "T20CP.SituationalModifiers.Setting.off", on: "T20CP.SituationalModifiers.Setting.on" },
+  default: "off"
+};
 
 /** Installs the rule. The setting is read on every use, so a change applies without reloading. */
 export function installSituationalModifiersRule() {
@@ -445,3 +446,13 @@ export function installSituationalModifiersRule() {
     }
   });
 }
+
+/** @type {import("../kernel/feature.mjs").Feature} */
+export default {
+  id: "situational-modifiers",
+  kind: "rule",
+  group: "combat",
+  system: { id: "tormenta20" },
+  settings: [SETTING_SPEC],
+  install: () => installSituationalModifiersRule()
+};

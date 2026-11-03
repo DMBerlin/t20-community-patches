@@ -506,22 +506,23 @@ function refreshActors() {
   }
 }
 
-/** Registers the world setting. Runs on "init" for every system, so the setting always exists. */
-export function registerNonlethalSetting() {
-  game.settings.register(MODULE_ID, NONLETHAL_SETTING, {
-    name: "T20CP.NonlethalDamage.Setting.Name",
-    hint: "T20CP.NonlethalDamage.Setting.Hint",
-    scope: "world",
-    config: false,
-    type: String,
-    choices: { off: "T20CP.NonlethalDamage.Setting.off", on: "T20CP.NonlethalDamage.Setting.on" },
-    default: "off",
-    onChange: (value) => {
-      syncChatToggles(value === "on");
-      refreshActors();
-    }
-  });
-}
+/**
+ * World setting. The lifecycle registers it on "init" for every system, so it always exists.
+ * @type {import("../kernel/feature.mjs").SettingSpec}
+ */
+const SETTING_SPEC = {
+  key: NONLETHAL_SETTING,
+  name: "T20CP.NonlethalDamage.Setting.Name",
+  hint: "T20CP.NonlethalDamage.Setting.Hint",
+  scope: "world",
+  type: String,
+  choices: { off: "T20CP.NonlethalDamage.Setting.off", on: "T20CP.NonlethalDamage.Setting.on" },
+  default: "off",
+  onChange: (value) => {
+    syncChatToggles(value === "on");
+    refreshActors();
+  }
+};
 
 /**
  * Installs the rule. Runs after the patches and the other rules, so the prepareDerivedData wrappers sit outside
@@ -568,3 +569,14 @@ export function installNonlethalRule() {
   Hooks.on("renderChatMessageHTML", onRenderChatMessage);
   Hooks.on("renderActorSheetT20", onRenderActorSheet);
 }
+
+/** @type {import("../kernel/feature.mjs").Feature} */
+export default {
+  id: "nonlethal-damage",
+  kind: "rule",
+  group: "combat",
+  system: { id: "tormenta20" },
+  settings: [SETTING_SPEC],
+  after: ["death-threshold"],
+  install: () => installNonlethalRule()
+};

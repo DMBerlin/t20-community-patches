@@ -79,5 +79,5 @@ function defaultLabel(target, method) {
   return `${target.constructor?.name || "?"}#${method}`;
 }
 
-/** Module-wide registry used by patches and rules until it is injected through ctx (#85). */
+/** Module-wide registry. Features also reach it through ctx.wrap (scripts/kernel/lifecycle.mjs), with their id as owner. */
 export const wraps = createWrapRegistry();

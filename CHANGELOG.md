@@ -15,6 +15,7 @@ Não edite as seções de versão à mão.
 - Lint de fronteiras entre camadas e CI em push e PR (#83).
 - Registro central de wrappers, com a ordem de composição exposta em api.wraps (#84).
 - Patches e regras opcionais passam a usar um contrato único (Feature) e um ciclo de vida central (#85).
+- Camada de plataforma e injeção de dependências: globais do Foundry ficam isolados num único módulo (#86).
 
 ## v1.1.0 - 2026-10-27
 

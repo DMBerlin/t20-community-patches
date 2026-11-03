@@ -22,7 +22,7 @@ Você é o QA, rodada {k}, de um módulo do Foundry VTT v14 (`t20-community-patc
 **Checklist obrigatório:**
 1. A correção cobre **todos** os caminhos que levam ao bug (diálogo, atalho/Shift, ficha, macro, chat, outros usuários), e não só o caminho da reprodução.
 2. Com o patch desligado ou fora da faixa de versão, o comportamento oficial fica **intacto**: nada é instalado e nenhum efeito colateral ocorre no `init`.
-3. `isNeeded()` é síncrono, seguro no `init`, não tem efeitos colaterais e retorna `true`/`false`/`undefined` corretamente.
+3. `isNeeded(ctx)` é síncrono, seguro no `init`, não tem efeitos colaterais e retorna um `Diagnosis` (ou o booleano legado) correto. Código migrado não lê globais do Foundry: usa só `ctx.platform`.
 4. Wrappers preservam `this`, os argumentos, o valor de retorno (inclusive `Promise` e geradores) e as exceções. Analise reentrância, chamadas aninhadas e o estado do módulo em erro (`try/finally`).
 5. Segurança: nenhuma avaliação de texto como JavaScript; nenhum HTML de usuário sem escape; nenhuma escrita em documentos por um usuário sem permissão.
 6. Multiusuário: o comportamento do GM e do jogador, e dados persistidos ou sincronizados.

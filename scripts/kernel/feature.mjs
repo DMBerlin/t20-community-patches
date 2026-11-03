@@ -24,13 +24,18 @@
  * @property {SettingSpec[]} [settings]           On patches, only registered when the patch is applied.
  * @property {string[]} [after]                   Ids that must come BEFORE in FEATURES (inner wrappers). "*" = all.
  * @property {boolean} [guarded]
- * @property {() => import("../registry.mjs").Diagnosis|boolean|undefined} [isNeeded]
- * @property {() => Promise<import("../registry.mjs").Diagnosis|boolean|undefined>} [lateProbe]
+ * @property {(ctx: FeatureContext) => import("../registry.mjs").Diagnosis|boolean|undefined} [isNeeded]
+ *                                                 Legacy patches ignore ctx and read globals until #88.
+ * @property {(ctx: FeatureContext) => Promise<import("../registry.mjs").Diagnosis|boolean|undefined>} [lateProbe]
  * @property {(ctx: FeatureContext) => void} install
  *
- * @typedef {object} FeatureContext            Grows in #86 (platform) and #87 (services).
+ * @typedef {object} FeatureContext            Built by createFeatureContext (scripts/kernel/context.mjs); grows in #87.
  * @property {string} id
+ * @property {import("../platform/foundry.mjs").Platform} platform   The only way to reach Foundry.
+ * @property {import("./context.mjs").FeatureLog} log                Prefixed with the module and the feature id.
+ * @property {import("../platform/foundry.mjs").Platform["hooks"]} hooks
  * @property {(target: object, method: string, wrapper: Function, options?: object) => Function} wrap  Owner = id.
+ * @property {(key: string) => unknown} setting  Value of a key declared in `settings`; any other key throws.
  */
 
 export const KINDS = ["patch", "rule"];
@@ -89,7 +94,7 @@ export function validateFeatures(features, groups) {
 }
 
 /**
- * A patch module (`{id, group, system, apply, …}`) as a Feature. `apply()` becomes `install()`.
+ * A patch module (`{id, group, system, apply | install, …}`) as a Feature. A legacy `apply()` becomes `install()`.
  * @param {object} patch
  * @returns {Feature}
  */

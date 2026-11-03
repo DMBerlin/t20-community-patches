@@ -221,7 +221,7 @@ function isNeeded() {
  */
 async function lateProbe() {
   if (CONFIG.T20?.conditions) return undefined;
-  const conditions = await findWithRetry(async () => statusEffectSources([PRONE]));
+  const conditions = await findWithRetry(async () => statusEffectSources([PRONE], globalThis.CONFIG?.statusEffects));
   return conditions ? diagnoseProneChanges(conditions[PRONE]?.system?.changes) : undefined;
 }
 

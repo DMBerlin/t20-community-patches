@@ -9,8 +9,9 @@
  * Fix: the toggle of usage rows flips system.abilityUse.automatic and the icon reflects it. Temporary usage
  * effects held by items keep toggling `disabled` (default vs optional application on the chat card).
  */
-import { MODULE_ID, sheetEffectClass, unwrap } from "../utils.mjs";
+import { MODULE_ID, unwrap } from "../utils.mjs";
 import { resolveEffectFromRow } from "../effect-rows.mjs";
+import { sheetEffectClass } from "../platform/foundry.mjs";
 import { wraps } from "../kernel/wrap.mjs";
 
 /**

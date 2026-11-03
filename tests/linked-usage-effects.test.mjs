@@ -8,6 +8,7 @@ import patch, {
 } from "../scripts/patches/linked-usage-effects.mjs";
 import { PATCHES } from "../scripts/patches/index.mjs";
 import appendedUsageChanges from "../scripts/patches/appended-usage-changes.mjs";
+import { createFakeContext, createFakePlatform } from "./support/fake-platform.mjs";
 
 test("plainText strips tags, decodes common entities and collapses whitespace", () => {
   assert.equal(plainText("<p>Inspiração&nbsp;(Arte  Mágica)</p>\n"), "Inspiração (Arte Mágica)");
@@ -103,7 +104,6 @@ class FakeEffect {
 const effect = (data, parent) => new FakeEffect({ _id: data._id ?? `e${++nextId}`, ...data }, { parent });
 
 function setup({ extraArte = [], ownLinked = false } = {}) {
-  globalThis.foundry = { utils: { deepClone: (v) => structuredClone(v), randomID: () => `r${++nextId}` } };
   const actor = { items: new FakeCollection() };
   const item = (id, name, effects) => {
     const it = { documentName: "Item", id, name, uuid: `Actor.a.Item.${id}`, actor };
@@ -186,14 +186,17 @@ function systemApplyOnUse(item, applied) {
   return effectList.map((ef) => ({ name: ef.name, changes: ef.system.changes.map(({ key, value }) => ({ key, value: String(value) })) }));
 }
 
+/** Installs the patch on a fake platform; returns it so a test can read what the patch logged. */
+function installPatch(Item) {
+  const platform = createFakePlatform({ classes: { item: Item } });
+  patch.install(createFakeContext(patch, platform));
+  return platform;
+}
+
 function withPatch(Item, fn) {
-  globalThis.CONFIG = { Item: { documentClass: Item } };
-  try {
-    patch.apply();
-    return fn();
-  } finally {
-    delete globalThis.CONFIG;
-  }
+  const platform = installPatch(Item);
+  fn();
+  return platform;
 }
 
 const ALL = { aumento: 2, arteUse: 1, esgrimaUse: 1 };
@@ -236,10 +239,11 @@ test("with the patch the card carries the isolated linked effects and a clean ma
 
 test("works on the isolated copies made by appended-usage-changes", () => {
   const { Item, rolledClone } = setup();
+  // appended-usage-changes is still a legacy patch (#88) and reads CONFIG.
   globalThis.CONFIG = { Item: { documentClass: Item } };
   try {
     appendedUsageChanges.apply();
-    patch.apply();
+    installPatch(Item);
     assert.deepEqual(systemApplyOnUse(rolledClone(), ALL).map((e) => e.name), [
       "Inspiração",
       "Inspiração (Arte Mágica)",
@@ -272,19 +276,13 @@ test("a rolled item that already has the named effect keeps the official path", 
 test("ambiguous links are not injected and warn once", () => {
   const twin = { _id: "twin", name: "Inspiração (Arte Mágica)", disabled: true, duration: { expiry: "sceneEnd" }, system: { onuse: true, changes: [] } };
   const { Item, rolledClone } = setup({ extraArte: [twin] });
-  const warnings = [];
-  const warn = console.warn;
-  console.warn = (...args) => warnings.push(args.join(" "));
-  try {
-    withPatch(Item, () => {
-      systemApplyOnUse(rolledClone(), { arteUse: 1 });
-      assert.deepEqual(systemApplyOnUse(rolledClone(), { arteUse: 1 }).map((e) => e.name), ["Inspiração"]);
-    });
-  } finally {
-    console.warn = warn;
-  }
+  const platform = withPatch(Item, () => {
+    systemApplyOnUse(rolledClone(), { arteUse: 1 });
+    assert.deepEqual(systemApplyOnUse(rolledClone(), { arteUse: 1 }).map((e) => e.name), ["Inspiração"]);
+  });
+  const warnings = platform.logs.filter((l) => l.level === "warn").map((l) => l.args.join(" "));
   assert.equal(warnings.length, 1);
-  assert.match(warnings[0], /ambiguous/);
+  assert.match(warnings[0], /^linked-usage-effects: .*ambiguous/);
 });
 
 test("the live item is left untouched", () => {

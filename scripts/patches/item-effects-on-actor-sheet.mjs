@@ -9,8 +9,9 @@
  * same set Foundry v10 showed). Rows of item effects show the item as source; Toggle/Edit/Delete (with
  * confirmation) and drag act on the effect inside the item.
  */
-import { MODULE_ID, sheetEffectClass, stripComments, unwrap } from "../utils.mjs";
+import { MODULE_ID, stripComments, unwrap } from "../utils.mjs";
 import { resolveEffectFromRow } from "../effect-rows.mjs";
+import { sheetEffectClass } from "../platform/foundry.mjs";
 import { wraps } from "../kernel/wrap.mjs";
 
 /**

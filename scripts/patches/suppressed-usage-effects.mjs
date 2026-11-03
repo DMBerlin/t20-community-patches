@@ -10,9 +10,6 @@
  * actor's own effects are kept.
  */
 
-import { unwrap } from "../utils.mjs";
-import { wraps } from "../kernel/wrap.mjs";
-
 /**
  * @param {object} effect                 ActiveEffect
  * @param {string|null} rolledItemId      Id of the rolled item (null for skill/attribute rolls)
@@ -44,25 +41,26 @@ const ROLL_METHODS = ["rollPericia", "rollAtributo"];
 /** Depth of the synchronous collection window of rollPericia/rollAtributo, by actor. */
 const collecting = new WeakMap();
 
-function apply() {
-  const ItemClass = CONFIG.Item.documentClass;
-  const proto = CONFIG.Actor.documentClass.prototype;
+/** @param {import("../kernel/feature.mjs").FeatureContext} ctx */
+function install(ctx) {
+  const ItemClass = ctx.platform.classes.item;
+  const proto = ctx.platform.classes.actor?.prototype;
   if (
-    typeof ItemClass.prototype._allApplicableOnUseEffects !== "function" ||
-    typeof proto.traverseEmbeddedDocuments !== "function" ||
+    typeof ItemClass?.prototype?._allApplicableOnUseEffects !== "function" ||
+    typeof proto?.traverseEmbeddedDocuments !== "function" ||
     ROLL_METHODS.some((m) => typeof proto[m] !== "function")
   ) {
     throw new Error("Tormenta20 usage effect API not found");
   }
 
   // Item rolls (dialog and automatic path). `this` is the rolled item's clone, which keeps its id.
-  wraps.wrap(ItemClass.prototype, "_allApplicableOnUseEffects", "suppressed-usage-effects", function (allApplicable, ...args) {
+  ctx.wrap(ItemClass.prototype, "_allApplicableOnUseEffects", function (allApplicable, ...args) {
     const effects = allApplicable.apply(this, args);
     return Array.isArray(effects) ? effects.filter((e) => !isSuppressedUsageEffect(e, this.id)) : effects;
   });
 
   // Skill/attribute rolls build their list inline: filter the traversal only inside the collection window.
-  wraps.wrap(proto, "traverseEmbeddedDocuments", "suppressed-usage-effects", function (traverse, ...args) {
+  ctx.wrap(proto, "traverseEmbeddedDocuments", function (traverse, ...args) {
     const iterator = traverse.apply(this, args);
     if (!collecting.get(this)) return iterator;
     return (function* () {
@@ -75,7 +73,7 @@ function apply() {
   });
 
   for (const method of ROLL_METHODS) {
-    wraps.wrap(proto, method, "suppressed-usage-effects", function (original, ...args) {
+    ctx.wrap(proto, method, function (original, ...args) {
       collecting.set(this, (collecting.get(this) ?? 0) + 1);
       try {
         // The async original runs synchronously until its first await, which comes after the collection loop.
@@ -92,14 +90,16 @@ function apply() {
 /**
  * The bug exists while any of the three collection paths ignores suppression. A path that mentions suppression
  * may still be partially fixed, so that case is reported as unknown.
+ * @param {import("../kernel/feature.mjs").FeatureContext} ctx
  * @returns {boolean|undefined}
  */
-function isNeeded() {
-  const itemProto = CONFIG.Item?.documentClass?.prototype;
-  const actorProto = CONFIG.Actor?.documentClass?.prototype;
-  const fns = [itemProto?._allApplicableOnUseEffects, ...ROLL_METHODS.map((m) => actorProto?.[m])].map(unwrap);
-  if (fns.some((fn) => typeof fn !== "function")) return undefined;
-  return fns.some((fn) => collectsIgnoringSuppression(Function.prototype.toString.call(fn))) || undefined;
+function isNeeded(ctx) {
+  const { classes, sourceOf } = ctx.platform;
+  const itemProto = classes.item?.prototype;
+  const actorProto = classes.actor?.prototype;
+  const sources = [itemProto?._allApplicableOnUseEffects, ...ROLL_METHODS.map((m) => actorProto?.[m])].map(sourceOf);
+  if (sources.some((source) => typeof source !== "string")) return undefined;
+  return sources.some(collectsIgnoringSuppression) || undefined;
 }
 
 export default {
@@ -108,5 +108,5 @@ export default {
   issue: 4,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
   isNeeded,
-  apply
+  install
 };

@@ -52,14 +52,22 @@ const FAIL = [
   ["lib/x.mjs", "export function currentUser({ game } = globalThis) { return game.user; }", "foundryGlobal"],
   ["features/a/domain.mjs", "export const f = ({ Hooks: hooks } = window) => hooks;", "foundryGlobal"],
   ["lib/x.mjs", "export function f([first] = [], { ui } = self) { return [first, ui]; }", "foundryGlobal"],
-  ["features/a/domain.mjs", 'export const x = () => window.self["CONFIG"];', "foundryGlobal"]
+  ["features/a/domain.mjs", 'export const x = () => window.self["CONFIG"];', "foundryGlobal"],
+  // Globais só em scripts/platform/ (#86): também na integração e na UI das features, no main e nos pilotos.
+  ["features/a/integration.mjs", "export const x = () => game.user;", "defaultMessage"],
+  ["features/a/ui/x.mjs", "export const x = () => ui.notifications;", "defaultMessage"],
+  ["kernel/k.mjs", "export const x = () => CONFIG.Item;", "defaultMessage"],
+  ["main.mjs", "export const x = () => game.settings;", "defaultMessage"],
+  ["patches/suppressed-usage-effects.mjs", "export const x = () => CONFIG.Actor;", "defaultMessage"],
+  ["rules/mana-limit.mjs", "export const x = () => Hooks;", "defaultMessage"]
 ];
 
 const PASS = [
   ["features/a/domain/x.mjs", 'import "../domain/y.mjs"; import "./z.mjs"; import "../domain.mjs";'],
   ["features/a/domain.mjs", 'import "./domain/y.mjs"; import "../../lib/x.mjs"; import "../../kernel/k.mjs";'],
   ["features/a/domain.mjs", 'export const f = () => import("./domain/y.mjs");'],
-  ["features/a/integration.mjs", 'import "./domain.mjs"; import "../../lib/x.mjs"; import "../../services/s.mjs"; export const x = () => game.user;'],
+  ["features/a/integration.mjs", 'import "./domain.mjs"; import "../../lib/x.mjs"; import "../../services/s.mjs"; export const x = (ctx) => ctx.platform.user;'],
+  ["patches/legacy.mjs", "export const x = () => game.user;"],
   ["features/a/ui/x.mjs", 'import "../integration.mjs"; import "../domain/y.mjs";'],
   ["lib/x.mjs", 'import "./y.mjs"; import "../kernel/k.mjs"; export const x = () => import("./z.mjs");'],
   ["platform/x.mjs", 'import "../services/s.mjs"; export const x = () => game.user;'],

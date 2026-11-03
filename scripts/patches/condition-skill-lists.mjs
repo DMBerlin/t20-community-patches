@@ -235,7 +235,7 @@ function isNeeded() {
  */
 async function lateProbe() {
   if (CONFIG.T20?.conditions) return undefined;
-  const conditions = await findWithRetry(async () => statusEffectSources(Object.keys(CONDITION_ABILITIES)));
+  const conditions = await findWithRetry(async () => statusEffectSources(Object.keys(CONDITION_ABILITIES), globalThis.CONFIG?.statusEffects));
   return conditions ? diagnoseConditionLists(conditions, CONFIG.T20?.pericias) : undefined;
 }
 

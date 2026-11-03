@@ -12,6 +12,9 @@ import {
   skipsDialog,
   sourceKey
 } from "../scripts/rules/usage-effect-max.mjs";
+import { createPlatform } from "../scripts/platform/foundry.mjs";
+import { createFeatureContext } from "../scripts/kernel/context.mjs";
+import { createWrapRegistry } from "../scripts/kernel/wrap.mjs";
 
 const INSPIRACAO_SOURCE = "Compendium.tormenta20.poderes.Item.Uv6GW8R54wUtv3sm";
 const INSPIRACAO_EFFECT = "gpuEqXYdlZr1nrNK";
@@ -216,7 +219,8 @@ function setupFoundry({ patches = [] } = {}) {
   });
   const originalWarn = console.warn;
   console.warn = (msg) => consoleWarnings.push(msg);
-  for (const patch of patches) patch.apply();
+  // Migrated patches install through the real platform, which reads the fake globals above (#86).
+  for (const patch of patches) patch.install(createFeatureContext(createPlatform(), patch, { wraps: createWrapRegistry() }));
   installUsageEffectMaxRule();
 
   const actor = (level) => ({ name: "Bardo", getRollData: () => ({ nvl: { bardo: level } }) });

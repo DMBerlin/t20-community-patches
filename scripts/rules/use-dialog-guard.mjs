@@ -6,8 +6,8 @@
  * result skips the original submit, so the dialog stays open and nothing is spent. Covers every button
  * ("Usar", "Poção") and the Enter key, which all go through submit.
  */
-import { MODULE_ID } from "../utils.mjs";
 import { wraps } from "../kernel/wrap.mjs";
+import { createPlatform } from "../platform/foundry.mjs";
 
 /**
  * @typedef {object} UseViolation
@@ -58,17 +58,21 @@ export function runValidators(list, context, onError = () => {}) {
   return { block, messages };
 }
 
+/** The element of the dialog: an HTMLElement, or the first element of a jQuery object. */
 function toElement(html) {
-  if (html instanceof HTMLElement) return html;
-  return html?.[0] instanceof HTMLElement ? html[0] : null;
+  if (typeof html?.querySelector === "function") return html;
+  return typeof html?.[0]?.querySelector === "function" ? html[0] : null;
 }
 
 let installed = false;
 
-/** Installs the submit wrapper once. Throws when the system's dialog is missing. */
-export function installUseDialogGuard() {
+/**
+ * Installs the submit wrapper once. Throws when the system's dialog is missing.
+ * @param {import("../platform/foundry.mjs").Platform} [platform]  The legacy callers use the real platform.
+ */
+export function installUseDialogGuard(platform = createPlatform()) {
   if (installed) return;
-  const AbilityUseDialog = globalThis.tormenta20?.applications?.AbilityUseDialog;
+  const AbilityUseDialog = platform.t20()?.applications?.AbilityUseDialog;
   const original = AbilityUseDialog?.prototype?.submit;
   if (typeof original !== "function") throw new Error("Tormenta20 AbilityUseDialog not found");
 
@@ -77,15 +81,15 @@ export function installUseDialogGuard() {
     try {
       const form = toElement(this.element)?.querySelector("form");
       if (form && this.item && validators.length) {
-        const formData = new foundry.applications.ux.FormDataExtended(form).object;
+        const formData = platform.forms.data(form);
         verdict = runValidators(validators, { dialog: this, item: this.item, formData, button }, (err) =>
-          console.error(`${MODULE_ID} | Use dialog validator failed`, err)
+          platform.log.error("Use dialog validator failed", err)
         );
       }
     } catch (err) {
-      console.error(`${MODULE_ID} | Use dialog guard failed`, err);
+      platform.log.error("Use dialog guard failed", err);
     }
-    for (const message of verdict.messages) ui.notifications.warn(message);
+    for (const message of verdict.messages) platform.notify.warn(message);
     if (verdict.block) return;
     return original.call(this, button, event);
   });

@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import patch, { collectsIgnoringSuppression, isSuppressedUsageEffect } from "../scripts/patches/suppressed-usage-effects.mjs";
+import { createFakeContext, createFakePlatform } from "./support/fake-platform.mjs";
 
 const item = (id, suppressed = false) => ({ documentName: "Item", id, areEffectsSuppressed: suppressed });
 const usage = (parent, extra = {}) => ({ documentName: "ActiveEffect", system: { onuse: true }, parent, ...extra });
@@ -63,10 +64,10 @@ function setup() {
       return Object.values(effects); // filters system.onuse
     }
   }
-  globalThis.CONFIG = { Actor: { documentClass: Actor }, Item: { documentClass: Item } };
-  assert.equal(patch.isNeeded(), true);
-  patch.apply();
-  return { Actor, Item, effects };
+  const ctx = createFakeContext(patch, createFakePlatform({ classes: { actor: Actor, item: Item } }));
+  assert.equal(patch.isNeeded(ctx), true);
+  patch.install(ctx);
+  return { Actor, Item, effects, ctx };
 }
 
 test("item rolls keep the rolled item's and the actor's effects and drop stored items' effects", () => {
@@ -89,6 +90,6 @@ test("skill and attribute rolls drop stored items' effects only inside the colle
 });
 
 test("the probe sees the system code after the patch is applied", () => {
-  setup();
-  assert.equal(patch.isNeeded(), true);
+  const { ctx } = setup();
+  assert.equal(patch.isNeeded(ctx), true);
 });

@@ -143,18 +143,20 @@ export function checkManaLimit({ cost, minimumCost, limit }) {
 /*  Foundry integration                         */
 /* -------------------------------------------- */
 
-function getMode() {
+/** @param {import("../kernel/feature.mjs").FeatureContext} ctx */
+function getMode(ctx) {
   try {
-    const mode = game.settings.get(MODULE_ID, MANA_LIMIT_SETTING);
+    const mode = ctx.setting(MANA_LIMIT_SETTING);
     return MANA_LIMIT_MODES.includes(mode) ? mode : "warn";
   } catch {
     return "off";
   }
 }
 
+/** The element of a render hook argument: an HTMLElement, or the first element of a jQuery object. */
 function toElement(html) {
-  if (html instanceof HTMLElement) return html;
-  return html?.[0] instanceof HTMLElement ? html[0] : null;
+  if (typeof html?.querySelector === "function") return html;
+  return typeof html?.[0]?.querySelector === "function" ? html[0] : null;
 }
 
 /** @returns {UseEffect[]} */
@@ -167,24 +169,32 @@ function readEffects(item) {
   }));
 }
 
-/**
- * Limit of the item for its actor, with the text shown after it. null when there is no limit to check.
- * @returns {{limit: number, enforce: boolean, label: string} | null}
- */
-function describeLimit(item) {
-  const actor = item?.actor;
-  if (!actor || SKIPPED_TYPES.has(item.type)) return null;
+/** Class slugs of the actor (as in getRollData's @nvl) mapped to the class names. */
+function actorClasses(actor, slugify) {
   const classes = new Map();
   for (const cls of actor.items ?? []) {
-    if (cls.type === "classe") classes.set(defaultSlugify(cls.name), cls.name);
+    if (cls.type === "classe") classes.set(slugify(cls.name), cls.name);
   }
+  return classes;
+}
+
+/**
+ * Limit of the item for its actor, with the text shown after it. null when there is no limit to check.
+ * @param {import("../kernel/feature.mjs").FeatureContext} ctx
+ * @returns {{limit: number, enforce: boolean, label: string} | null}
+ */
+function describeLimit(ctx, item) {
+  const actor = item?.actor;
+  if (!actor || SKIPPED_TYPES.has(item.type)) return null;
+  const { utils, dice, i18n } = ctx.platform;
+  const classes = actorClasses(actor, utils.slugify);
   const resolved = resolveManaLimitFormula({
-    flag: foundry.utils.getProperty(item, `flags.${MODULE_ID}.${MANA_LIMIT_FLAG}`),
-    source: manaLimitSource(item, classes.keys())
+    flag: utils.getProperty(item, `flags.${MODULE_ID}.${MANA_LIMIT_FLAG}`),
+    source: manaLimitSource(item, classes.keys(), utils.slugify)
   });
   if (resolved.kind === "none") return null;
   const rollData = actor.getRollData();
-  const Roll = foundry.dice.Roll;
+  const Roll = dice.Roll;
   let limit = evaluateManaLimit(resolved.formula, rollData, Roll);
   let { kind, enforce } = resolved;
   if (limit === null) {
@@ -194,18 +204,20 @@ function describeLimit(item) {
     limit = evaluateManaLimit(CHARACTER_FORMULA, rollData, Roll);
     if (limit === null) return null;
   }
-  const label = game.i18n.format(`T20CP.ManaLimit.Source.${kind}`, {
+  const label = i18n.format(`T20CP.ManaLimit.Source.${kind}`, {
     class: classes.get(resolved.slug) ?? resolved.slug ?? "",
     formula: resolved.formula ?? ""
   });
   return { limit, enforce, label };
 }
 
-function validate({ item, formData }) {
-  const mode = getMode();
+/** @param {import("../kernel/feature.mjs").FeatureContext} ctx */
+function validate(ctx, { item, formData }) {
+  const mode = getMode(ctx);
   if (mode === "off") return null;
-  const info = describeLimit(item);
+  const info = describeLimit(ctx, item);
   if (!info) return null;
+  const { i18n, utils } = ctx.platform;
   const effects = readEffects(item);
   const common = {
     itemType: item.type,
@@ -213,55 +225,61 @@ function validate({ item, formData }) {
     effects,
     extraCost: item.actor.system?.modificadores?.custoPM
   };
-  const cost = estimateUseCost({ ...common, applied: foundry.utils.expandObject(formData ?? {}).aprs ?? {} });
+  const cost = estimateUseCost({ ...common, applied: utils.expandObject(formData ?? {}).aprs ?? {} });
   const minimumCost = estimateUseCost({ ...common, applied: automaticApplied(effects) });
   if (checkManaLimit({ cost, minimumCost, limit: info.limit }).ok) return null;
 
   const block = mode === "block" && info.enforce;
   const data = { name: item.name, cost, limit: info.limit, source: info.label, minimum: minimumCost };
-  const parts = [game.i18n.format("T20CP.ManaLimit.Exceeded", data)];
-  if (block) parts.push(game.i18n.format("T20CP.ManaLimit.Blocked", data));
-  if (!info.enforce) parts.push(game.i18n.localize("T20CP.ManaLimit.Unknown"));
+  const parts = [i18n.format("T20CP.ManaLimit.Exceeded", data)];
+  if (block) parts.push(i18n.format("T20CP.ManaLimit.Blocked", data));
+  if (!info.enforce) parts.push(i18n.localize("T20CP.ManaLimit.Unknown"));
   return { message: parts.join(" "), block };
 }
 
-function renderDialogLine(app, html) {
-  if (getMode() === "off") return;
+/** @param {import("../kernel/feature.mjs").FeatureContext} ctx */
+function renderDialogLine(ctx, app, html) {
+  if (getMode(ctx) === "off") return;
   const root = toElement(html);
   const total = root?.querySelector(".total-cost");
   if (!total || root.querySelector(".t20cp-mana-limit")) return;
-  const info = describeLimit(app.item);
+  const info = describeLimit(ctx, app.item);
   if (!info) return;
-  const row = document.createElement("div");
+  const { i18n } = ctx.platform;
+  const doc = root.ownerDocument;
+  const row = doc.createElement("div");
   row.className = "form-group t20cp-mana-limit";
-  const label = document.createElement("label");
-  label.textContent = game.i18n.localize("T20CP.ManaLimit.DialogLabel");
-  const value = document.createElement("span");
-  value.textContent = game.i18n.format("T20CP.ManaLimit.DialogValue", { limit: info.limit, source: info.label });
+  const label = doc.createElement("label");
+  label.textContent = i18n.localize("T20CP.ManaLimit.DialogLabel");
+  const value = doc.createElement("span");
+  value.textContent = i18n.format("T20CP.ManaLimit.DialogValue", { limit: info.limit, source: info.label });
   row.append(label, value);
   total.after(row);
   app.setPosition?.({ height: "auto" });
 }
 
-function renderItemField(app, html) {
-  if (getMode() === "off") return;
+/** @param {import("../kernel/feature.mjs").FeatureContext} ctx */
+function renderItemField(ctx, app, html) {
+  if (getMode(ctx) === "off") return;
   const root = toElement(html);
   const costInput = root?.querySelector('input[name="system.ativacao.custo"]');
   const name = `flags.${MODULE_ID}.${MANA_LIMIT_FLAG}`;
   if (!costInput || root.querySelector(`input[name="${name}"]`)) return;
+  const { i18n, utils } = ctx.platform;
+  const doc = root.ownerDocument;
   const anchor = costInput.closest(".form-group") ?? costInput;
-  const row = document.createElement("div");
+  const row = doc.createElement("div");
   row.className = "form-group t20cp-mana-limit-field";
-  const label = document.createElement("label");
-  label.textContent = game.i18n.localize("T20CP.ManaLimit.FieldLabel");
-  label.dataset.tooltip = game.i18n.localize("T20CP.ManaLimit.FieldHint");
-  const fields = document.createElement("div");
+  const label = doc.createElement("label");
+  label.textContent = i18n.localize("T20CP.ManaLimit.FieldLabel");
+  label.dataset.tooltip = i18n.localize("T20CP.ManaLimit.FieldHint");
+  const fields = doc.createElement("div");
   fields.className = "form-fields";
-  const input = document.createElement("input");
+  const input = doc.createElement("input");
   input.type = "text";
   input.name = name;
-  input.value = String(foundry.utils.getProperty(app.document ?? app.item ?? {}, name) ?? "");
-  input.placeholder = game.i18n.localize("T20CP.ManaLimit.FieldPlaceholder");
+  input.value = String(utils.getProperty(app.document ?? app.item ?? {}, name) ?? "");
+  input.placeholder = i18n.localize("T20CP.ManaLimit.FieldPlaceholder");
   input.disabled = app.isEditable === false;
   fields.append(input);
   row.append(label, fields);
@@ -286,22 +304,25 @@ const SETTING_SPEC = {
   default: "warn"
 };
 
-/** Installs the rule. The mode is read on every use, so a change applies without reloading. */
-export function installManaLimitRule() {
-  installUseDialogGuard();
-  registerUseValidator(validate);
-  Hooks.on("renderAbilityUseDialog", (app, html) => {
+/**
+ * Installs the rule. The mode is read on every use, so a change applies without reloading.
+ * @param {import("../kernel/feature.mjs").FeatureContext} ctx
+ */
+export function installManaLimitRule(ctx) {
+  installUseDialogGuard(ctx.platform);
+  registerUseValidator((context) => validate(ctx, context));
+  ctx.hooks.on("renderAbilityUseDialog", (app, html) => {
     try {
-      renderDialogLine(app, html);
+      renderDialogLine(ctx, app, html);
     } catch (err) {
-      console.error(`${MODULE_ID} | mana-limit: failed to show the limit`, err);
+      ctx.log.error("failed to show the limit", err);
     }
   });
-  Hooks.on("renderItemSheet", (app, html) => {
+  ctx.hooks.on("renderItemSheet", (app, html) => {
     try {
-      renderItemField(app, html);
+      renderItemField(ctx, app, html);
     } catch (err) {
-      console.error(`${MODULE_ID} | mana-limit: failed to add the item field`, err);
+      ctx.log.error("failed to add the item field", err);
     }
   });
 }
@@ -313,5 +334,5 @@ export default {
   group: "usage-effects",
   system: { id: "tormenta20" },
   settings: [SETTING_SPEC],
-  install: () => installManaLimitRule()
+  install: (ctx) => installManaLimitRule(ctx)
 };

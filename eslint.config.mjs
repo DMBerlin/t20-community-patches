@@ -6,7 +6,18 @@ import noFoundryGlobals from "./tools/eslint/no-foundry-globals.mjs";
 // Globais do Foundry (e do Handlebars que ele expõe): permitidas na plataforma e no legado, proibidas nas camadas puras.
 const FOUNDRY = ["game", "CONFIG", "ui", "foundry", "canvas", "Hooks", "CONST", "Roll", "ChatMessage", "Actor", "Item", "Handlebars"];
 const LAYERED = ["scripts/kernel/**", "scripts/platform/**", "scripts/services/**", "scripts/lib/**", "scripts/features/**"];
-const PURE = ["scripts/kernel/**", "scripts/services/**", "scripts/lib/**", "scripts/features/*/domain.mjs", "scripts/features/*/domain/**"];
+// Globais do Foundry só em scripts/platform/ (#86): o resto das camadas e os pilotos já migrados recebem tudo por ctx.
+const NO_GLOBALS = [
+  "scripts/kernel/**",
+  "scripts/services/**",
+  "scripts/lib/**",
+  "scripts/features/**",
+  "scripts/main.mjs",
+  "scripts/patches/suppressed-usage-effects.mjs",
+  "scripts/patches/linked-usage-effects.mjs",
+  "scripts/rules/mana-limit.mjs",
+  "scripts/rules/use-dialog-guard.mjs"
+];
 const t20 = { rules: { "layer-boundaries": layerBoundaries, "no-foundry-globals": noFoundryGlobals } };
 
 export default [
@@ -32,7 +43,7 @@ export default [
   },
   { files: LAYERED, rules: { "max-lines": ["error", { max: 300 }] } },
   {
-    files: PURE,
+    files: NO_GLOBALS,
     plugins: { t20 },
     rules: {
       // checkGlobalObject também pega globalThis.game, window.game e self.game.

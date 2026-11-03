@@ -62,8 +62,12 @@ t20-community-patches/
 O `eslint.config.mjs` garante as fronteiras da arquitetura em camadas (épico #82). Rode `npm ci` uma vez em cada worktree; depois, `make lint` ou `make check`.
 
 - Camadas: `scripts/kernel`, `scripts/platform`, `scripts/services`, `scripts/lib` e `scripts/features/<feature>`.
-- Globais do Foundry (`game`, `CONFIG`, `ui`, `foundry`, `canvas`, `Hooks`, `CONST`, `Roll`, `ChatMessage`, `Actor`, `Item`, `Handlebars`) são proibidos nas camadas puras: `kernel`, `services`, `lib` e o domínio das features (`domain.mjs` ou `domain/`). Isso vale também para `globalThis.<global>`, `window.<global>` e `self.<global>`, para cadeias como `globalThis.window.game` e para desestruturação (`const { game } = window`), via a regra local `t20/no-foundry-globals`.
+- **Globais do Foundry só em `scripts/platform/`.** `game`, `CONFIG`, `ui`, `foundry`, `canvas`, `Hooks`, `CONST`, `Roll`, `ChatMessage`, `Actor`, `Item` e `Handlebars` são proibidos em `kernel`, `services`, `lib`, em todas as features (domínio, integração e UI), no `main.mjs` e nos arquivos legados já migrados (lista `NO_GLOBALS` do `eslint.config.mjs`). Isso vale também para `globalThis.<global>`, `window.<global>` e `self.<global>`, para cadeias como `globalThis.window.game` e para desestruturação (`const { game } = window`), via a regra local `t20/no-foundry-globals`.
 - A regra local `t20/layer-boundaries` (`tools/eslint/layer-boundaries.mjs`) resolve cada importação relativa a partir do arquivo, em qualquer profundidade de pasta. Importações dentro da mesma feature são livres, salvo as do domínio abaixo. Ela também verifica `export … from` e `import()`; nas features e em `scripts/lib`, `import()` só aceita caminho literal. Nas camadas, só caminhos relativos (`./`, `../`): caminho absoluto, URL ou pacote é erro.
+- Plataforma (`scripts/platform/foundry.mjs`): `createPlatform()` devolve um objeto congelado com as portas `system`, `classes` (classes de documento do sistema), `t20()`, `t20Config()`, `statusEffects()`, `settings` (chaves deste módulo), `i18n`, `notify`, `hooks`, `user`, `documents`, `utils`, `dice`, `forms`, `log`, `sourceOf(fn)` (código-fonte da função original, sob os wrappers do módulo) e `module`. Tudo é lido sob demanda, porque `CONFIG`, `game.user` e as traduções mudam entre o `init` e o `ready`. Uma porta nova entra aqui, nunca como global lido numa feature.
+- Contexto (`scripts/kernel/context.mjs`): cada feature recebe um `ctx` congelado em `isNeeded(ctx)`, `install(ctx)` e `lateProbe(ctx)`, com `id`, `platform`, `log` (prefixado com o id), `hooks`, `wrap(alvo, método, wrapper)` (o dono é o id da feature) e `setting(chave)`, que só lê chaves declaradas em `settings` da própria feature e lança nas outras.
+- O `main.mjs` só cria a plataforma e liga o `init` (`registerPatchSettings`, menu da Central, `bootFeatures`, `api`) e o `ready` (`runReady`, em `scripts/kernel/ready.mjs`: avisos do carregamento e diagnósticos tardios).
+- Nos testes, use `createFakePlatform(overrides)` e `createFakeContext(feature, platform)`, de `tests/support/fake-platform.mjs`, sem tocar em `globalThis`. A plataforma falsa guarda os avisos em `platform.notes` e o log em `platform.logs`.
 - Uma feature não importa outra feature nem `scripts/platform`; ela recebe a plataforma por `ctx`. Código comum vai para `scripts/lib` ou `scripts/services`.
 - O domínio de uma feature (`domain.mjs` ou `domain/`) e `scripts/lib` não importam `integration`, `ui`, `scripts/platform` nem `scripts/services`; `scripts/lib` também não importa features. Os dois também não importam o código legado de `scripts/` (raiz, `patches`, `rules`, `apps`): mova o código puro para `scripts/lib`.
 - No máximo 300 linhas por arquivo nas camadas. Um domínio maior vira uma pasta `domain/`.
@@ -87,7 +91,7 @@ O `eslint.config.mjs` garante as fronteiras da arquitetura em camadas (épico #8
 
 Patches (correções) e regras opcionais seguem um contrato único, `Feature` (`scripts/kernel/feature.mjs`), com `kind: "patch" | "rule"`. A lista `FEATURES`, em `scripts/features/index.mjs`, define a ordem de instalação: primeiro os patches (`PATCHES`, de `scripts/patches/index.mjs`), depois as regras. Quem vem antes fica mais perto do original em cada cadeia de wrappers. O ciclo de vida (`bootFeatures`, em `scripts/kernel/lifecycle.mjs`) é o único ponto que instala features e isola erros: uma feature que lança vira `error` e não impede as outras. O `main.mjs` não conhece nenhuma feature específica.
 
-Cada correção fica em `scripts/patches/<id>.mjs` e é registrada em `PATCHES`, em `scripts/patches/index.mjs` (o `apply()` vira `install()` em `patchFeature`):
+Cada correção fica em `scripts/patches/<id>.mjs` e é registrada em `PATCHES`, em `scripts/patches/index.mjs`. Patches novos usam `install(ctx)`; o `apply()` sem contexto é legado, lê globais e continua aceito até a migração (#88):
 
 ```js
 export default {
@@ -95,11 +99,11 @@ export default {
   group: "<um de GROUPS>",          // conditions | sheet-effects | usage-effects | items | settings | actor | combat
   issue: <n>,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.5" } },
-  guarded: false,                   // opcional: true se o apply() só age quando o bug aparece
+  guarded: false,                   // opcional: true se o install() só age quando o bug aparece
   settings: [/* opcional: SettingSpec, registradas só quando o patch é aplicado */],
-  isNeeded() { /* síncrono, seguro no init, roda antes do apply(): devolve um Diagnosis */ },
-  async lateProbe() { /* opcional: diagnóstico depois do ready; só atualiza selo e aviso */ },
-  apply() { /* instala os wrappers; chamado uma vez no init */ }
+  isNeeded(ctx) { /* síncrono, seguro no init, roda antes do install(): devolve um Diagnosis */ },
+  async lateProbe(ctx) { /* opcional: diagnóstico depois do ready; só atualiza selo e aviso */ },
+  install(ctx) { /* instala os wrappers com ctx.wrap; chamado uma vez no init */ }
 };
 ```
 
@@ -113,7 +117,7 @@ export default {
   system: { id: "tormenta20" },     // outro sistema → estado "incompatible", sem install
   settings: [{ key: "<chave>", scope: "world", type: String, choices: {…}, default: "off", name, hint, onChange }],
   after: ["<id>"],                  // opcional: ids que precisam vir ANTES em FEATURES; "*" = a última
-  install(ctx) { /* lê a própria configuração a cada uso; ctx = { id, wrap } */ }
+  install(ctx) { /* lê a própria configuração a cada uso, com ctx.setting("<chave>") */ }
 };
 ```
 
@@ -124,7 +128,7 @@ export default {
 
 Diagnóstico (`Diagnosis`, em `scripts/registry.mjs`): `{ bug: "present" | "fixed" | "unknown", confidence: "high" | "low", evidence?: string }`.
 - `confidence: "high"` só quando a evidência cobre **tudo** o que o patch corrige. Em Automático, só `fixed`/high deixa de aplicar a correção; `fixed`/low vira `suspected-fixed` e a correção continua aplicada.
-- Um teste que **só lê código-fonte** nunca devolve `fixed`/high: ignore comentários (`stripComments`), leia a função original (`unwrap`, antes do `apply()`) e responda `unknown` para código não reconhecido (por exemplo, o wrapper de outro módulo). Uma correção parcial do sistema não é `fixed`.
+- Um teste que **só lê código-fonte** nunca devolve `fixed`/high: ignore comentários (`stripComments`), leia a função original (`ctx.platform.sourceOf(fn)`, que segue o `unwrap`) e responda `unknown` para código não reconhecido (por exemplo, o wrapper de outro módulo). Uma correção parcial do sistema não é `fixed`.
 - Booleanos legados continuam aceitos: `true` → present/high, `false` → fixed/low, `undefined` → unknown.
 - `guarded: true` permite aplicar a correção numa versão não verificada sem confirmar o bug (`applied-guarded`).
 - `lateProbe()` só roda quando o patch foi aplicado, não pode medir o efeito do próprio patch e devolve `undefined` quando não aprendeu nada.
@@ -132,7 +136,7 @@ Diagnóstico (`Diagnosis`, em `scripts/registry.mjs`): `{ bug: "present" | "fixe
 Regras (patches e regras opcionais):
 - Lógica de decisão em **funções puras exportadas**, testadas em `tests/<id>.test.mjs`. A integração com o Foundry fica fina.
 - Wrappers preservam `this`, argumentos e o valor de retorno, e falham de forma segura (sem quebrar o sistema).
-- Todo wrapper de método passa por `wraps.wrap(alvo, "método", "<id>", function (original, ...args) { … })`, de `scripts/kernel/wrap.mjs`; nunca atribua direto ao protótipo. O dono é o id do patch ou da regra (ou o nome do serviço compartilhado). Quem registra primeiro fica mais perto do original, e a ordem aparece em `api.wraps()` e no snapshot `tests/fixtures/wrap-order.json` (regerar com `UPDATE_WRAP_ORDER=1 node --test tests/wrap-order.test.mjs` quando a ordem mudar de propósito). Para uma fábrica pura `(original) => substituta`, use `fromFactory`. `scripts/kernel/` não lê globais do Foundry.
+- Todo wrapper de método passa por `ctx.wrap(alvo, "método", function (original, ...args) { … })` (ou, no código legado e nos serviços, `wraps.wrap(alvo, "método", "<dono>", …)`, de `scripts/kernel/wrap.mjs`); nunca atribua direto ao protótipo. O dono é o id do patch ou da regra (ou o nome do serviço compartilhado). Quem registra primeiro fica mais perto do original, e a ordem aparece em `api.wraps()` e no snapshot `tests/fixtures/wrap-order.json` (regerar com `UPDATE_WRAP_ORDER=1 node --test tests/wrap-order.test.mjs` quando a ordem mudar de propósito). Para uma fábrica pura `(original) => substituta`, use `fromFactory`. `scripts/kernel/` não lê globais do Foundry.
 - Nunca avaliar texto de usuário como JavaScript (`eval`, `Function`, `Roll.safeEval`). Fórmulas passam por `foundry.dice.Roll`, como no core.
 - Para cada patch, atualizar:
   - `lang/pt-BR.json` e `lang/en.json` (paridade de chaves; é a tradução da interface do módulo);

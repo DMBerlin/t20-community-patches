@@ -6,10 +6,13 @@ import {
   estimateUseCost,
   evaluateManaLimit,
   installManaLimitRule,
+  MANA_LIMIT_SETTING,
   manaLimitSource,
   resolveManaLimitFormula
 } from "../scripts/rules/mana-limit.mjs";
 import { runValidators } from "../scripts/rules/use-dialog-guard.mjs";
+import manaLimit from "../scripts/rules/mana-limit.mjs";
+import { createFakeContext, createFakePlatform } from "./support/fake-platform.mjs";
 
 const slugify = (text) => String(text).trim().toLowerCase().replace(/\s+/g, "-");
 
@@ -132,7 +135,7 @@ test("runValidators merges messages, blocks on any blocking result and ignores a
   assert.deepEqual(errors, ["boom"]);
 });
 
-/* Integration with fake Foundry globals: the guard wraps submit and the rule validates the dialog form. */
+/* Integration on a fake platform: the guard wraps submit and the rule validates the dialog form. */
 
 let foundryFakes;
 
@@ -142,9 +145,6 @@ function setupFoundry() {
     foundryFakes.warnings.length = 0;
     return foundryFakes;
   }
-  const settings = { mode: "block" };
-  const warnings = [];
-  const hooks = {};
   class Element {
     querySelector(selector) {
       return selector === "form" ? this.form : null;
@@ -161,52 +161,20 @@ function setupFoundry() {
       return "submitted";
     }
   }
-  Object.assign(globalThis, {
-    HTMLElement: Element,
-    tormenta20: { applications: { AbilityUseDialog } },
-    game: {
-      settings: { get: () => settings.mode },
-      i18n: {
-        localize: (key) => key,
-        format: (key, data) => `${key}${JSON.stringify(data)}`
-      }
-    },
-    ui: { notifications: { warn: (msg) => warnings.push(msg) } },
-    Hooks: { on: (name, fn) => (hooks[name] = fn) },
-    foundry: {
-      dice: { Roll: FakeRoll },
-      applications: {
-        ux: {
-          FormDataExtended: class {
-            constructor(form) {
-              this.object = form.formData;
-            }
-          }
-        }
-      },
-      utils: {
-        getProperty: (obj, path) => path.split(".").reduce((o, k) => o?.[k], obj),
-        expandObject: (flat) => {
-          const out = {};
-          for (const [path, value] of Object.entries(flat)) {
-            const keys = path.split(".");
-            const last = keys.pop();
-            keys.reduce((o, k) => (o[k] ??= {}), out)[last] = value;
-          }
-          return out;
-        }
-      }
-    }
+  const platform = createFakePlatform({
+    settings: { [MANA_LIMIT_SETTING]: "block" },
+    t20: { applications: { AbilityUseDialog } },
+    dice: { Roll: FakeRoll },
+    forms: { data: (form) => form.formData }
   });
-  if (!String.prototype.slugify) {
-    Object.defineProperty(String.prototype, "slugify", {
-      value() {
-        return slugify(this);
-      },
-      configurable: true
-    });
-  }
-  installManaLimitRule();
+  const settings = {
+    set mode(value) {
+      platform.settings.set(MANA_LIMIT_SETTING, value);
+    }
+  };
+  /** Notifications shown by the guard: {level, message}. */
+  const warnings = platform.notes;
+  installManaLimitRule(createFakeContext(manaLimit, platform));
 
   const actor = (level, extra = {}) => ({
     items: [{ type: "classe", name: "Bardo" }],
@@ -227,7 +195,7 @@ function setupFoundry() {
     const result = dialog.submit();
     return { result, submitted: dialog.submitted };
   };
-  foundryFakes = { settings, warnings, hooks, actor, inspiracao, use };
+  foundryFakes = { settings, warnings, actor, inspiracao, use };
   return foundryFakes;
 }
 
@@ -239,7 +207,7 @@ test("block mode: minimum cost passes, a class-limit violation keeps the dialog 
   assert.equal(warnings.length, 0);
   assert.deepEqual(use(bardo1, 1), { result: undefined, submitted: 0 });
   assert.equal(warnings.length, 1);
-  assert.match(warnings[0], /T20CP\.ManaLimit\.Exceeded.*"cost":4.*"limit":1.*T20CP\.ManaLimit\.Blocked/);
+  assert.match(warnings[0].message, /T20CP\.ManaLimit\.Exceeded.*"cost":4.*"limit":1.*T20CP\.ManaLimit\.Blocked/);
 
   const bardo5 = inspiracao(actor(5));
   assert.equal(use(bardo5, 1).submitted, 1);
@@ -249,7 +217,7 @@ test("block mode: minimum cost passes, a class-limit violation keeps the dialog 
   settings.mode = "warn";
   assert.equal(use(bardo1, 1).submitted, 1);
   assert.equal(warnings.length, 1);
-  assert.doesNotMatch(warnings[0], /Blocked/);
+  assert.doesNotMatch(warnings[0].message, /Blocked/);
 
   warnings.length = 0;
   settings.mode = "off";
@@ -263,13 +231,13 @@ test("block mode: unknown source and invalid formula only warn; item flag enforc
 
   const magia = { ...inspiracao(actor(1)), type: "magia" };
   assert.equal(use(magia, 3).submitted, 1);
-  assert.match(warnings.at(-1), /T20CP\.ManaLimit\.Unknown/);
+  assert.match(warnings.at(-1).message, /T20CP\.ManaLimit\.Unknown/);
 
   assert.equal(use(inspiracao(actor(1), flag("@nvl.arcanista")), 3).submitted, 1);
-  assert.match(warnings.at(-1), /Source\.invalid.*T20CP\.ManaLimit\.Unknown/);
+  assert.match(warnings.at(-1).message, /Source\.invalid.*T20CP\.ManaLimit\.Unknown/);
 
   assert.equal(use(inspiracao(actor(1), flag("1d4")), 3).submitted, 1);
-  assert.match(warnings.at(-1), /Source\.invalid.*T20CP\.ManaLimit\.Unknown/);
+  assert.match(warnings.at(-1).message, /Source\.invalid.*T20CP\.ManaLimit\.Unknown/);
 
   const count = warnings.length;
   assert.equal(use(inspiracao(actor(1), flag("none")), 3).submitted, 1);

@@ -1,5 +1,5 @@
 import { MODULE_ID } from "../utils.mjs";
-import { getPatchMode } from "../settings.mjs";
+import { getPatchMode } from "../kernel/patch-settings.mjs";
 import { centerSettings } from "../kernel/settings.mjs";
 import {
   STATE_CATEGORIES,
@@ -14,6 +14,9 @@ import {
 } from "../registry.mjs";
 import { FEATURES, GROUPS, PATCH_FEATURES } from "../features/index.mjs";
 import { PATCH_FILTERS, RULE_FILTERS, facetCounts, matchesView, patchBucket, ruleBucket } from "./center-view.mjs";
+
+/** Legacy until the Center moves to the platform (#89). */
+const MODULE_SETTINGS = { get: (key) => game.settings.get(MODULE_ID, key) };
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -89,7 +92,7 @@ export class PatchManager extends HandlebarsApplicationMixin(ApplicationV2) {
       const { state = "disabled", diagnosis, reason, changed } = status.get(patch.id) ?? {};
       const shown = displayState(state, diagnosis);
       const category = stateCategory(shown);
-      const mode = getPatchMode(patch.id);
+      const mode = getPatchMode(MODULE_SETTINGS, patch.id);
       const name = game.i18n.localize(`T20CP.Patches.${patch.id}.Name`);
       const link =
         category === "attention"

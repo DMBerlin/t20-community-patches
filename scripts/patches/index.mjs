@@ -57,8 +57,8 @@ export const GROUPS = ["conditions", "sheet-effects", "usage-effects", "items", 
  * @property {number} [issue]                    Issue number in this repository.
  * @property {{id: string, affected: {minimum?: string, maximum?: string}}} system
  *                                               System versions verified to contain the bug.
- * @property {() => import("../registry.mjs").Diagnosis|boolean|undefined} [isNeeded]
- *                                               Synchronous runtime probe, safe during "init", run before apply().
+ * @property {(ctx: import("../kernel/feature.mjs").FeatureContext) => import("../registry.mjs").Diagnosis|boolean|undefined} [isNeeded]
+ *                                               Synchronous runtime probe, safe during "init", run before the fix.
  *                                               Returns a Diagnosis, or a legacy boolean: true = present/high,
  *                                               false = fixed/low, undefined = unknown. A probe that only reads
  *                                               source code never returns fixed/high.
@@ -66,13 +66,16 @@ export const GROUPS = ["conditions", "sheet-effects", "usage-effects", "items", 
  *                                               Settings registered only when the patch is applied, before apply().
  * @property {boolean} [guarded]                 apply() only acts when the bug shows up, so it is safe to apply on
  *                                               an unverified system version without confirming the bug.
- * @property {() => Promise<import("../registry.mjs").Diagnosis|boolean|undefined>} [lateProbe]
+ * @property {(ctx: import("../kernel/feature.mjs").FeatureContext) => Promise<import("../registry.mjs").Diagnosis|boolean|undefined>} [lateProbe]
  *                                               Optional diagnosis after "ready", for bugs that cannot be checked
  *                                               during "init". Only runs when the patch was applied; it updates the
  *                                               badge and notifications, never installs or removes wrappers. It
  *                                               must not measure the patch's own effect. undefined = no news.
- * @property {() => void} apply                  Installs the fix. Called once during "init" (install() of the
- *                                               Feature, see patchFeature in scripts/kernel/feature.mjs).
+ * @property {() => void} [apply]                Legacy: installs the fix reading Foundry globals.
+ * @property {(ctx: import("../kernel/feature.mjs").FeatureContext) => void} [install]
+ *                                               Installs the fix through the injected context (preferred over
+ *                                               apply). Each patch has one of the two; both are called once during
+ *                                               "init" (see patchFeature in scripts/kernel/feature.mjs).
  */
 
 /** @type {Patch[]} */

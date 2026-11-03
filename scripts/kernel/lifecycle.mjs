@@ -29,18 +29,19 @@ function registerAll(feature, registerSetting) {
 
 /** Mode and state of a patch, or an "error" entry when reading the mode or probing throws. */
 function resolvePatch(feature, deps) {
-  const { modeOf, system, log } = deps;
+  const { modeOf, system, contextFor, log } = deps;
   let mode;
   try {
     mode = modeOf(feature);
+    const ctx = contextFor(feature);
     const resolved = resolvePatchState({
       patch: feature,
       mode,
       systemId: system.id,
       systemVersion: system.version,
-      probe: feature.isNeeded
+      probe: typeof feature.isNeeded === "function" ? () => feature.isNeeded(ctx) : undefined
     });
-    return { mode, ...resolved };
+    return { mode, ctx, ...resolved };
   } catch (err) {
     log.error(`Failed to resolve patch: ${feature.id}`, err);
     return { mode, state: "error", reason: err?.message ?? String(err), failed: true };
@@ -48,8 +49,8 @@ function resolvePatch(feature, deps) {
 }
 
 function bootPatch(feature, deps) {
-  const { contextFor, registerSetting, log } = deps;
-  const { mode, diagnosis, failed, ...resolved } = resolvePatch(feature, deps);
+  const { registerSetting, log } = deps;
+  const { mode, ctx, diagnosis, failed, ...resolved } = resolvePatch(feature, deps);
   let { state, reason } = resolved;
   const entry = () => ({ id: feature.id, kind: "patch", group: feature.group, mode, state, diagnosis, reason });
   if (failed) return entry();
@@ -60,7 +61,7 @@ function bootPatch(feature, deps) {
   try {
     // Only an applied patch registers its settings (segmented-scene-setting's limit).
     registerAll(feature, registerSetting);
-    feature.install(contextFor(feature));
+    feature.install(ctx);
     log.info(`Patch applied: ${feature.id} (${state}${describeDiagnosis(diagnosis)})`);
   } catch (err) {
     state = "error";

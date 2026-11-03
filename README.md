@@ -121,9 +121,9 @@ As convenções completas estão em [`AGENTS.md`](AGENTS.md).
   - `group`: um dos `GROUPS`;
   - `issue`;
   - `system.affected`: as versões verificadas;
-  - `apply()`;
-  - sempre que possível, `isNeeded()`: um teste síncrono, seguro no `init`, que devolve um diagnóstico `{ bug, confidence, evidence }` (ou o booleano legado). Um teste que só lê código-fonte nunca devolve "corrigido" com confiança alta;
-  - opcionalmente, `guarded` (o `apply()` só age quando o bug aparece) e `lateProbe()` (diagnóstico depois do `ready`).
+  - `install(ctx)`: instala a correção com o contexto injetado (`ctx.platform`, `ctx.wrap`, `ctx.setting`); os globais do Foundry só são lidos em `scripts/platform/`. O `apply()` sem contexto é legado;
+  - sempre que possível, `isNeeded(ctx)`: um teste síncrono, seguro no `init`, que devolve um diagnóstico `{ bug, confidence, evidence }` (ou o booleano legado). Um teste que só lê código-fonte nunca devolve "corrigido" com confiança alta;
+  - opcionalmente, `guarded` (o `install()` só age quando o bug aparece) e `lateProbe(ctx)` (diagnóstico depois do `ready`).
 - O nome e a descrição de cada correção vão em `lang/pt-BR.json` e `lang/en.json`.
 - O repositório usa worktrees no layout `.bare`: `main/` é a principal e cada issue ganha a sua (`<n>-<slug>/`, branch `issue/<n>-<slug>`).
 

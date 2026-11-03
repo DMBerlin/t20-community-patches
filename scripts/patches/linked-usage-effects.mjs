@@ -8,7 +8,6 @@
  * Fix: the single matching effect of the usage effect's own item is injected (as an isolated, disabled clone named
  * after the change value) into the rolled item's clone, and "efeito"/"condicao" are not appended to own effects.
  */
-import { wraps } from "../kernel/wrap.mjs";
 
 const LINK_KEY = "efeito";
 const DROPPED_KEYS = new Set(["efeito", "condicao"]);
@@ -71,19 +70,25 @@ export class OwnChangeList extends Array {
 const warned = new Set();
 
 /** Every read of `system.changes` returns a fresh copy of the target's changes, and writes are ignored. */
-function isolateChanges(effect) {
-  const snapshot = foundry.utils.deepClone(effect._source?.system?.changes ?? []);
+function isolateChanges(effect, utils) {
+  const snapshot = utils.deepClone(effect._source?.system?.changes ?? []);
   Object.defineProperty(effect.system, "changes", {
     configurable: true,
     enumerable: true,
-    get: () => foundry.utils.deepClone(snapshot),
+    get: () => utils.deepClone(snapshot),
     set: () => {}
   });
 }
 
-function injectLinked(rolled, usageEffect) {
+/**
+ * @param {import("../kernel/feature.mjs").FeatureContext} ctx
+ * @param {object} rolled       The rolled item's clone.
+ * @param {object} usageEffect  One of its applicable usage effects.
+ */
+function injectLinked(ctx, rolled, usageEffect) {
   const source = usageEffect?.parent?.documentName === "Item" ? usageEffect.parent : null;
   if (!source) return;
+  const { utils } = ctx.platform;
   for (const value of linkedValues(usageEffect.system?.changes)) {
     if (rolled.effects.some((e) => e.name === value)) continue;
     const candidates = findLinkedCandidates(source.effects, value, usageEffect.id);
@@ -91,26 +96,28 @@ function injectLinked(rolled, usageEffect) {
       const key = `${source.uuid}|${value}`;
       if (candidates.length > 1 && !warned.has(key)) {
         warned.add(key);
-        console.warn(`t20-community-patches | linked-usage-effects: "${value}" is ambiguous in ${source.name}`);
+        ctx.log.warn(`"${value}" is ambiguous in ${source.name}`);
       }
       continue;
     }
     const linked = candidates[0].clone(
-      { name: value, disabled: true, _id: foundry.utils.randomID() },
+      { name: value, disabled: true, _id: utils.randomID() },
       { keepId: true, parent: rolled }
     );
-    isolateChanges(linked);
+    isolateChanges(linked, utils);
     rolled.effects.set(linked.id, linked, { modifySource: false });
   }
 }
 
-function apply() {
-  const ItemClass = CONFIG.Item.documentClass;
-  const original = ItemClass.prototype._allApplicableOnUseEffects;
-  if (typeof original !== "function") throw new Error("Tormenta20 usage effect API not found");
+/** @param {import("../kernel/feature.mjs").FeatureContext} ctx */
+function install(ctx) {
+  const ItemClass = ctx.platform.classes.item;
+  if (typeof ItemClass?.prototype?._allApplicableOnUseEffects !== "function") {
+    throw new Error("Tormenta20 usage effect API not found");
+  }
 
   // `this` is the rolled item's clone (ItemT20#roll); the live document is never touched.
-  wraps.wrap(ItemClass.prototype, "_allApplicableOnUseEffects", "linked-usage-effects", function (original, ...args) {
+  ctx.wrap(ItemClass.prototype, "_allApplicableOnUseEffects", function (original, ...args) {
     const effects = original.apply(this, args);
     if (!Array.isArray(effects) || !this.effects || this.actor?.items?.get(this.id) === this) return effects;
     try {
@@ -119,9 +126,9 @@ function apply() {
           own.system.changes = OwnChangeList.from(own.system.changes);
         }
       }
-      for (const effect of effects) injectLinked(this, effect);
+      for (const effect of effects) injectLinked(ctx, this, effect);
     } catch (err) {
-      console.warn("t20-community-patches | linked-usage-effects:", err);
+      ctx.log.warn(err);
     }
     return effects;
   });
@@ -138,5 +145,5 @@ export default {
   issue: 24,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
   isNeeded,
-  apply
+  install
 };

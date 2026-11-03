@@ -11,7 +11,7 @@
  * the dialog form already sends it), the dialog gets the missing hidden cost input (empty value), and a checked
  * Truque locks the other enhancements and shows a total of 0.
  */
-import { MODULE_ID } from "../utils.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
 import { wraps } from "../kernel/wrap.mjs";
 
 export const CANTRIP_COST = "Truque";

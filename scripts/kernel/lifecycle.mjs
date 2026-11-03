@@ -27,6 +27,17 @@ function registerAll(feature, registerSetting) {
   for (const spec of feature.settings ?? []) registerSetting(spec);
 }
 
+/**
+ * Installs the services the feature declares, right before its own install(): the first feature that declares a
+ * service decides where its wrappers sit in each chain (#87).
+ */
+function ensureServices(feature, services) {
+  for (const id of feature.services ?? []) {
+    if (!services) throw new Error(`${feature.id}: no service registry for "${id}"`);
+    services.ensure(id);
+  }
+}
+
 /** Mode and state of a patch, or an "error" entry when reading the mode or probing throws. */
 function resolvePatch(feature, deps) {
   const { modeOf, system, contextFor, log } = deps;
@@ -61,6 +72,7 @@ function bootPatch(feature, deps) {
   try {
     // Only an applied patch registers its settings (segmented-scene-setting's limit).
     registerAll(feature, registerSetting);
+    ensureServices(feature, deps.services);
     feature.install(ctx);
     log.info(`Patch applied: ${feature.id} (${state}${describeDiagnosis(diagnosis)})`);
   } catch (err) {
@@ -80,6 +92,7 @@ function bootRule(feature, deps, failed) {
     return { ...entry, state: "incompatible", reason: system.id };
   }
   try {
+    ensureServices(feature, deps.services);
     feature.install(contextFor(feature));
     return { ...entry, state: "installed" };
   } catch (err) {
@@ -98,6 +111,7 @@ function bootRule(feature, deps, failed) {
  * @param {{id: string, version: string}} deps.system
  * @param {(feature: import("./feature.mjs").Feature) => import("./feature.mjs").FeatureContext} deps.contextFor
  * @param {(spec: import("./feature.mjs").SettingSpec) => void} deps.registerSetting
+ * @param {{ensure: (id: string) => object}} [deps.services]  Installs the declared services on demand.
  * @param {{info: Function, error: Function}} deps.log
  * @returns {StatusEntry[]}
  */

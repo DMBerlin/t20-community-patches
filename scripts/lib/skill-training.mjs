@@ -8,10 +8,7 @@
  *
  * Everything here is pure, except skillUseEffects, which reads the actor's embedded documents.
  */
-import { MODULE_ID } from "../utils.mjs";
-import { APPLY_STATES } from "../registry.mjs";
-import { pseudoItemEffects } from "./usage-effect-max.mjs";
-import { isSuppressedUsageEffect } from "../patches/suppressed-usage-effects.mjs";
+import { isSuppressedUsageEffect, pseudoItemEffects } from "./usage-effects.mjs";
 
 /** CONFIG first: the compendium menaces store st=false for every skill (migration_1_5_012 only fixed characters). */
 export function isTrainedOnlySkill(key, skill, config = {}) {
@@ -76,23 +73,17 @@ export function isTrainedFor({ key, skill, config = {}, grants = [], applied = {
   return { required, trained: !!grant, grant };
 }
 
-/** Whether suppressed-usage-effects (#4) is applied on this load. */
-function suppressionPatchApplied() {
-  const status = globalThis.game?.modules?.get?.(MODULE_ID)?.api?.status;
-  const entry = Array.isArray(status) ? status.find((s) => s.id === "suppressed-usage-effects") : null;
-  return Boolean(entry && APPLY_STATES.has(entry.state));
-}
-
 /**
  * The usage effects ActorT20#rollPericia collects for a skill (T20:7607-7616), as the ActiveEffect documents.
  * suppressed-usage-effects only filters inside the system's own call, so its filter is applied here explicitly.
  * @param {object} actor
  * @param {string} key
+ * @param {boolean} dropSuppressed  Whether suppressed-usage-effects (#4) is applied on this load.
  * @returns {object[]}
  */
-export function skillUseEffects(actor, key) {
+export function skillUseEffects(actor, key, dropSuppressed) {
   const skill = actor?.system?.pericias?.[key];
   if (!skill || typeof actor.traverseEmbeddedDocuments !== "function") return [];
   const effects = pseudoItemEffects(actor.traverseEmbeddedDocuments(), { type: "skill", name: skill.label });
-  return suppressionPatchApplied() ? effects.filter((ef) => !isSuppressedUsageEffect(ef, null)) : effects;
+  return dropSuppressed ? effects.filter((ef) => !isSuppressedUsageEffect(ef, null)) : effects;
 }

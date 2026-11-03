@@ -1,4 +1,4 @@
-import { compareVersions } from "./utils.mjs";
+import { compareVersions } from "./lib/version.mjs";
 
 /**
  * @typedef {"applied"|"applied-unverified"|"applied-guarded"|"suspected-fixed"|"forced"|"disabled"|"fixed"|"unverified"|"incompatible"|"error"} PatchState

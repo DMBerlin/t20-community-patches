@@ -22,6 +22,8 @@ import patch, {
 } from "../scripts/patches/field-bonuses-breakdown.mjs";
 import tooltipPatch, { hasConditionLines } from "../scripts/patches/field-bonuses-tooltip.mjs";
 import { fieldBonuses165 } from "./fixtures/field-bonuses-1.6.5.mjs";
+import { createPlatform } from "../scripts/platform/foundry.mjs";
+import { createTestKernel } from "./support/fake-platform.mjs";
 
 const HELPER_SOURCE = fieldBonuses165.toString();
 const lines = (html) => [...html.matchAll(/<label>([^<]*):<\/label><span>([^<]*)/g)].map((m) => `${m[1]} ${m[2]}`);
@@ -304,14 +306,13 @@ function makeActor({ level = 5, bonus = {}, effects = [], defesa = {}, sourceDef
   return actor;
 }
 
-function setup(actor, status = []) {
+function setup(actor) {
   const helpers = { fieldBonuses: fieldBonuses165 };
   globalThis.Handlebars = { helpers, registerHelper: (name, fn) => (helpers[name] = fn) };
   globalThis.game = {
     actors: { get: (id) => (id === actor._id ? actor : undefined) },
     i18n: { localize: (key) => key },
-    settings: { get: () => false },
-    modules: { get: () => ({ api: { status } }) }
+    settings: { get: () => false }
   };
   globalThis.fromUuidSync = (uuid) => (uuid === actor.uuid ? actor : null);
   globalThis.Roll = FakeRoll;
@@ -326,6 +327,12 @@ function setup(actor, status = []) {
   return helpers;
 }
 
+/** Installs a patch over the globals of setup(); `status` is what ctx.features.isActive reads. */
+function install(p, status = []) {
+  if (!p.install) return p.apply();
+  createTestKernel({ platform: createPlatform(), status }).install(p);
+}
+
 function teardown() {
   for (const key of ["Handlebars", "game", "fromUuidSync", "Roll", "CONFIG", "foundry"]) delete globalThis[key];
 }
@@ -337,10 +344,10 @@ function render(helpers, actor, path) {
 function scenario(options, path, { status = [], patches = [patch], mutate } = {}) {
   const actor = makeActor(options);
   mutate?.(actor);
-  const helpers = setup(actor, status);
+  const helpers = setup(actor);
   try {
     const before = render(helpers, actor, path);
-    for (const p of patches) p.apply();
+    for (const p of patches) install(p, status);
     const after = render(helpers, actor, path);
     assert.equal(Object.hasOwn(actor, "modifiedFields"), false);
     return { before, after };
@@ -443,7 +450,7 @@ test("part 5: heavy armor lists the capped attribute (22)", () => {
   assert.deepEqual(lines(after), ["Base +10", "Armadura completa +10", "Destreza (T20CP.FieldBonuses.HeavyArmorLimit) +2", "Total +22"]);
 });
 
-const APPLIED = (...ids) => ids.map((id) => ({ id, state: "applied" }));
+const APPLIED = (...ids) => ids.map((id) => ({ id, kind: "patch", state: "applied" }));
 const CAIDO = () => effect("Caído", [["system.attributes.defesa.outros", "downgrade", -5]], ["caido"]);
 const DESPREVENIDO = () => effect("Desprevenido", [["system.attributes.defesa.condi", "downgrade", -5]]);
 const VULNERAVEL = () => effect("Vulnerável", [["system.attributes.defesa.condi", "downgrade", -2]]);
@@ -491,7 +498,7 @@ test("the shadow is removed when the helper throws", () => {
   const actor = makeActor();
   const helpers = setup(actor);
   try {
-    patch.apply();
+    install(patch);
     game.settings.get = () => {
       throw new Error("boom");
     };

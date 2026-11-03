@@ -1,11 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import patch, {
-  adjustThreatEffect,
-  isThreatMultiply,
-  rewriteThreatChanges,
-  threatRangeIncrease
-} from "../scripts/patches/threatening-crit-range.mjs";
+import patch, { adjustThreatEffect } from "../scripts/patches/threatening-crit-range.mjs";
+import { isThreatMultiply, rewriteThreatChanges, threatRangeIncrease } from "../scripts/lib/threat.mjs";
 
 const keen = () => ({ key: "criticoM", type: "multiply", value: 2, phase: "initial", priority: null });
 const precise = () => ({ key: "criticoM", type: "add", value: -1, phase: "initial", priority: null });

@@ -10,8 +10,9 @@
  * Copies of Fortalecimento Arcano that still have the shipped usage effect become a single passive bonus on
  * attributes.cd, and their usage effects are no longer offered.
  */
-import { stripComments, unwrap } from "../utils.mjs";
+import { stripComments, unwrap } from "../lib/source.mjs";
 import { wraps } from "../kernel/wrap.mjs";
+import { matchesSource, sourceId } from "../lib/spell-source.mjs";
 
 export const ARCANE_EMPOWERMENT = { id: "KhQoVoaIZ8huXnPY", names: new Set(["fortalecimento arcano"]) };
 /** Basic-book classes whose spell progression reaches the 4th circle, and the class level that grants it. */
@@ -50,27 +51,6 @@ export const PROBE = {
  */
 export function normalizeSource(source) {
   return typeof source === "string" ? stripComments(source).replace(/\s+/g, "") : "";
-}
-
-/**
- * Whether a document is a copy of a compendium entry, by source id or by name.
- * @param {{name?: string, _stats?: {compendiumSource?: string}, flags?: object}} doc
- * @param {{id: string, names: Set<string>}} ref
- * @returns {boolean}
- */
-export function matchesSource(doc, { id, names }) {
-  if (sourceId(doc) === id) return true;
-  return names.has(String(doc?.name ?? "").trim().toLowerCase());
-}
-
-/**
- * Last segment of the document's compendium source, or "".
- * @param {{_stats?: {compendiumSource?: string}, flags?: object}} doc
- * @returns {string}
- */
-export function sourceId(doc) {
-  const source = String(doc?._stats?.compendiumSource ?? doc?.flags?.core?.sourceId ?? "");
-  return source ? source.split(".").pop() : "";
 }
 
 /**

@@ -11,7 +11,7 @@
  * as in any other skill; no roll data variable is redefined. Only the saves the probe still finds buggy are touched,
  * so a partial fix upstream is never doubled. semataque bonuses with dice are left alone.
  */
-import { unwrap } from "../utils.mjs";
+import { unwrap } from "../lib/source.mjs";
 import { wraps } from "../kernel/wrap.mjs";
 
 const LOG = "t20-community-patches | save-skill-bonus:";

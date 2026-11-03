@@ -12,7 +12,7 @@
  * or when no class is initial anymore (the initial class was unmarked or deleted). A created class is initial only
  * when the actor had no class and it is the first class accepted in its creation operation.
  */
-import { markWrapper, stripComments, unwrap } from "../utils.mjs";
+import { markWrapper, stripComments, unwrap } from "../lib/source.mjs";
 import { fromFactory, wraps } from "../kernel/wrap.mjs";
 
 const LOG = "t20-community-patches | initial-class:";

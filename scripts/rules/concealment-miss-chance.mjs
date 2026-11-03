@@ -8,26 +8,17 @@
  * each target marked when the use started, records it in the attack roll, cancels the critical when every target was
  * missed, and shows the result on the chat card.
  */
-import { MODULE_ID } from "../utils.mjs";
-import {
-  canSeeTokenName,
-  installUseTargets,
-  registerTargetConsumer,
-  USE_PURPOSES,
-  usePurposeOf,
-  useTargetRecords,
-  useTargets
-} from "./shared/targets.mjs";
-import {
-  finalOutcome,
-  invalidateConcealmentChecks,
-  keepCritical,
-  missedByConcealment,
-  setConcealmentChecks
-} from "./shared/attack-outcome.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
+import { canSeeTokenName, USE_PURPOSES } from "../lib/targets.mjs";
+import { finalOutcome, keepCritical, missedByConcealment } from "../lib/attack-outcome.mjs";
 import { wraps } from "../kernel/wrap.mjs";
+import { CONCEALMENT_SETTING, DATA_KEY, DATA_VERSION, concealmentChecksOf } from "../lib/concealment.mjs";
 
-export const CONCEALMENT_SETTING = "concealmentMissChance";
+/** The use-targets service; null before the install. */
+let uses = null;
+/** The attack-outcome service; null before the install. */
+let outcome = null;
+
 export const CONCEALMENT_FIELD = "t20cpConcealment";
 export const CONCEALMENT_CHOICES = ["auto", "light", "total", "scent", "none"];
 export const CHANCE = { light: 20, total: 50 };
@@ -35,8 +26,6 @@ export const SCENT_CHANCE = 20; // Faro, p. 229
 export const MAX_MISS_CHANCE = 75; // p. 226
 export const BLIND = "cego";
 export const INVISIBLE = "invisivel";
-export const DATA_KEY = "concealment";
-const DATA_VERSION = 1;
 const FIELD_CLASS = "t20cp-concealment";
 const BLOCK_CLASS = "t20cp-miss-chance";
 const LOG = `${MODULE_ID} | concealment-miss-chance:`;
@@ -111,12 +100,6 @@ export function concealmentOutcomes(checks, rollName, targetUuids) {
   return uuids.map((uuid) => finalOutcome(undefined, missedByConcealment(checks, rollName, uuid)));
 }
 
-/** The checks recorded in an attack roll by this rule (annotate), or [] when there are none. */
-export function concealmentChecksOf(roll) {
-  const data = roll?.options?.[MODULE_ID]?.[DATA_KEY];
-  return data?.v === DATA_VERSION && Array.isArray(data.checks) ? data.checks : [];
-}
-
 /**
  * Card label of a target, decided by each client at render time.
  * @returns {{name: string|null, index: number}}  name null → "Alvo {index}"
@@ -157,11 +140,11 @@ const statusesOf = (actor) => [...(actor?.statuses ?? [])];
  * Name, uuid and name mode always come from the record.
  */
 export function useTargetsWithStatuses(item) {
-  const tokens = useTargets(item);
+  const tokens = uses.useTargets(item);
   const byUuid = new Map(tokens.map((token) => [(token?.document ?? token)?.uuid, token]));
   const attacker = item?.actor ?? null;
   const targets = [];
-  for (const record of useTargetRecords(item)) {
+  for (const record of uses.useTargetRecords(item)) {
     if (!record?.uuid) continue;
     const token = byUuid.get(record.uuid);
     const actor = token?.actor ?? null;
@@ -290,7 +273,7 @@ export function buildField(item) {
 export function onRenderDialog(app, html) {
   if (!isEnabled()) return;
   const item = app?.item;
-  if (!hasAttackRoll(item) || usePurposeOf(item) === USE_PURPOSES.MANEUVER_RESISTANCE) return;
+  if (!hasAttackRoll(item) || uses.usePurposeOf(item) === USE_PURPOSES.MANEUVER_RESISTANCE) return;
   const root = html?.[0] ?? html;
   const form = root?.querySelector?.("form#ability-use-form") ?? root?.querySelector?.("form");
   if (!form || form.querySelector(`.${FIELD_CLASS}`)) return;
@@ -386,19 +369,24 @@ const SETTING_SPEC = {
   default: "off"
 };
 
-/** Installs the rule. The setting is read on every use, so a change applies without reloading. */
-export function installConcealmentRule() {
-  registerTargetConsumer(isEnabled);
-  installUseTargets();
+/**
+ * Installs the rule. The setting is read on every use, so a change applies without reloading.
+ * @param {ReturnType<typeof import("../services/use-targets.mjs").createUseTargets>} useTargets  The use-targets service.
+ * @param {ReturnType<typeof import("../services/attack-outcome.mjs").createAttackOutcome>} attackOutcome  The attack-outcome service.
+ */
+export function installConcealmentRule(useTargets, attackOutcome) {
+  uses = useTargets;
+  outcome = attackOutcome;
+  uses.registerTargetConsumer(isEnabled);
   const itemProto = CONFIG.Item.documentClass?.prototype;
   // The current method, not unwrap(): unwrap() follows the wrapper tags down to the system method
   // and would drop any wrapper installed before this one (attack-vs-defense, etc.).
   const rollAttack = itemProto?.rollAttack;
   if (typeof rollAttack !== "function") throw new Error("ItemT20#rollAttack not found");
   wraps.wrap(itemProto, "rollAttack", "concealment-miss-chance", async function (rollAttack, ...args) {
-    invalidateConcealmentChecks(this); // on entry, before any await, even when the rule is off
+    outcome.invalidateConcealmentChecks(this); // on entry, before any await, even when the rule is off
     // Maneuver resistance test (combat-maneuvers): no d10, no checks, nothing recorded.
-    if (usePurposeOf(this) === USE_PURPOSES.MANEUVER_RESISTANCE) return rollAttack.apply(this, args);
+    if (uses.usePurposeOf(this) === USE_PURPOSES.MANEUVER_RESISTANCE) return rollAttack.apply(this, args);
     let targets = [];
     let checks = [];
     let before = {};
@@ -407,7 +395,7 @@ export function installConcealmentRule() {
         targets = useTargetsWithStatuses(this);
         checks = await rollChecks(this, targets, args[0]?.options);
         before = { ...(this.system?.rolled ?? {}) };
-        setConcealmentChecks(this, checks); // published only after success; never cleared on the way out
+        outcome.setConcealmentChecks(this, checks); // published only after success; never cleared on the way out
       } catch (err) {
         console.error(`${LOG} failed to roll`, err);
         checks = [];
@@ -453,5 +441,6 @@ export default {
   group: "combat",
   system: { id: "tormenta20" },
   settings: [SETTING_SPEC],
-  install: () => installConcealmentRule()
+  services: ["use-targets", "attack-outcome"],
+  install: (ctx) => installConcealmentRule(ctx.services["use-targets"], ctx.services["attack-outcome"])
 };

@@ -18,7 +18,7 @@
  * getRollData reduces are reduced again, in getRollData's order and with the system's own simplifyRollFormula, in the
  * same rollData, before Defesa and skills are prepared. PV/PM are prepared earlier and keep ignoring temporary bonuses.
  */
-import { unwrap } from "../utils.mjs";
+import { unwrap } from "../lib/source.mjs";
 import { wraps } from "../kernel/wrap.mjs";
 
 const LOG = "t20-community-patches | skill-modifier-attributes:";

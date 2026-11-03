@@ -14,7 +14,7 @@
  * combatants of this token (or of this actor, when linked) that have no initiative yet, as core
  * Actor#rollInitiative selects them.
  */
-import { stripComments, unwrap } from "../utils.mjs";
+import { stripComments, unwrap } from "../lib/source.mjs";
 import { wraps } from "../kernel/wrap.mjs";
 
 const LOG = "t20-community-patches | sheet-initiative-token:";

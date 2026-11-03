@@ -8,7 +8,7 @@
  * Fix: the check runs after items are created or deleted on the actor, and is serialized per actor, awaiting the
  * creation/removal. Every copy is removed when the character is no longer encumbered.
  */
-import { stripComments, unwrap } from "../utils.mjs";
+import { stripComments, unwrap } from "../lib/source.mjs";
 import { fromFactory, wraps } from "../kernel/wrap.mjs";
 
 export const ENCUMBERED = "sobrecarregado";

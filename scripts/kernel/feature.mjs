@@ -23,19 +23,24 @@
  *                                                 rule needs: another system id leaves it "incompatible".
  * @property {SettingSpec[]} [settings]           On patches, only registered when the patch is applied.
  * @property {string[]} [after]                   Ids that must come BEFORE in FEATURES (inner wrappers). "*" = all.
+ * @property {string[]} [services]              Services used through ctx.services[id] (scripts/services/).
+ * @property {string[]} [interactsWith]         Features whose state or settings this one reads at run time.
  * @property {boolean} [guarded]
  * @property {(ctx: FeatureContext) => import("../registry.mjs").Diagnosis|boolean|undefined} [isNeeded]
  *                                                 Legacy patches ignore ctx and read globals until #88.
  * @property {(ctx: FeatureContext) => Promise<import("../registry.mjs").Diagnosis|boolean|undefined>} [lateProbe]
  * @property {(ctx: FeatureContext) => void} install
  *
- * @typedef {object} FeatureContext            Built by createFeatureContext (scripts/kernel/context.mjs); grows in #87.
+ * @typedef {object} FeatureContext            Built by createFeatureContext (scripts/kernel/context.mjs).
  * @property {string} id
  * @property {import("../platform/foundry.mjs").Platform} platform   The only way to reach Foundry.
  * @property {import("./context.mjs").FeatureLog} log                Prefixed with the module and the feature id.
  * @property {import("../platform/foundry.mjs").Platform["hooks"]} hooks
  * @property {(target: object, method: string, wrapper: Function, options?: object) => Function} wrap  Owner = id.
  * @property {(key: string) => unknown} setting  Value of a key declared in `settings`; any other key throws.
+ * @property {Record<string, object>} services   API of each declared service; any other id throws.
+ * @property {{isActive: (id: string) => boolean, setting: (id: string, key: string) => unknown, list: () => object[]}}
+ *           features                            Features declared in `interactsWith`; any other id throws.
  */
 
 export const KINDS = ["patch", "rule"];
@@ -61,24 +66,39 @@ function afterProblem(after, index, positions, last) {
  * @param {Feature} feature
  * @param {number} index
  * @param {Map<string, number>} positions  Index of every id in the list.
- * @param {{groups: string[], last: number}} env
+ * @param {{groups: string[], last: number, services?: Set<string>}} env
  */
-function problemOf(feature, index, positions, { groups, last }) {
+function problemOf(feature, index, positions, { groups, last, services }) {
   if (!KINDS.includes(feature.kind)) return `invalid kind ${JSON.stringify(feature.kind)}`;
   if (!groups.includes(feature.group)) return `unknown group ${JSON.stringify(feature.group)}`;
   if (typeof feature.install !== "function") return "install missing";
   if (feature.kind === "patch" && !feature.system?.id) return "patch without system";
   if (feature.kind === "patch" && !feature.system.affected) return "patch without system.affected";
-  return afterProblem(feature.after, index, positions, last);
+  return afterProblem(feature.after, index, positions, last) ?? dependencyProblem(feature, positions, services);
+}
+
+/** The first unknown id in `interactsWith` or `services`, or null. */
+function dependencyProblem(feature, positions, services) {
+  for (const id of feature.interactsWith ?? []) {
+    if (id === feature.id) return `interactsWith itself`;
+    if (!positions.has(id)) return `interactsWith unknown id "${id}"`;
+  }
+  if (!services) return null;
+  for (const id of feature.services ?? []) {
+    if (!services.has(id)) return `unknown service "${id}"`;
+  }
+  return null;
 }
 
 /**
- * Validates a list of features: unique ids, required fields, and `after` satisfied by the declaration order (which is
- * the install order; `after` never reorders). Throws on the first problem.
+ * Validates a list of features: unique ids, required fields, `after` satisfied by the declaration order (which is
+ * the install order; `after` never reorders), and known ids in `interactsWith` and `services`. Throws on the first
+ * problem.
  * @param {Feature[]} features
  * @param {string[]} groups
+ * @param {string[]} [serviceIds]  When given, every id in `services` must be one of them.
  */
-export function validateFeatures(features, groups) {
+export function validateFeatures(features, groups, serviceIds) {
   const positions = new Map();
   features.forEach((feature, index) => {
     const id = feature?.id;
@@ -86,7 +106,7 @@ export function validateFeatures(features, groups) {
     if (positions.has(id)) throw new Error(`Feature ${id}: duplicate id`);
     positions.set(id, index);
   });
-  const env = { groups, last: features.length - 1 };
+  const env = { groups, last: features.length - 1, services: serviceIds ? new Set(serviceIds) : undefined };
   features.forEach((feature, index) => {
     const problem = problemOf(feature, index, positions, env);
     if (problem) throw new Error(`Feature ${feature.id}: ${problem}`);

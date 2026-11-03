@@ -9,7 +9,8 @@
  * Fix: before the card is created, every sustained effect of the same caster gets the origin of the first one, so a
  * cast has a single marker, named after the spell. The system's own cost and deletion logic then work per cast.
  */
-import { MODULE_ID, stripComments, unwrap } from "../utils.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
+import { stripComments, unwrap } from "../lib/source.mjs";
 import { fromFactory, wraps } from "../kernel/wrap.mjs";
 
 export const SUSTAIN_EXPIRY = "sustainEnd";

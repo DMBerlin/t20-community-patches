@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseOwnedEffectUuid, resolveEffectFromRow } from "../scripts/effect-rows.mjs";
+import { parseOwnedEffectUuid, resolveEffectFromRow } from "../scripts/lib/effect-rows.mjs";
 
 test("parses effect uuids relative to the owner", () => {
   assert.deepEqual(parseOwnedEffectUuid("Actor.A.ActiveEffect.E", "Actor.A"), { effectId: "E" });
@@ -36,6 +36,18 @@ test("resolves item effects by uuid even when the actor has an effect with the s
   assert.equal(resolveEffectFromRow(row({ effectId: "E", effectUuid: "Actor.A.Item.I.ActiveEffect.E" }), actor), itemEffect);
   assert.equal(resolveEffectFromRow(row({ effectId: "E", effectUuid: "Actor.A.ActiveEffect.E" }), actor), actorEffect);
   assert.equal(resolveEffectFromRow(row({ effectId: "E", effectUuid: "Actor.A.Item.X.ActiveEffect.E" }), actor), null);
+});
+
+test("resolves the uuid of another owner through fromUuidSync, non-strict and fail-safe", () => {
+  const { actor } = makeActor();
+  const other = { id: "O" };
+  const calls = [];
+  const fromUuidSync = (uuid, options) => (calls.push([uuid, options]), other);
+  const foreign = row({ effectUuid: "Compendium.x.Actor.B.ActiveEffect.O" });
+  assert.equal(resolveEffectFromRow(foreign, actor, fromUuidSync), other);
+  assert.deepEqual(calls, [["Compendium.x.Actor.B.ActiveEffect.O", { strict: false }]]);
+  assert.equal(resolveEffectFromRow(foreign, actor, () => { throw new Error("boom"); }), null);
+  assert.equal(resolveEffectFromRow(foreign, actor), null);
 });
 
 test("falls back to owner.effects without uuid and returns null without data", () => {

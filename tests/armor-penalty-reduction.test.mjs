@@ -1,13 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import {
-  computePenaltyAdjustments,
-  diagnosePenaltyField,
-  isArmorPenaltyReducer,
-  parseReduction,
-  resolveDataRefs
-} from "../scripts/patches/armor-penalty-reduction.mjs";
-import { isSystemVersionAffected } from "../scripts/utils.mjs";
+import { computePenaltyAdjustments, isArmorPenaltyReducer, parseReduction } from "../scripts/lib/armor-penalty.mjs";
+import { diagnosePenaltyField } from "../scripts/patches/armor-penalty-reduction.mjs";
+import { resolveDataRefs } from "../scripts/lib/data-refs.mjs";
+import { isSystemVersionAffected } from "../scripts/lib/version.mjs";
 
 test("identifies reducer upgrades by identifier, legacy flag, compendium source and name", () => {
   assert.ok(isArmorPenaltyReducer({ system: { identifier: "adjusted" } }));

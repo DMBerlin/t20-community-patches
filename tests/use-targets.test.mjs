@@ -1,21 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import {
-  USE_PURPOSES,
-  addDefenseAdjustments,
-  canSeeTokenName,
-  defenseAdjustmentsFor,
-  installUseTargets,
-  registerTargetConsumer,
-  targetRecord,
-  usePurposeOf,
-  useTargetRecords,
-  useTargets,
-  withUsePurpose
-} from "../scripts/rules/shared/targets.mjs";
+import { USE_PURPOSES, canSeeTokenName, targetRecord } from "../scripts/lib/targets.mjs";
+import { currentUseTargets as uses } from "./support/legacy-services.mjs";
 
 const state = { on: true };
-registerTargetConsumer(() => state.on);
+const consumer = () => state.on;
 
 const token = (id, name = id, displayName = 50) => ({ document: { uuid: `Scene.s.Token.${id}`, name, displayName } });
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -50,21 +39,21 @@ function setup({ on = true } = {}) {
     async rollAttack() {
       hooks.duringAttack?.(this);
       await tick();
-      seen.push({ step: "attack", item: this, tokens: useTargets(this), records: useTargetRecords(this) });
+      seen.push({ step: "attack", item: this, tokens: uses().useTargets(this), records: uses().useTargetRecords(this) });
     }
     async rollDamage() {
       await tick();
       hooks.duringDamage?.(this);
-      seen.push({ step: "damage", item: this, tokens: useTargets(this), records: useTargetRecords(this) });
+      seen.push({ step: "damage", item: this, tokens: uses().useTargets(this), records: uses().useTargetRecords(this) });
     }
     async displayCard() {
-      seen.push({ step: "card", item: this, tokens: useTargets(this), records: useTargetRecords(this) });
+      seen.push({ step: "card", item: this, tokens: uses().useTargets(this), records: uses().useTargetRecords(this) });
       return "card";
     }
   }
   globalThis.CONFIG = { Item: { documentClass: ItemT20 } };
   globalThis.game = { user: { targets: new Set() } };
-  installUseTargets();
+  uses().registerTargetConsumer(consumer);
   const step = (name) => seen.find((entry) => entry.step === name);
   return { ItemT20, seen, hooks, step, setTargets: (...tokens) => (game.user.targets = new Set(tokens)) };
 }
@@ -145,8 +134,8 @@ test("only the clone returned by the reserved call is bound; extra clones and ot
     const pending = item.roll();
     setTargets(token("B"));
     await pending;
-    assert.equal(useTargetRecords(extra)[0].uuid, "Scene.s.Token.B");
-    assert.notEqual(useTargets(extra), useTargets(extra));
+    assert.equal(uses().useTargetRecords(extra)[0].uuid, "Scene.s.Token.B");
+    assert.notEqual(uses().useTargets(extra), uses().useTargets(extra));
     assert.equal(bound.isClone, true);
   }
   // Second clone after the first one, and a clone of another item, during the synchronous part.
@@ -161,7 +150,7 @@ test("only the clone returned by the reserved call is bound; extra clones and ot
     const pending = new ItemT20().roll();
     setTargets(token("B"));
     await pending;
-    for (const copy of late) assert.equal(useTargetRecords(copy)[0].uuid, "Scene.s.Token.B");
+    for (const copy of late) assert.equal(uses().useTargetRecords(copy)[0].uuid, "Scene.s.Token.B");
     assert.equal(step("card").records[0].uuid, "Scene.s.Token.A");
   }
 });
@@ -170,16 +159,16 @@ test("outside a use each call reads the current targets, and the clone loses its
   const { ItemT20, hooks, setTargets } = setup();
   const item = new ItemT20();
   setTargets(token("A"));
-  const first = useTargets(item);
-  assert.notEqual(useTargets(item), first);
+  const first = uses().useTargets(item);
+  assert.notEqual(uses().useTargets(item), first);
   setTargets(token("B"));
-  assert.equal(useTargetRecords(item)[0].uuid, "Scene.s.Token.B");
+  assert.equal(uses().useTargetRecords(item)[0].uuid, "Scene.s.Token.B");
 
   let clone = null;
   hooks.afterClone = (_s, c) => (clone = c);
   await item.roll();
   setTargets(token("C"));
-  assert.equal(useTargetRecords(clone)[0].uuid, "Scene.s.Token.C");
+  assert.equal(uses().useTargetRecords(clone)[0].uuid, "Scene.s.Token.C");
 
   // A rejected use also releases the clone.
   ItemT20.prototype.rollDamage = async function () {
@@ -188,7 +177,7 @@ test("outside a use each call reads the current targets, and the clone loses its
   setTargets(token("D"));
   await assert.rejects(item.roll(), /boom/);
   setTargets(token("E"));
-  assert.equal(useTargetRecords(clone)[0].uuid, "Scene.s.Token.E");
+  assert.equal(uses().useTargetRecords(clone)[0].uuid, "Scene.s.Token.E");
 });
 
 test("a roll that throws synchronously after the clone releases the clone", async () => {
@@ -205,10 +194,10 @@ test("a roll that throws synchronously after the clone releases the clone", asyn
   }
   globalThis.CONFIG = { Item: { documentClass: SyncItem } };
   globalThis.game = { user: { targets: new Set([token("A")]) } };
-  installUseTargets();
+  uses().registerTargetConsumer(consumer);
   await assert.rejects(new SyncItem().roll(), /sync/);
   game.user.targets = new Set([token("B")]);
-  assert.equal(useTargetRecords(copy)[0].uuid, "Scene.s.Token.B");
+  assert.equal(uses().useTargetRecords(copy)[0].uuid, "Scene.s.Token.B");
 });
 
 test("a foreign roll wrapper that awaits before the system roll leads to a fresh copy", async () => {
@@ -238,10 +227,10 @@ test("purpose: MANEUVER_RESISTANCE empties the targets, is consumed by one roll 
   };
   let purposeInUse = null;
   ItemT20.prototype.rollAttack = async function () {
-    purposeInUse ??= usePurposeOf(this);
-    seen.push({ step: "attack", item: this, tokens: useTargets(this), records: useTargetRecords(this) });
+    purposeInUse ??= uses().usePurposeOf(this);
+    seen.push({ step: "attack", item: this, tokens: uses().useTargets(this), records: uses().useTargetRecords(this) });
   };
-  await withUsePurpose(USE_PURPOSES.MANEUVER_RESISTANCE, () => item.roll());
+  await uses().withUsePurpose(USE_PURPOSES.MANEUVER_RESISTANCE, () => item.roll());
   assert.equal(purposeInUse, USE_PURPOSES.MANEUVER_RESISTANCE);
   const attack = seen.find((e) => e.step === "attack");
   assert.deepEqual([attack.tokens.length, attack.records.length], [0, 0]);
@@ -253,13 +242,13 @@ test("purpose: MANEUVER_RESISTANCE empties the targets, is consumed by one roll 
   assert.equal(purposeInUse, null);
 
   // Nested withUsePurpose restores the outer value, also when fn throws; fn without a roll leaves nothing pending.
-  withUsePurpose("outer", () => {
-    assert.throws(() => withUsePurpose("inner", () => {
+  uses().withUsePurpose("outer", () => {
+    assert.throws(() => uses().withUsePurpose("inner", () => {
       throw new Error("x");
     }));
     purposeInUse = null;
   });
-  withUsePurpose(USE_PURPOSES.MANEUVER_RESISTANCE, () => null);
+  uses().withUsePurpose(USE_PURPOSES.MANEUVER_RESISTANCE, () => null);
   purposeInUse = null;
   await item.roll();
   assert.equal(purposeInUse, null);
@@ -270,7 +259,7 @@ test("a roll nested in a purposed use has no purpose and normal targets", async 
   setTargets(token("A"));
   const purposes = [];
   ItemT20.prototype.displayCard = async function () {
-    purposes.push([this.name, usePurposeOf(this), useTargetRecords(this).length]);
+    purposes.push([this.name, uses().usePurposeOf(this), uses().useTargetRecords(this).length]);
   };
   const inner = new ItemT20("Interno");
   hooks.onClone = (source) => {
@@ -280,7 +269,7 @@ test("a roll nested in a purposed use has no purpose and normal targets", async 
   };
   const outer = new ItemT20("Externo");
   let pendingInner = null;
-  await withUsePurpose(USE_PURPOSES.MANEUVER_RESISTANCE, () => outer.roll());
+  await uses().withUsePurpose(USE_PURPOSES.MANEUVER_RESISTANCE, () => outer.roll());
   await pendingInner;
   assert.deepEqual(purposes.sort(), [["Externo", USE_PURPOSES.MANEUVER_RESISTANCE, 0], ["Interno", null, 1]]);
 });
@@ -288,7 +277,7 @@ test("a roll nested in a purposed use has no purpose and normal targets", async 
 test("no consumer on and no purpose: the original runs with the same arguments and no context; installs once", async () => {
   const { ItemT20, seen, setTargets, step } = setup({ on: false });
   const wrapped = ItemT20.prototype.roll;
-  installUseTargets();
+  uses().registerTargetConsumer(consumer);
   assert.equal(ItemT20.prototype.roll, wrapped);
   setTargets(token("A"));
   const args = { event: { shiftKey: true } };
@@ -315,12 +304,12 @@ test("canSeeTokenName: GM, owner, or a public display mode", () => {
 
 test("Defense adjustments: per target, accumulated without repeating an id, returned as a copy", () => {
   const item = {};
-  addDefenseAdjustments(item, new Map([["A", [{ id: "cover", delta: 5 }]], ["B", [{ id: "x", delta: -2 }]]]));
-  addDefenseAdjustments(item, new Map([["A", [{ id: "cover", delta: 10 }, { id: "flank", delta: "2" }]]]));
-  assert.deepEqual(defenseAdjustmentsFor(item, "A"), [{ id: "cover", delta: 5 }, { id: "flank", delta: 2 }]);
-  assert.deepEqual(defenseAdjustmentsFor(item, "B"), [{ id: "x", delta: -2 }]);
-  assert.deepEqual(defenseAdjustmentsFor(item, "C"), []);
-  assert.deepEqual(defenseAdjustmentsFor({}, "A"), []);
-  defenseAdjustmentsFor(item, "A")[0].delta = 99;
-  assert.equal(defenseAdjustmentsFor(item, "A")[0].delta, 5);
+  uses().addDefenseAdjustments(item, new Map([["A", [{ id: "cover", delta: 5 }]], ["B", [{ id: "x", delta: -2 }]]]));
+  uses().addDefenseAdjustments(item, new Map([["A", [{ id: "cover", delta: 10 }, { id: "flank", delta: "2" }]]]));
+  assert.deepEqual(uses().defenseAdjustmentsFor(item, "A"), [{ id: "cover", delta: 5 }, { id: "flank", delta: 2 }]);
+  assert.deepEqual(uses().defenseAdjustmentsFor(item, "B"), [{ id: "x", delta: -2 }]);
+  assert.deepEqual(uses().defenseAdjustmentsFor(item, "C"), []);
+  assert.deepEqual(uses().defenseAdjustmentsFor({}, "A"), []);
+  uses().defenseAdjustmentsFor(item, "A")[0].delta = 99;
+  assert.equal(uses().defenseAdjustmentsFor(item, "A")[0].delta, 5);
 });

@@ -1,16 +1,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import patch, {
+import {
   OUTROS_KEY,
   collectProneCandidates,
-  diagnoseProneChanges,
-  isBuggyProneChange,
   isProneDefenseChange,
   isSameChange,
   pickProneChange,
-  planProneChange,
-  toAdditive
-} from "../scripts/patches/prone-defense.mjs";
+  planProneChange
+} from "../scripts/lib/prone.mjs";
+import patch, { diagnoseProneChanges, isBuggyProneChange, toAdditive } from "../scripts/patches/prone-defense.mjs";
 
 const change = (type, value, phase = "initial", extra = {}) => ({ key: OUTROS_KEY, type, value, phase, priority: 20, ...extra });
 

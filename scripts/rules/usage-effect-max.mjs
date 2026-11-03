@@ -7,66 +7,21 @@
  * effects. The use dialog shows the maximum and the submit is checked; the GM picks warn, block or off.
  * A misconfigured formula never blocks: it means "no limit", with a single console warning.
  */
-import { MODULE_ID } from "../utils.mjs";
-import { evaluateManaLimit } from "./mana-limit.mjs";
-import { installUseDialogGuard, registerUseValidator } from "./use-dialog-guard.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
+import { evaluateManaLimit } from "../lib/mana.mjs";
 import { wraps } from "../kernel/wrap.mjs";
-
-export const USAGE_EFFECT_MAX_SETTING = "usageEffectMaxRule";
-export const USAGE_EFFECT_MAX_FLAG = "maxApplications";
-export const USAGE_EFFECT_MAX_MODES = ["off", "warn", "block"];
-
-/**
- * Built-in maximums. `source` is the compendium UUID of the item that owns the effect and `effect` the effect id;
- * `item`/`name` are the item and effect names, used when the source does not match (items without origin).
- */
-export const DEFAULT_MAXIMUMS = [
-  {
-    source: "Compendium.tormenta20.poderes.Item.Uv6GW8R54wUtv3sm",
-    effect: "gpuEqXYdlZr1nrNK",
-    item: "Inspiração",
-    name: "Inspiração",
-    formula: "floor((@nvl.bardo - 1) / 4)"
-  }
-];
-
-/** @param {string} source @param {string} effectId */
-export const sourceKey = (source, effectId) => (source && effectId ? `${source}#${effectId}` : "");
-/** @param {string} itemName @param {string} effectName */
-export const nameKey = (itemName, effectName) =>
-  itemName && effectName ? `name:${String(itemName).trim()}#${String(effectName).trim()}` : "";
-
-/**
- * Lookup table of the built-in maximums, by source key and by name key.
- * @param {typeof DEFAULT_MAXIMUMS} entries
- * @returns {Map<string, string>}
- */
-export function buildDefaults(entries = DEFAULT_MAXIMUMS) {
-  const map = new Map();
-  for (const entry of entries) {
-    const bySource = sourceKey(entry.source, entry.effect);
-    const byName = nameKey(entry.item, entry.name);
-    if (bySource) map.set(bySource, entry.formula);
-    if (byName && !map.has(byName)) map.set(byName, entry.formula);
-  }
-  return map;
-}
-
-/**
- * Formula of an effect's maximum: the effect flag (empty = inherit, "none" = no limit), then the built-in default
- * by source, then by names, then no limit.
- * @param {{flag?: unknown, defaults?: Map<string, string>, sourceKey?: string, nameKey?: string}} params
- * @returns {{kind: "none", origin: "effect"|"none"} | {kind: "formula", formula: string, origin: "effect"|"default"}}
- */
-export function resolveMaxFormula({ flag, defaults = new Map(), sourceKey: bySource, nameKey: byName }) {
-  const text = flag === undefined || flag === null ? "" : String(flag).trim();
-  if (text.toLowerCase() === "none") return { kind: "none", origin: "effect" };
-  if (text) return { kind: "formula", formula: text, origin: "effect" };
-  for (const key of [bySource, byName]) {
-    if (key && defaults.has(key)) return { kind: "formula", formula: defaults.get(key), origin: "default" };
-  }
-  return { kind: "none", origin: "none" };
-}
+import { pseudoItemEffects, skipsDialog } from "../lib/usage-effects.mjs";
+import {
+  DEFAULTS,
+  FLAG_PATH,
+  USAGE_EFFECT_MAX_SETTING,
+  nameKey,
+  ownerSource,
+  resolveEffect,
+  resolveMaxFormula,
+  sourceKey,
+  usageLimitMode
+} from "../lib/usage-limits.mjs";
 
 /**
  * Evaluates a maximum. Only an integer ≥ 0 is valid.
@@ -112,25 +67,6 @@ export function mergeLimits(entries) {
 }
 
 /**
- * Usage effects of a skill or attribute roll, filtered as ActorT20#rollPericia/rollAtributo do.
- * @param {Iterable<[string, object]>} entries  actor.traverseEmbeddedDocuments().
- * @param {{type: "skill"|"ability", name?: string}} params
- */
-export function pseudoItemEffects(entries, { type, name }) {
-  const effects = [];
-  for (const [path, doc] of entries) {
-    if (doc?.documentName !== "ActiveEffect") continue;
-    if (doc.isTemporary && path !== "effects") continue;
-    if (!doc.system?.onuse) continue;
-    const { types, names } = doc.system.abilityUse ?? {};
-    if (!types?.has?.(type)) continue;
-    if (names?.size && !names.has(name)) continue;
-    effects.push(doc);
-  }
-  return effects;
-}
-
-/**
  * @param {Record<string, {aplica?: unknown}>} applied  Expanded `aprs` of the form.
  * @param {Record<string, {max: number|null, name?: string}>} limits  Maximum of each effect, null = no limit.
  * @returns {{id: string, name: string, requested: number, max: number}[]}
@@ -145,61 +81,13 @@ export function findViolations(applied = {}, limits = {}) {
   return violations;
 }
 
-/**
- * Whether ItemT20#roll will skip the dialog and apply only the "Aplicar Sempre" effects, as the system decides.
- * @param {{usageDefault: boolean, shiftKey: boolean, hasEffectsOrRolls: boolean}} params
- */
-export function skipsDialog({ usageDefault, shiftKey, hasEffectsOrRolls }) {
-  return !(hasEffectsOrRolls && (usageDefault ? !shiftKey : shiftKey));
-}
-
-/* -------------------------------------------- */
-/*  Foundry integration                         */
-/* -------------------------------------------- */
-
-const FLAG_PATH = `flags.${MODULE_ID}.${USAGE_EFFECT_MAX_FLAG}`;
-const DEFAULTS = buildDefaults();
 const warnedFormulas = new Set();
 
-function getMode() {
-  try {
-    const mode = game.settings.get(MODULE_ID, USAGE_EFFECT_MAX_SETTING);
-    return USAGE_EFFECT_MAX_MODES.includes(mode) ? mode : "warn";
-  } catch {
-    return "off";
-  }
-}
+const getMode = () => usageLimitMode(() => game.settings.get(MODULE_ID, USAGE_EFFECT_MAX_SETTING));
 
 function toElement(html) {
   if (html instanceof HTMLElement) return html;
   return html?.[0] instanceof HTMLElement ? html[0] : null;
-}
-
-/** Compendium origin of the item that owns the effect (current and legacy field). */
-function ownerSource(effect) {
-  const owner = effect?.parent;
-  if (owner?.documentName !== "Item") return "";
-  return owner._stats?.compendiumSource ?? foundry.utils.getProperty(owner, "flags.core.sourceId") ?? "";
-}
-
-/** @returns {ReturnType<typeof resolveMaxFormula>} */
-function resolveEffect(effect) {
-  const owner = effect?.parent;
-  return resolveMaxFormula({
-    flag: foundry.utils.getProperty(effect, FLAG_PATH),
-    defaults: DEFAULTS,
-    sourceKey: sourceKey(ownerSource(effect), effect?.id),
-    nameKey: owner?.documentName === "Item" ? nameKey(owner.name, effect?.name) : ""
-  });
-}
-
-/** Whether usage-effect-max limits this usage effect (rule on and a maximum resolved for it). */
-export function hasUsageLimit(effect) {
-  try {
-    return getMode() !== "off" && resolveEffect(effect).kind === "formula";
-  } catch {
-    return false;
-  }
 }
 
 const evaluate = (formula, rollData) => evaluateManaLimit(formula, rollData, foundry.dice.Roll);
@@ -215,7 +103,7 @@ function effectLimits(item) {
   if (!actor || !effects.length) return {};
   let rollData;
   for (const effect of effects) {
-    const resolved = resolveEffect(effect);
+    const resolved = resolveEffect(effect, foundry.utils.getProperty);
     if (resolved.kind !== "formula") continue;
     rollData ??= actor.getRollData();
     const max = evaluateMax(resolved.formula, rollData, evaluate);
@@ -304,7 +192,7 @@ function renderEffectField(app, html) {
 function resolveKeys(effect) {
   const owner = effect?.parent;
   return {
-    sourceKey: sourceKey(ownerSource(effect), effect?.id),
+    sourceKey: sourceKey(ownerSource(effect, foundry.utils.getProperty), effect?.id),
     nameKey: owner?.documentName === "Item" ? nameKey(owner.name, effect?.name) : ""
   };
 }
@@ -430,10 +318,12 @@ const SETTING_SPEC = {
   default: "warn"
 };
 
-/** Installs the rule. The mode is read on every use, so a change applies without reloading. */
-export function installUsageEffectMaxRule() {
-  installUseDialogGuard();
-  registerUseValidator(validate);
+/**
+ * Installs the rule. The mode is read on every use, so a change applies without reloading.
+ * @param {{register: (validator: Function) => void}} useDialogGuard  The use-dialog-guard service.
+ */
+export function installUsageEffectMaxRule(useDialogGuard) {
+  useDialogGuard.register(validate);
   Hooks.on("renderAbilityUseDialog", (app, html) => {
     try {
       renderDialogLimits(app, html);
@@ -463,5 +353,6 @@ export default {
   group: "usage-effects",
   system: { id: "tormenta20" },
   settings: [SETTING_SPEC],
-  install: () => installUsageEffectMaxRule()
+  services: ["use-dialog-guard"],
+  install: (ctx) => installUsageEffectMaxRule(ctx.services["use-dialog-guard"])
 };

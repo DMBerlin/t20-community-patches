@@ -26,7 +26,11 @@ import { installConcealmentRule } from "../scripts/rules/concealment-miss-chance
 import { installSaveButtonRule } from "../scripts/rules/save-button.mjs";
 import { installSituationalModifiersRule } from "../scripts/rules/situational-modifiers.mjs";
 import { installNonlethalAttackRule } from "../scripts/rules/nonlethal-attack.mjs";
-import { USE_PURPOSES, usePurposeOf, useTargetRecords, useTargets, withUsePurpose } from "../scripts/rules/shared/targets.mjs";
+import { USE_PURPOSES } from "../scripts/lib/targets.mjs";
+import { currentUseTargets as uses, currentAttackOutcome as outcome } from "./support/legacy-services.mjs";
+
+/** The concealment rule's setting, as main.mjs reads it through ctx.features. */
+const concealmentOn = () => game.settings.get(MODULE, "concealmentMissChance") === "on";
 
 const MODULE = "t20-community-patches";
 const SIZES = { min: 5, peq: 2, med: 0, gra: -2, eno: -5, col: -10 };
@@ -438,7 +442,7 @@ function setup({ rule = "on", user = "mago", messageMode = "public", extra = {} 
     async roll({ createMessage = true, event, rollMode } = {}) {
       void event.shiftKey; // the system reads it without "?."
       const item = this.clone();
-      seen.push({ phase: "roll", purpose: usePurposeOf(item), records: useTargetRecords(item), tokens: useTargets(item) });
+      seen.push({ phase: "roll", purpose: uses().usePurposeOf(item), records: uses().useTargetRecords(item), tokens: uses().useTargets(item) });
       if (this.onDialog) await this.onDialog(item);
       // The use dialog: its form values become the use options (T20:8575-8578).
       const options = { ...((await this.useDialog?.(item)) ?? {}) };
@@ -452,17 +456,17 @@ function setup({ rule = "on", user = "mago", messageMode = "public", extra = {} 
       return item.displayCard({ options, rollMode, createMessage });
     }
     async rollAttack({ options } = {}) {
-      seen.push({ phase: "rollAttack", purpose: usePurposeOf(this), parts: this.system.rolls.find((r) => r.type === "ataque")?.parts.length });
+      seen.push({ phase: "rollAttack", purpose: uses().usePurposeOf(this), parts: this.system.rolls.find((r) => r.type === "ataque")?.parts.length });
       const [d20, bonus] = this.next ?? [10, 5];
       this.system.rolled.Ataque = roll(d20, bonus, "attack");
       options?.rolls?.push(this.system.rolled.Ataque);
     }
     async rollDamage() {
-      seen.push({ phase: "rollDamage", purpose: usePurposeOf(this) });
+      seen.push({ phase: "rollDamage", purpose: uses().usePurposeOf(this) });
       this.system.rolled.Dano = roll(4, 2, "damage", 6);
     }
     async displayCard({ createMessage = true } = {}) {
-      seen.push({ phase: "displayCard", purpose: usePurposeOf(this), createMessage });
+      seen.push({ phase: "displayCard", purpose: uses().usePurposeOf(this), createMessage });
       const actor = this.actor;
       const chatData = {
         user: game.user.id,
@@ -600,7 +604,7 @@ async function resist(env, B, { weapon, d20 = 10, bonus = 5, versatile = false, 
 
 test("rule off: displayCard is untouched and no button is added", async () => {
   const env = setup({ rule: "off" });
-  installCombatManeuversRule();
+  installCombatManeuversRule(uses(), concealmentOn);
   game.user.targets = new Set([env.tLobo]);
   const chatData = await env.chicote.roll({ event, createMessage: false });
   assert.equal(chatData.flags[MODULE], undefined);
@@ -611,7 +615,7 @@ test("rule off: displayCard is untouched and no button is added", async () => {
 
 test("rule on, no maneuver declared: the system's attack card is untouched", async () => {
   const env = setup();
-  installCombatManeuversRule();
+  installCombatManeuversRule(uses(), concealmentOn);
   game.user.targets = new Set([env.tLobo]);
   const shortcut = await env.chicote.roll({ event: { shiftKey: true } });
   const chatData = await env.chicote.roll({ event, createMessage: false });
@@ -633,7 +637,7 @@ test("rule on, no maneuver declared: the system's attack card is untouched", asy
 
 test("maneuver card: test with size and Versátil, no target name in the content", async () => {
   const env = setup();
-  installCombatManeuversRule();
+  installCombatManeuversRule(uses(), concealmentOn);
   const { B } = await attackAndManeuver(env, { weapon: env.chicote, target: env.tLobo, versatile: true, bonus: 8 });
   const data = B.flags[MODULE].maneuver;
   assert.equal(data.kind, "derrubar");
@@ -652,7 +656,7 @@ test("maneuver card: test with size and Versátil, no target name in the content
 
 test("resist with a weapon: maneuver-resistance purpose, no targets, attack roll only, no writes", async () => {
   const env = setup();
-  installCombatManeuversRule();
+  installCombatManeuversRule(uses(), concealmentOn);
   const { B } = await attackAndManeuver(env, { weapon: env.chicote, target: env.tLobo, d20: 12, bonus: 7 });
   env.as("gm");
   game.user.targets = new Set([env.tOgro]);
@@ -680,7 +684,7 @@ test("resist with a weapon: maneuver-resistance purpose, no targets, attack roll
 
 test("resist with Luta: rollPericia without a message", async () => {
   const env = setup();
-  installCombatManeuversRule();
+  installCombatManeuversRule(uses(), concealmentOn);
   const { B } = await attackAndManeuver(env, { weapon: env.chicote, target: env.tOgro, kind: "agarrar" });
   env.as("gm");
   env.queues.set("ogro.luta", [roll(15, 3, "attack")]);
@@ -693,7 +697,7 @@ test("resist with Luta: rollPericia without a message", async () => {
 
 test("a cancelled roll creates nothing and releases the lock", async () => {
   const env = setup();
-  installCombatManeuversRule();
+  installCombatManeuversRule(uses(), concealmentOn);
   const { B } = await attackAndManeuver(env, { weapon: env.chicote, target: env.tLobo });
   env.as("gm");
   env.queues.set("mordida", [null]);
@@ -710,7 +714,7 @@ test("a cancelled roll creates nothing and releases the lock", async () => {
 
 test("Resistir and Dar passagem share the lock: one result", async () => {
   const env = setup();
-  installCombatManeuversRule();
+  installCombatManeuversRule(uses(), concealmentOn);
   const { B } = await attackAndManeuver(env, { weapon: env.chicote, target: env.tLobo, kind: "atropelar" });
   env.as("gm");
   assert.deepEqual(env.render(B).buttons().map((b) => b.textContent), ["Resistir", "Dar passagem"]);
@@ -730,7 +734,7 @@ test("Resistir and Dar passagem share the lock: one result", async () => {
 
 test("Dar passagem: result without a test or condition", async () => {
   const env = setup();
-  installCombatManeuversRule();
+  installCombatManeuversRule(uses(), concealmentOn);
   const { B } = await attackAndManeuver(env, { weapon: env.chicote, target: env.tLobo, kind: "atropelar" });
   env.as("gm");
   const C = await onPassageClick(B);
@@ -741,7 +745,7 @@ test("Dar passagem: result without a test or condition", async () => {
 
 test("a result before the dialog warns; one arriving during the roll creates nothing", async () => {
   const env = setup();
-  installCombatManeuversRule();
+  installCombatManeuversRule(uses(), concealmentOn);
   const { B } = await attackAndManeuver(env, { weapon: env.chicote, target: env.tLobo });
   env.as("gm");
   const C = await resist(env, B, { weapon: env.mordida });
@@ -761,7 +765,7 @@ test("a result before the dialog warns; one arriving during the roll creates not
 
 test("two results: the oldest is canonical, a late older one takes over, without writes", async () => {
   const env = setup();
-  installCombatManeuversRule();
+  installCombatManeuversRule(uses(), concealmentOn);
   const { B } = await attackAndManeuver(env, { weapon: env.chicote, target: env.tLobo });
   env.as("gm");
   const C1 = await resist(env, B, { weapon: env.mordida });
@@ -788,7 +792,7 @@ test("visibility: whispered B is inherited; otherwise the resister's real messag
   };
   for (const [mode, expected] of Object.entries(cases)) {
     const env = setup();
-    installCombatManeuversRule();
+    installCombatManeuversRule(uses(), concealmentOn);
     const { B } = await attackAndManeuver(env, { weapon: env.chicote, target: env.tLobo });
     env.as("gm");
     env.settings["core.messageMode"] = mode;
@@ -797,7 +801,7 @@ test("visibility: whispered B is inherited; otherwise the resister's real messag
     assert.deepEqual([chatData.whisper ?? [], !!chatData.blind], [expected.whisper, expected.blind], mode);
   }
   const env = setup({ messageMode: "blind" });
-  installCombatManeuversRule();
+  installCombatManeuversRule(uses(), concealmentOn);
   const { B } = await attackAndManeuver(env, { weapon: env.chicote, target: env.tLobo });
   assert.deepEqual([B.whisper, B.blind], [["gm"], true]);
   env.as("gm");
@@ -808,7 +812,7 @@ test("visibility: whispered B is inherited; otherwise the resister's real messag
 
 test("different readers: each user reads only their own result as canonical", async () => {
   const env = setup({ user: "gm" });
-  installCombatManeuversRule();
+  installCombatManeuversRule(uses(), concealmentOn);
   const { B } = await attackAndManeuver(env, { weapon: env.mordida, target: env.tGuerreiro });
   env.settings["core.messageMode"] = "gm";
   const C1 = await resist(env, B, { weapon: env.chicote });
@@ -839,7 +843,7 @@ test("different readers: each user reads only their own result as canonical", as
 
 test("result speaker is neutral and the full render never leaks the target's name", async () => {
   const env = setup();
-  installCombatManeuversRule();
+  installCombatManeuversRule(uses(), concealmentOn);
   const { B } = await attackAndManeuver(env, { weapon: env.chicote, target: env.tLobo });
   env.as("gm");
   const C = await resist(env, B, { weapon: env.mordida });
@@ -854,7 +858,7 @@ test("result speaker is neutral and the full render never leaks the target's nam
 
 test("names: GM, owner and public display modes see it; others see Alvo; deleted token uses the record", async () => {
   const env = setup();
-  installCombatManeuversRule();
+  installCombatManeuversRule(uses(), concealmentOn);
   const { B } = await attackAndManeuver(env, { weapon: env.chicote, target: env.tLobo });
   env.as("gm");
   const C = await resist(env, B, { weapon: env.mordida });
@@ -899,23 +903,23 @@ test("install orders: the resistance skips #42 and the stubs of #49 and #59 in b
       // #49 (concealment) and #59 (charge): contract stubs that skip a maneuver resistance.
       const rollAttack = proto.rollAttack;
       proto.rollAttack = async function (...args) {
-        if (usePurposeOf(this) !== USE_PURPOSES.MANEUVER_RESISTANCE && useTargetRecords(this).length) stubLog.push("concealment");
+        if (uses().usePurposeOf(this) !== USE_PURPOSES.MANEUVER_RESISTANCE && uses().useTargetRecords(this).length) stubLog.push("concealment");
         return rollAttack.apply(this, args);
       };
       const displayCard = proto.displayCard;
       proto.displayCard = async function (...args) {
-        if (usePurposeOf(this) !== USE_PURPOSES.MANEUVER_RESISTANCE) stubLog.push("charge");
+        if (uses().usePurposeOf(this) !== USE_PURPOSES.MANEUVER_RESISTANCE) stubLog.push("charge");
         return displayCard.apply(this, args);
       };
     };
     if (order === "maneuvers-first") {
-      installCombatManeuversRule();
-      installAttackVsDefenseRule();
+      installCombatManeuversRule(uses(), concealmentOn);
+      installAttackVsDefenseRule(uses(), outcome());
       installStubs();
     } else {
       installStubs();
-      installAttackVsDefenseRule();
-      installCombatManeuversRule();
+      installAttackVsDefenseRule(uses(), outcome());
+      installCombatManeuversRule(uses(), concealmentOn);
     }
     const { B } = await attackAndManeuver(env, { weapon: env.chicote, target: env.tLobo });
     assert.ok(B.rolls[0].options[MODULE]?.attackVsDefense, `${order}: #42 compares the attack`);
@@ -964,7 +968,7 @@ function declare(env, weapon, values, { d20 = 12, bonus = 7 } = {}) {
 
 test("use dialog: Manobra and Arma versátil on eligible melee attacks only", async () => {
   const env = setup();
-  installCombatManeuversRule();
+  installCombatManeuversRule(uses(), concealmentOn);
   game.user.targets = new Set([env.tLobo]);
   declare(env, env.chicote, {});
   await env.chicote.roll({ event });
@@ -998,23 +1002,23 @@ test("use dialog: Manobra and Arma versátil on eligible melee attacks only", as
 
 test("use dialog: no field with the rule off nor in the resistance test", async () => {
   const off = setup({ rule: "off" });
-  installCombatManeuversRule();
+  installCombatManeuversRule(uses(), concealmentOn);
   game.user.targets = new Set([off.tLobo]);
   declare(off, off.chicote, {});
   await off.chicote.roll({ event });
   assert.equal(off.lastDialog.field, null);
 
   const env = setup();
-  installCombatManeuversRule();
+  installCombatManeuversRule(uses(), concealmentOn);
   declare(env, env.mordida, {});
   env.as("gm");
-  await withUsePurpose(USE_PURPOSES.MANEUVER_RESISTANCE, () => env.mordida.roll({ event, createMessage: false }));
+  await uses().withUsePurpose(USE_PURPOSES.MANEUVER_RESISTANCE, () => env.mordida.roll({ event, createMessage: false }));
   assert.equal(env.lastDialog.field, null);
 });
 
 test("use dialog: without exactly one valid target the field is disabled with the reason", async () => {
   const env = setup();
-  installCombatManeuversRule();
+  installCombatManeuversRule(uses(), concealmentOn);
   const W = LANG.T20CP.CombatManeuvers.Warn;
   for (const [targets, reason] of [[[], W.NoTarget], [[env.tLobo, env.tOgro], W.ManyTargets], [[env.tGuerreiro], W.SelfTarget]]) {
     game.user.targets = new Set(targets);
@@ -1029,7 +1033,7 @@ test("use dialog: without exactly one valid target the field is disabled with th
 
 test("declared maneuver: one maneuver card with the attack roll, no attack card, no damage roll", async () => {
   const env = setup();
-  installCombatManeuversRule();
+  installCombatManeuversRule(uses(), concealmentOn);
   game.user.targets = new Set([env.tLobo]);
   declare(env, env.chicote, { t20cpManeuver: "derrubar", t20cpManeuverVersatile: true }, { d20: 12, bonus: 7 });
   const B = await env.chicote.roll({ event });
@@ -1058,7 +1062,7 @@ test("declared maneuver: one maneuver card with the attack roll, no attack card,
 
 test("declared maneuver: roll mode and createMessage: false like the system's card", async () => {
   const env = setup({ messageMode: "blind" });
-  installCombatManeuversRule();
+  installCombatManeuversRule(uses(), concealmentOn);
   game.user.targets = new Set([env.tGuerreiro]);
   declare(env, env.mordida, { t20cpManeuver: "agarrar", t20cpManeuverVersatile: true });
   const B = await env.mordida.roll({ event });
@@ -1073,7 +1077,7 @@ test("declared maneuver: roll mode and createMessage: false like the system's ca
 
 test("declared maneuver against an invalid target: warning, then the normal attack with damage", async () => {
   const env = setup();
-  installCombatManeuversRule();
+  installCombatManeuversRule(uses(), concealmentOn);
   const W = LANG.T20CP.CombatManeuvers.Warn;
   for (const [targets, reason] of [[[], W.NoTarget], [[env.tLobo, env.tOgro], W.ManyTargets], [[env.tGuerreiro], W.SelfTarget]]) {
     game.user.targets = new Set(targets);
@@ -1089,7 +1093,7 @@ test("declared maneuver against an invalid target: warning, then the normal atta
 
 test("maneuver and result cards: details collapsed, the title toggles them on this client", async () => {
   const env = setup();
-  installCombatManeuversRule();
+  installCombatManeuversRule(uses(), concealmentOn);
   game.user.targets = new Set([env.tLobo]);
   declare(env, env.chicote, { t20cpManeuver: "derrubar" });
   const B = await env.chicote.roll({ event });
@@ -1118,11 +1122,11 @@ test("declared maneuver with Investida: the inner rules still run (attack bonus 
   const effects = [];
   Object.assign(env.guerreiro, { isOwner: true, effects, createEmbeddedDocuments: async (_, data) => effects.push(...data) });
   // Same order as scripts/main.mjs.
-  installSaveButtonRule();
-  installAttackVsDefenseRule();
-  installSituationalModifiersRule();
-  installCombatManeuversRule();
-  installNonlethalAttackRule();
+  installSaveButtonRule(uses());
+  installAttackVsDefenseRule(uses(), outcome());
+  installSituationalModifiersRule(uses());
+  installCombatManeuversRule(uses(), concealmentOn);
+  installNonlethalAttackRule(uses());
   game.user.targets = new Set([env.tLobo]);
   env.queues.set(env.chicote.id, [[12, 7]]);
   env.chicote.useDialog = () => ({ t20cpManeuver: "derrubar", t20cpSituationalAttack: ["charge"] });
@@ -1138,7 +1142,7 @@ test("declared maneuver with Investida: the inner rules still run (attack bonus 
 
 test("maneuver cards carry a copy of the attack roll and never serialize the live one", async () => {
   const env = setup();
-  installCombatManeuversRule();
+  installCombatManeuversRule(uses(), concealmentOn);
   class Roll {
     constructor(data) {
       Object.assign(this, data);
@@ -1186,8 +1190,8 @@ function withConcealment(env, d10s) {
       }
     }
   };
-  installConcealmentRule();
-  installCombatManeuversRule();
+  installConcealmentRule(uses(), outcome());
+  installCombatManeuversRule(uses(), concealmentOn);
   return rolled;
 }
 
@@ -1238,7 +1242,7 @@ test("concealment rule off: a declared maneuver ignores the d10", async () => {
 
 test("an old button-made maneuver card still renders and resists", async () => {
   const env = setup();
-  installCombatManeuversRule();
+  installCombatManeuversRule(uses(), concealmentOn);
   const data = {
     v: 1,
     kind: "derrubar",

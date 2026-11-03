@@ -12,8 +12,8 @@
  * their description, and an official all-zero placeholder with the same name is hidden. A weapon buff asks for the
  * weapon when it is applied (a single wielded weapon is chosen silently) and is offered only on that weapon.
  */
-import { MODULE_ID } from "../utils.mjs";
-import { plainText } from "./linked-usage-effects.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
+import { plainText } from "../lib/text.mjs";
 import { wraps } from "../kernel/wrap.mjs";
 
 export const WEAPON_FLAG = "buffWeapon";

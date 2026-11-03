@@ -9,7 +9,7 @@ import patch, {
   rollsWithDefaultAttribute,
   systemResolvesDefault
 } from "../scripts/patches/default-damage-attribute.mjs";
-import { markWrapper, sourceFingerprint } from "../scripts/utils.mjs";
+import { markWrapper, sourceFingerprint } from "../scripts/lib/source.mjs";
 import { ROLL_DAMAGE_1_6_6 } from "./fixtures/roll-damage-1.6.6.mjs";
 
 const weapon = (system = {}) => ({ type: "arma", system: { empunhadura: "uma", proposito: "corpo-a-corpo", propriedades: {}, ...system } });

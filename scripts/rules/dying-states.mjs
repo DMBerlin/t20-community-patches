@@ -10,35 +10,21 @@
  * the system conditions "inconsciente", "sangrando" and "morto". Effects created here carry a flag, and only those
  * are removed automatically, plus child conditions the system created after their parent was already deleted.
  *
- * The lethal HP contract (snapshots, rebase between nonlethal modes) comes from nonlethal-damage.mjs (#55), and the
- * death threshold from the death-threshold patch (#29).
+ * The lethal HP contract (snapshots, rebase between nonlethal modes) of the nonlethal damage rule (#55) and the
+ * death threshold (#29) come from lib/; the nonlethal mode is read through ctx.features.
  */
-import { MODULE_ID } from "../utils.mjs";
-import { deathThreshold } from "../patches/death-threshold.mjs";
-import { hpSnapshotOf, rebaseSnapshot, touchesLethalHp } from "./nonlethal-damage.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
+import { deathThreshold } from "../lib/death-threshold.mjs";
+import { NONLETHAL_SETTING, hpSnapshotOf, readsOn, rebaseSnapshot, touchesLethalHp } from "../lib/nonlethal.mjs";
+import { DYING_STATES_SETTING, isTracked } from "../lib/dying-states.mjs";
 
-export const DYING_STATES_SETTING = "dyingStatesRule";
 export const DYING_STATES_MODES = ["off", "characters", "all"];
 export const DYING_FLAG = "dyingState";
 export const UNCONSCIOUS = "inconsciente";
 export const BLEEDING = "sangrando";
 export const DEAD = "morto";
 export const RULE_STATUSES = [UNCONSCIOUS, BLEEDING, DEAD];
-const TRACKED_TYPES = {
-  characters: new Set(["character"]),
-  all: new Set(["character", "npc", "simple"])
-};
 const LOG = `${MODULE_ID} | dying-states:`;
-
-/**
- * Whether the rule covers an actor type in a mode.
- * @param {string} type
- * @param {string} mode
- * @returns {boolean}
- */
-export function isTracked(type, mode) {
-  return TRACKED_TYPES[mode]?.has(type) ?? false;
-}
 
 function currentMode() {
   try {
@@ -222,6 +208,8 @@ export function createKeyedQueue() {
 
 const enqueue = createKeyedQueue();
 const tracker = createPvTracker();
+/** Whether the nonlethal damage rule is on; set by installDyingStatesRule. */
+let nonlethalOn = () => false;
 const warnedMissing = new Set();
 
 /** Same answer on every client: the active GM if any, otherwise the active owner the core designates. */
@@ -238,7 +226,7 @@ function onPreUpdateActor(actor, changes, options, userId) {
   try {
     if (userId !== game.user?.id || !touchesLethalHp(changes) || !coversActor(actor)) return;
     const store = (options[MODULE_ID] ??= {});
-    (store.dyingStates ??= {})[actor.uuid] = hpSnapshotOf(actor);
+    (store.dyingStates ??= {})[actor.uuid] = hpSnapshotOf(actor, nonlethalOn());
   } catch (err) {
     console.warn(`${LOG} could not capture the HP of ${actor?.name}`, err);
   }
@@ -248,7 +236,7 @@ function onUpdateActor(actor, changed, options) {
   try {
     if (!touchesLethalHp(changed)) return;
     // Read synchronously: the document already holds this update, and hooks fire in server order.
-    const after = hpSnapshotOf(actor);
+    const after = hpSnapshotOf(actor, nonlethalOn());
     const observed = tracker.observe(actor.uuid, after, options?.[MODULE_ID]?.dyingStates?.[actor.uuid]);
     // Compare under one mode: a snapshot taken before the nonlethal rule was toggled is recomputed under the new one.
     const before = rebaseSnapshot(observed, after.nonlethalOn);
@@ -284,7 +272,7 @@ function onCreateActiveEffect(effect) {
     });
     if (orphan) return deleteOrphans(actor, [effect.id]);
     if (effect.getFlag?.(MODULE_ID, DYING_FLAG)) {
-      const now = hpSnapshotOf(actor);
+      const now = hpSnapshotOf(actor, nonlethalOn());
       enqueue(actor.uuid, () => syncDyingStates(actor, now, now));
     }
   } catch (err) {
@@ -352,8 +340,12 @@ const SETTING_SPEC = {
   default: "off"
 };
 
-/** Installs the hooks. They stay installed and read the setting on every change. */
-export function installDyingStatesRule() {
+/**
+ * Installs the hooks. They stay installed and read the settings on every change.
+ * @param {() => boolean} isNonlethalOn  Whether the nonlethal damage rule is on, read on every change.
+ */
+export function installDyingStatesRule(isNonlethalOn) {
+  nonlethalOn = isNonlethalOn;
   Hooks.on("preUpdateActor", onPreUpdateActor);
   Hooks.on("updateActor", onUpdateActor);
   Hooks.on("createActiveEffect", onCreateActiveEffect);
@@ -367,5 +359,7 @@ export default {
   group: "actor",
   system: { id: "tormenta20" },
   settings: [SETTING_SPEC],
-  install: () => installDyingStatesRule()
+  // Lethal HP follows the nonlethal damage rule's mode.
+  interactsWith: ["nonlethal-damage"],
+  install: (ctx) => installDyingStatesRule(() => readsOn(() => ctx.features.setting("nonlethal-damage", NONLETHAL_SETTING)))
 };

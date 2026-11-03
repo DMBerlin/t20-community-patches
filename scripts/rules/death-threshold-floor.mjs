@@ -2,9 +2,28 @@
  * HP below the death threshold (#51). Belongs to the death-threshold patch, but exists in every patch mode: the
  * system's damage clamp always does. The wrappers keep "death-threshold" as owner.
  */
-import { MODULE_ID } from "../utils.mjs";
-import { DEATH_FLOOR_MODES, DEATH_FLOOR_SETTING, allowsBelowThreshold, installDamageFloor } from "../patches/death-threshold.mjs";
-import { coversActor } from "./dying-states.mjs";
+import { DEATH_FLOOR_MODES, DEATH_FLOOR_SETTING, allowsBelowThreshold, wrapDamageFloor } from "../lib/death-threshold.mjs";
+import { DYING_STATES_SETTING, isTracked } from "../lib/dying-states.mjs";
+import { fromFactory, wraps } from "../kernel/wrap.mjs";
+
+/** Wraps the system's damage methods. `allows` reads the settings on every call. */
+export function installDamageFloor(allows) {
+  const proto = CONFIG.Actor.documentClass.prototype;
+  for (const name of ["applyDamage", "applyDamageV2"]) {
+    if (typeof proto[name] === "function") {
+      wraps.wrap(proto, name, "death-threshold", fromFactory((original) => wrapDamageFloor(original, allows)));
+    }
+  }
+}
+
+/** A setting read on every damage; a missing one (not registered yet) counts as `fallback`. */
+function read(get, fallback) {
+  try {
+    return get();
+  } catch {
+    return fallback;
+  }
+}
 
 /** @type {import("../kernel/feature.mjs").Feature} */
 export default {
@@ -26,8 +45,13 @@ export default {
     }
   ],
   after: ["dying-states"],
-  install: () =>
+  // Only actors covered by the dying states, in their current mode, go below the threshold.
+  interactsWith: ["dying-states"],
+  install: (ctx) =>
     installDamageFloor((actor) =>
-      allowsBelowThreshold({ floor: game.settings.get(MODULE_ID, DEATH_FLOOR_SETTING), covered: coversActor(actor) })
+      allowsBelowThreshold({
+        floor: ctx.setting(DEATH_FLOOR_SETTING),
+        covered: isTracked(actor?.type, read(() => ctx.features.setting("dying-states", DYING_STATES_SETTING), "off"))
+      })
     )
 };

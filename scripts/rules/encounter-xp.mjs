@@ -1,4 +1,4 @@
-import { MODULE_ID } from "../utils.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
 
 /**
  * Optional GM tool: awards encounter XP (Tormenta20 Jogo do Ano, cap. 7, "Pontos de Experiência", p. 326).

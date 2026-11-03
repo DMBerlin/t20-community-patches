@@ -1,4 +1,6 @@
 import { test } from "node:test";
+import { createPlatform } from "../scripts/platform/foundry.mjs";
+import { createTestKernel } from "./support/fake-platform.mjs";
 import assert from "node:assert/strict";
 import {
   appliesToActor,
@@ -136,8 +138,7 @@ function setupFoundry() {
       settings: {
         get: (scope, key) => (scope === "tormenta20" && key === "UsageConfig" ? settings.usage : settings.mode)
       },
-      i18n: { lang: "pt-BR", localize: (key) => key, format: (key, data) => `${key}${JSON.stringify(data)}` },
-      modules: { get: () => ({ api: { status: [] } }) }
+      i18n: { lang: "pt-BR", localize: (key) => key, format: (key, data) => `${key}${JSON.stringify(data)}` }
     },
     ui: { notifications: { warn: (msg) => warnings.push(msg) } },
     foundry: {
@@ -164,7 +165,7 @@ function setupFoundry() {
       }
     }
   });
-  installTrainedOnlyRule();
+  installTrainedOnlyRule(createTestKernel({ platform: createPlatform() }).service("use-dialog-guard"));
 
   const guerreiro = (extra = {}) =>
     new Actor({

@@ -15,8 +15,7 @@
  * that only echoes those prepared values back (the item sheet submits every field) does not persist them.
  * A Manto da Resistência created straight from the compendium data is created with its effect enabled.
  */
-import { MODULE_ID } from "../utils.mjs";
-import { isPatchApplied } from "../registry.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
 import { wraps } from "../kernel/wrap.mjs";
 
 const DEFENSE = "system.attributes.defesa.bonus";
@@ -337,7 +336,9 @@ export function diagnoseSources(upgrades, cloakEffect, fixes = UPGRADE_FIXES, cl
 /*  Foundry integration                         */
 /* -------------------------------------------- */
 
-const penaltyFixApplied = () => isPatchApplied(game.modules.get(MODULE_ID)?.api?.status, "armor-penalty-reduction");
+/** Other features this patch reads (ctx.features); null before the install. */
+let features = null;
+const penaltyFixApplied = () => !!features?.isActive("armor-penalty-reduction");
 
 function correct(effect) {
   const item = effect.parent;
@@ -395,7 +396,8 @@ function onPreCreateItem(doc) {
   }
 }
 
-function apply() {
+function install(ctx) {
+  features = ctx.features;
   const EffectClass = CONFIG.ActiveEffect.documentClass;
   const original = EffectClass.prototype.prepareBaseData;
   if (typeof original !== "function") throw new Error("ActiveEffect#prepareBaseData not found");
@@ -449,6 +451,8 @@ export default {
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
   guarded: true,
   isNeeded,
+  // The armor penalty of an enchantment follows armor-penalty-reduction when that patch is applied.
+  interactsWith: ["armor-penalty-reduction"],
   lateProbe,
-  apply
+  install
 };

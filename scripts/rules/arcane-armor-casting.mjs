@@ -12,11 +12,10 @@
  * happen. Skill training follows the shared contract of #62 (skill-training.mjs); the cost of a training grant
  * (Eclético) is charged in the actor's turn of the mana queue, after the spell's own spend.
  */
-import { MODULE_ID } from "../utils.mjs";
-import { markCastFailed, isCastUse } from "./cast-outcome.mjs";
-import { automaticApplied } from "./mana-limit.mjs";
-import { withManaTurn } from "./mana-queue.mjs";
-import { isTrainedFor, plainUseEffect, skillUseEffects, trainingGrants } from "./skill-training.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
+import { markCastFailed, isCastUse } from "../lib/cast-outcome.mjs";
+import { automaticApplied } from "../lib/mana.mjs";
+import { isTrainedFor, plainUseEffect, skillUseEffects, trainingGrants } from "../lib/skill-training.mjs";
 import { wraps } from "../kernel/wrap.mjs";
 
 export const ARCANE_ARMOR_SETTING = "arcaneArmorRule";
@@ -208,6 +207,12 @@ export function usesDiscreetCasting(effects, appliedIds, slugify = defaultSlugif
 /* -------------------------------------------- */
 
 const LOG = `${MODULE_ID} | arcane-armor-casting:`;
+
+/** Other features this rule reads (ctx.features); null before the install. */
+let features = null;
+const dropSuppressed = () => !!features?.isActive("suppressed-usage-effects");
+/** The mana-queue service; null before the install. */
+let manaQueue = null;
 const i18n = (key, data) => (data ? game.i18n.format(`T20CP.ArcaneArmor.${key}`, data) : game.i18n.localize(`T20CP.ArcaneArmor.${key}`));
 
 function getMode() {
@@ -282,7 +287,7 @@ function describeCheck(item, options) {
 
 /** Training for the test, through the shared contract of #62 (independent of that rule's mode). */
 function trainingFor(actor) {
-  const grants = trainingGrants(skillUseEffects(actor, SKILL_KEY).map(plainUseEffect));
+  const grants = trainingGrants(skillUseEffects(actor, SKILL_KEY, dropSuppressed()).map(plainUseEffect));
   const training = isTrainedFor({
     key: SKILL_KEY,
     skill: actor.system?.pericias?.[SKILL_KEY],
@@ -299,7 +304,7 @@ function trainingFor(actor) {
 
 /** Charges the grant in the actor's turn of the mana queue, after the spell's own spend (T20:8669). */
 async function payGrant(actor, cost) {
-  return withManaTurn(actor, async ({ spend }) => {
+  return manaQueue.withManaTurn(actor, async ({ spend }) => {
     const pm = actor.system?.attributes?.pm ?? {};
     if (!canPayGrant({ value: pm.value, temp: pm.temp, cost })) return false;
     await spend(cost, 0, false);
@@ -472,8 +477,10 @@ const SETTING_SPEC = {
 /**
  * Installs the rule. Must run before installCastingRestrictionsRule, so this displayCard wrapper sits inside that one
  * (which only counts a cast through castCompleted). The mode is read on every use.
+ * @param {{withManaTurn: Function}} queue  The mana-queue service: the grant is charged in the actor's turn.
  */
-export function installArcaneArmorRule() {
+export function installArcaneArmorRule(queue) {
+  manaQueue = queue;
   const itemProto = CONFIG.Item?.documentClass?.prototype;
   const original = itemProto?.displayCard;
   if (typeof original !== "function") throw new Error("ItemT20#displayCard not found");
@@ -524,5 +531,11 @@ export default {
   group: "usage-effects",
   system: { id: "tormenta20" },
   settings: [SETTING_SPEC],
-  install: () => installArcaneArmorRule()
+  // Training ignores the usage effects suppressed-usage-effects hides, as rollPericia does with that patch.
+  interactsWith: ["suppressed-usage-effects"],
+  services: ["mana-queue"],
+  install: (ctx) => {
+    features = ctx.features;
+    installArcaneArmorRule(ctx.services["mana-queue"]);
+  }
 };

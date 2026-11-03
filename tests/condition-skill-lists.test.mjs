@@ -3,11 +3,12 @@ import assert from "node:assert/strict";
 import patch, {
   conditionAbilities,
   diagnoseConditionLists,
-  keyAbility,
   planConditionChanges,
   skillRepresentation
 } from "../scripts/patches/condition-skill-lists.mjs";
-import { isSystemVersionAffected, statusEffectSources } from "../scripts/utils.mjs";
+import { keyAbility } from "../scripts/lib/skills.mjs";
+import { isSystemVersionAffected } from "../scripts/lib/version.mjs";
+import { statusEffectSources } from "../scripts/lib/status-effects.mjs";
 
 // Key attribute of each skill in Tormenta20 1.6.5 (CONFIG.T20.pericias[key].abl, T20:3411-3447).
 const ABL = {

@@ -25,8 +25,8 @@ import {
   summarize,
   wrapActorPreCreate,
   wrapPreCreate
-} from "../compendium-copy.mjs";
-import { MODULE_ID } from "../utils.mjs";
+} from "../lib/compendium-copy/index.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
 import { fromFactory, wraps } from "../kernel/wrap.mjs";
 
 const PATCH_ID = "race-data";
@@ -204,7 +204,7 @@ function isNeeded() {
 
 async function lateProbe() {
   try {
-    return summarize(await readEntries(ENTRIES));
+    return summarize(await readEntries(ENTRIES, game.packs));
   } catch (error) {
     console.warn(`${MODULE_ID} | ${PATCH_ID}: probe failed`, error);
     return undefined;

@@ -42,7 +42,8 @@ export const FEATURES = [
   nonProficiency,
   // save-button, attack-vs-defense, situational-modifiers, concealment-miss-chance and combat-maneuvers come before
   // casting-restrictions: its ItemT20#roll wrapper clones the item before calling the next one, so the shared
-  // use-target wrappers (scripts/rules/shared/targets.mjs) must sit inside it to bind the system's clone.
+  // use-targets service (scripts/services/use-targets.mjs), installed with the first of them, must sit inside it to
+  // bind the system's clone.
   saveButton,
   attackVsDefense,
   // The order relative to attack-vs-defense does not matter: adjustments are registered before the original
@@ -54,7 +55,7 @@ export const FEATURES = [
   // Without a declared maneuver, its displayCard wrapper only calls the original.
   combatManeuvers,
   // Its displayCard wrapper sits inside casting-restrictions', which only counts a cast through castCompleted
-  // (scripts/rules/cast-outcome.mjs), so a failed armor test never ends a sustained spell.
+  // (scripts/lib/cast-outcome.mjs), so a failed armor test never ends a sustained spell.
   arcaneArmor,
   // After the other ItemT20#roll/displayCard wrappers (usage-effect-max): a blocked use never reaches them.
   castingRestrictions,

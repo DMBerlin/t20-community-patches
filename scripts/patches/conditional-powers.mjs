@@ -10,7 +10,7 @@
  * Fix: those passive effects are suppressed while the actor's equipment proves the condition is not met, using the
  * system's own notion of equipped items. An actor that owns Fanático gets "ignora-armadura" in its movement tags.
  */
-import { markWrapper, stripComments, unwrap } from "../utils.mjs";
+import { markWrapper, stripComments, unwrap } from "../lib/source.mjs";
 import { wraps } from "../kernel/wrap.mjs";
 
 const POWERS = "Compendium.tormenta20.poderes.Item.";

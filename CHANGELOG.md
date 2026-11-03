@@ -16,6 +16,7 @@ Não edite as seções de versão à mão.
 - Registro central de wrappers, com a ordem de composição exposta em api.wraps (#84).
 - Patches e regras opcionais passam a usar um contrato único (Feature) e um ciclo de vida central (#85).
 - Camada de plataforma e injeção de dependências: globais do Foundry ficam isolados num único módulo (#86).
+- Código compartilhado separado em lib e serviços, com dependências entre correções declaradas (#87).
 
 ## v1.1.0 - 2026-10-27
 

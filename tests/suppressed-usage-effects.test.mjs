@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import patch, { collectsIgnoringSuppression, isSuppressedUsageEffect } from "../scripts/patches/suppressed-usage-effects.mjs";
+import patch, { collectsIgnoringSuppression } from "../scripts/patches/suppressed-usage-effects.mjs";
+import { isSuppressedUsageEffect } from "../scripts/lib/usage-effects.mjs";
 import { createFakeContext, createFakePlatform } from "./support/fake-platform.mjs";
 
 const item = (id, suppressed = false) => ({ documentName: "Item", id, areEffectsSuppressed: suppressed });

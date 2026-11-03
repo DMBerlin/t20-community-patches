@@ -17,25 +17,29 @@
  * - Sheet: a "Não letal" field under the HP.
  * - The toggle starts pressed when the damage roll recorded a nonlethal choice (#74, nonlethal-attack.mjs).
  *
- * The functions of the lethal HP contract (#51) are exported from here: lethalSnapshot, rebaseSnapshot,
- * hpSnapshotOf, nonlethalOf and touchesLethalHp.
+ * The lethal HP contract (#51: lethalSnapshot, rebaseSnapshot, hpSnapshotOf, nonlethalOf, touchesLethalHp) lives in
+ * lib/nonlethal.mjs; the other rules read this rule's mode through ctx.features.
  */
-import { MODULE_ID, stripComments, unwrap } from "../utils.mjs";
-import { allActors } from "./source-stacking.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
+import { stripComments, unwrap } from "../lib/source.mjs";
+import { allActors } from "../lib/actors.mjs";
 import { wraps } from "../kernel/wrap.mjs";
+import {
+  FLAG_PATH,
+  HP_PATH,
+  MAX_PATH,
+  NONLETHAL_SETTING,
+  ROLL_DATA_KEY,
+  effectiveNonlethal,
+  nonlethalOf,
+  readChange
+} from "../lib/nonlethal.mjs";
 
-export const NONLETHAL_SETTING = "nonlethalDamageRule";
-export const NONLETHAL_FLAG = "nonlethal";
-/** roll.options[MODULE_ID][ROLL_DATA_KEY] = {v, nonlethal}: the choice made when attacking (#74). */
-export const ROLL_DATA_KEY = "nonlethal";
 export const ACTOR_TYPES = Object.freeze(["character", "npc", "simple"]);
 export const TOGGLE_CLASS = "t20cp-nonlethal";
 export const FIELD_CLASS = "t20cp-nonlethal-field";
 const FOOTER_CLASS = "t20cp-nonlethal-footer";
 
-const FLAG_PATH = `flags.${MODULE_ID}.${NONLETHAL_FLAG}`;
-const HP_PATH = "system.attributes.pv.value";
-const MAX_PATH = "system.attributes.pv.max";
 const LOG = `${MODULE_ID} | nonlethal-damage:`;
 
 /* -------------------------------------------- */
@@ -49,55 +53,6 @@ export function ruleEnabled() {
   } catch {
     return false;
   }
-}
-
-/**
- * Nonlethal HP that still counts: an integer between 0 and the HP actually missing (max − value).
- * Non-finite inputs count as no nonlethal damage.
- */
-export function effectiveNonlethal(nonlethal, value, max) {
-  const n = Math.trunc(Number(nonlethal));
-  const v = Number(value);
-  const m = Number(max);
-  if (!Number.isFinite(n) || !Number.isFinite(v) || !Number.isFinite(m)) return 0;
-  return Math.min(Math.max(n, 0), Math.max(0, m - v));
-}
-
-/** Lethal HP under the rule: current HP plus the nonlethal HP that still counts. */
-export function lethalHp(value, nonlethal, max) {
-  return Number(value) + effectiveNonlethal(nonlethal, value, max);
-}
-
-/** Stored flag, as an integer >= 0. */
-export function nonlethalOf(actor) {
-  return Math.max(0, Math.trunc(Number(actor?.getFlag?.(MODULE_ID, NONLETHAL_FLAG))) || 0);
-}
-
-/**
- * Immutable HP snapshot used by the conditions rule. Keeps the raw flag and the mode, so a snapshot taken under
- * one mode can be recomputed under the other.
- */
-export function lethalSnapshot({ value, nonlethal, max, nonlethalOn }) {
-  const raw = Math.max(0, Math.trunc(Number(nonlethal)) || 0);
-  const n = nonlethalOn ? effectiveNonlethal(raw, value, max) : 0;
-  return Object.freeze({ value, rawNonlethal: raw, nonlethal: n, lethal: value + n, max, nonlethalOn: !!nonlethalOn });
-}
-
-/** The same confirmed data, seen under another mode. Returns the snapshot itself when the mode matches. */
-export function rebaseSnapshot(snapshot, nonlethalOn) {
-  if (!snapshot || snapshot.nonlethalOn === !!nonlethalOn) return snapshot;
-  return lethalSnapshot({ value: snapshot.value, nonlethal: snapshot.rawNonlethal, max: snapshot.max, nonlethalOn });
-}
-
-/** Confirmed snapshot of an actor under the current mode. */
-export function hpSnapshotOf(actor) {
-  const pv = actor.system?.attributes?.pv ?? {};
-  return lethalSnapshot({ value: Number(pv.value), nonlethal: nonlethalOf(actor), max: Number(pv.max), nonlethalOn: ruleEnabled() });
-}
-
-/** Whether an update changed anything the snapshot depends on (nested or dotted keys). */
-export function touchesLethalHp(changed) {
-  return [HP_PATH, MAX_PATH, FLAG_PATH].some((path) => readChange(changed, path).found);
 }
 
 /* -------------------------------------------- */
@@ -249,27 +204,6 @@ export function withNonlethalCall(actor) {
     },
     set: (target, prop, value) => Reflect.set(target, prop, value, target)
   });
-}
-
-/* -------------------------------------------- */
-/*  Changes (nested or dotted keys)             */
-/* -------------------------------------------- */
-
-/**
- * Reads a path from update changes that may mix nested objects and dotted keys.
- * @returns {{found: boolean, value?: unknown}}
- */
-export function readChange(obj, path) {
-  const parts = Array.isArray(path) ? path : path.split(".");
-  if (!obj || typeof obj !== "object") return { found: false };
-  for (let i = parts.length; i >= 1; i--) {
-    const key = parts.slice(0, i).join(".");
-    if (!Object.hasOwn(obj, key)) continue;
-    if (i === parts.length) return { found: true, value: obj[key] };
-    const inner = readChange(obj[key], parts.slice(i));
-    if (inner.found) return inner;
-  }
-  return { found: false };
 }
 
 /** Removes every nested or dotted variant of a path from update changes. */
@@ -495,8 +429,12 @@ export function syncChatToggles(enabled, doc = globalThis.document) {
   }
 }
 
+/** Documents port of the platform, set when the rule is installed; null until then. */
+let documents = null;
+
 function refreshActors() {
-  for (const actor of allActors()) {
+  if (!documents) return;
+  for (const actor of allActors(documents)) {
     try {
       actor.reset();
       if (actor.sheet?.rendered) actor.sheet.render(false);
@@ -578,5 +516,8 @@ export default {
   system: { id: "tormenta20" },
   settings: [SETTING_SPEC],
   after: ["death-threshold"],
-  install: () => installNonlethalRule()
+  install: (ctx) => {
+    documents = ctx.platform.documents;
+    installNonlethalRule();
+  }
 };

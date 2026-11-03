@@ -7,8 +7,9 @@
  * Fix: correct the world copy of the 11 threats in ActorT20#_preCreate, only when it comes from the known entry and
  * still holds the exact 1.6.5 type data; after the original parseData, fix each field the original failed to read.
  */
-import { readEntries, sameSignature, summarize, wrapPreCreate } from "../compendium-copy.mjs";
-import { MODULE_ID, markWrapper, stripComments, unwrap } from "../utils.mjs";
+import { readEntries, sameSignature, summarize, wrapPreCreate } from "../lib/compendium-copy/index.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
+import { markWrapper, stripComments, unwrap } from "../lib/source.mjs";
 import { fromFactory, wraps } from "../kernel/wrap.mjs";
 
 const PATCH_ID = "bestiary-creature-type";
@@ -333,7 +334,7 @@ function isNeeded() {
 
 async function lateProbe() {
   try {
-    const results = await readEntries(ENTRIES);
+    const results = await readEntries(ENTRIES, game.packs);
     const parse = unwrap(globalThis.tormenta20?.applications?.StatblockParser?.prototype?.parseData);
     const recognized = parserRecognized(String(parse ?? ""));
     const failures = recognized ? parserFailures(labelsNow()) : [];

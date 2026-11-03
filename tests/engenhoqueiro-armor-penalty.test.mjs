@@ -9,7 +9,7 @@ import patch, {
   wrapPrepareSkill
 } from "../scripts/patches/engenhoqueiro-armor-penalty.mjs";
 import { CreatureData165 } from "./fixtures/non-proficiency-1.6.5.mjs";
-import { markWrapper } from "../scripts/utils.mjs";
+import { markWrapper } from "../scripts/lib/source.mjs";
 
 const ORIGINAL = CreatureData165.prototype.prepareSkill;
 

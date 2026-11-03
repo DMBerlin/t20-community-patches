@@ -8,24 +8,10 @@
  * Fix: the single matching effect of the usage effect's own item is injected (as an isolated, disabled clone named
  * after the change value) into the rolled item's clone, and "efeito"/"condicao" are not appended to own effects.
  */
+import { plainText } from "../lib/text.mjs";
 
 const LINK_KEY = "efeito";
 const DROPPED_KEYS = new Set(["efeito", "condicao"]);
-const ENTITIES = { "&nbsp;": " ", "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"', "&#39;": "'" };
-
-/**
- * Plain text of an HTML description: tags removed, common entities decoded, whitespace collapsed.
- * @param {string} html
- * @returns {string}
- */
-export function plainText(html) {
-  return String(html ?? "")
-    .replace(/<[^>]*>/g, " ")
-    .replace(/&(nbsp|amp|lt|gt|quot|#39);/g, (m) => ENTITIES[m])
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
 /**
  * Candidates for a linked effect named `value` among `effects`, excluding the usage effect itself.
  * @param {Iterable<{id: string, name?: string, description?: string}>} effects

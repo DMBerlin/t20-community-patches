@@ -11,7 +11,8 @@
  * so the order stays the same for the whole combat even if they change. A combatant without a saved value comes after
  * the ones with it; with equal values, or none on both sides, the core order (id) is kept.
  */
-import { MODULE_ID, sourceFingerprint, unwrap } from "../utils.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
+import { sourceFingerprint, unwrap } from "../lib/source.mjs";
 import { wraps } from "../kernel/wrap.mjs";
 
 const LOG = `${MODULE_ID} | initiative-tiebreak:`;

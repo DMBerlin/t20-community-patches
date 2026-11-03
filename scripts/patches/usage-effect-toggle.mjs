@@ -9,10 +9,13 @@
  * Fix: the toggle of usage rows flips system.abilityUse.automatic and the icon reflects it. Temporary usage
  * effects held by items keep toggling `disabled` (default vs optional application on the chat card).
  */
-import { MODULE_ID, unwrap } from "../utils.mjs";
-import { resolveEffectFromRow } from "../effect-rows.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
+import { unwrap } from "../lib/source.mjs";
+import { resolveEffectFromRow } from "../lib/effect-rows.mjs";
 import { sheetEffectClass } from "../platform/foundry.mjs";
 import { wraps } from "../kernel/wrap.mjs";
+
+const fromUuidSync = (uuid, options) => foundry.utils.fromUuidSync(uuid, options);
 
 /**
  * Whether the sheet toggle of this effect should mean "Always Apply".
@@ -58,7 +61,7 @@ function fixToggles(owner, html) {
   for (const li of root.querySelectorAll("li.effect[data-effect-id]")) {
     const anchor = li.querySelector('.effect-control[data-action="toggle"]');
     if (!anchor) continue;
-    const effect = resolveEffectFromRow(li, owner);
+    const effect = resolveEffectFromRow(li, owner, fromUuidSync);
     if (!effect?.system?.onuse) continue;
     if (usesAutomaticToggle(effect)) {
       const { add, remove } = toggleIconClasses(Boolean(effect.system.abilityUse?.automatic));
@@ -102,7 +105,7 @@ function apply() {
     if (anchor?.dataset?.action === "toggle" && owner) {
       try {
         const li = anchor.closest?.("li");
-        effect = li ? resolveEffectFromRow(li, owner) : null;
+        effect = li ? resolveEffectFromRow(li, owner, fromUuidSync) : null;
       } catch (err) {
         console.error(`${MODULE_ID} | usage-effect-toggle: failed to resolve effect`, err);
       }

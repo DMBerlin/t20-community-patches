@@ -10,7 +10,7 @@
  * the system's Constitution test: success removes the condition, failure rolls the loss. Turn starts of the same actor
  * run one after the other. No data is changed.
  */
-import { stripComments, unwrap } from "../utils.mjs";
+import { stripComments, unwrap } from "../lib/source.mjs";
 import { wraps } from "../kernel/wrap.mjs";
 
 export const LEGACY_KEY = "dano";

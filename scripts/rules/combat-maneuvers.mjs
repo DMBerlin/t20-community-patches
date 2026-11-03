@@ -17,20 +17,16 @@
  * B and C show a summary; clicking the title shows the details (per client, like the system's item cards).
  * The module never applies conditions: the card says which one applies and the GM uses the token HUD.
  */
-import { MODULE_ID } from "../utils.mjs";
-import { FORM_FIELD as NONLETHAL_FIELD } from "./nonlethal-attack.mjs";
-import { CONCEALMENT_SETTING, concealmentChecksOf } from "./concealment-miss-chance.mjs";
-import {
-  canSeeTokenName,
-  inItemUse,
-  installUseTargets,
-  registerTargetConsumer,
-  USE_PURPOSES,
-  usePurposeOf,
-  useTargetRecords,
-  withUsePurpose
-} from "./shared/targets.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
+import { NONLETHAL_FIELD } from "../lib/nonlethal.mjs";
+import { CONCEALMENT_SETTING, concealmentChecksOf } from "../lib/concealment.mjs";
+import { canSeeTokenName, USE_PURPOSES } from "../lib/targets.mjs";
 import { wraps } from "../kernel/wrap.mjs";
+
+/** The use-targets service; null before the install. */
+let uses = null;
+/** Whether the concealment rule is on; set by the install. */
+let concealmentEnabled = () => false;
 
 export const COMBAT_MANEUVERS_SETTING = "combatManeuversRule";
 /** Fields of the use dialog (they reach rollAttack, rollDamage and displayCard in `options`). */
@@ -228,7 +224,7 @@ const withInCard = (concealment) => (concealment ? { ...concealment, inCard: tru
 /** The miss chance only counts while the concealment rule is on (its checks are recorded only then). */
 function concealmentOf(roll, targetUuid) {
   try {
-    if (game.settings.get(MODULE_ID, CONCEALMENT_SETTING) !== "on") return null;
+    if (!concealmentEnabled()) return null;
   } catch {
     return null;
   }
@@ -559,14 +555,14 @@ function maneuverChatData(data, { speaker, whisper, blind, rolls = [] }) {
 
 /** The use of a melee attack may declare a maneuver (not the defender's own test). */
 function eligibleUse(item) {
-  return isEnabled() && !!item?.actor && usePurposeOf(item) !== USE_PURPOSES.MANEUVER_RESISTANCE && isMeleeAttackCard(item.system);
+  return isEnabled() && !!item?.actor && uses.usePurposeOf(item) !== USE_PURPOSES.MANEUVER_RESISTANCE && isMeleeAttackCard(item.system);
 }
 
 const isVersatile = (item) => !!(item?.system?.propriedades?.ver || item?.system?.propriedades?.versatil);
 
 /** Frozen targets of the use and why they cannot take a maneuver (null when valid). */
 function useTargetCheck(item) {
-  const records = useTargetRecords(item);
+  const records = uses.useTargetRecords(item);
   const speakerToken = item.actor?.token?.id ?? null;
   const problem = targetProblem(records, (record) => isSelfTarget(record, item.actor, speakerToken));
   if (problem) return { records, problem };
@@ -579,7 +575,7 @@ function useTargetCheck(item) {
  * @returns {{kind: string, versatile: boolean, record: object} | null}
  */
 export function resolveDeclaration(item, options) {
-  if (!options || typeof options !== "object" || !inItemUse(item) || !eligibleUse(item)) return null;
+  if (!options || typeof options !== "object" || !uses.inItemUse(item) || !eligibleUse(item)) return null;
   const declared = parseDeclaration(options, { versatileAllowed: isVersatile(item) });
   if (!declared) return null;
   const { records, problem } = useTargetCheck(item);
@@ -733,7 +729,7 @@ export async function onResistClick(card, event) {
     let roll = null;
     if (choice.weapon) {
       const weapon = choice.weapon;
-      const chatData = await withUsePurpose(USE_PURPOSES.MANEUVER_RESISTANCE, () => weapon.roll({ createMessage: false, event }));
+      const chatData = await uses.withUsePurpose(USE_PURPOSES.MANEUVER_RESISTANCE, () => weapon.roll({ createMessage: false, event }));
       roll = pickTestRoll(chatData?.rolls);
     } else {
       const skillRoll = await actor.rollPericia(LUTA, { message: false, event });
@@ -903,13 +899,18 @@ const SETTING_SPEC = {
   onChange: () => redrawAll()
 };
 
-/** Installs the rule. The settings are read on every use, render and click, so a change applies without reloading. */
-export function installCombatManeuversRule() {
+/**
+ * Installs the rule. The settings are read on every use, render and click, so a change applies without reloading.
+ * @param {ReturnType<typeof import("../services/use-targets.mjs").createUseTargets>} useTargets  The use-targets service.
+ * @param {() => boolean} concealmentOn  Whether the concealment rule is on (its checks show on the maneuver card).
+ */
+export function installCombatManeuversRule(useTargets, concealmentOn) {
+  uses = useTargets;
+  concealmentEnabled = concealmentOn;
   locks.clear();
   expanded.clear();
   declarations = new WeakMap();
-  registerTargetConsumer(isEnabled);
-  installUseTargets();
+  uses.registerTargetConsumer(isEnabled);
   const proto = CONFIG.Item?.documentClass?.prototype;
   const { displayCard, rollAttack, rollDamage } = proto ?? {};
   if (typeof displayCard !== "function" || typeof rollAttack !== "function" || typeof rollDamage !== "function") {
@@ -971,5 +972,15 @@ export default {
   group: "combat",
   system: { id: "tormenta20" },
   settings: [SETTING_SPEC],
-  install: () => installCombatManeuversRule()
+  // The concealment checks of the attack show on the maneuver card while that rule is on.
+  interactsWith: ["concealment-miss-chance"],
+  services: ["use-targets"],
+  install: (ctx) =>
+    installCombatManeuversRule(ctx.services["use-targets"], () => {
+      try {
+        return ctx.features.setting("concealment-miss-chance", CONCEALMENT_SETTING) === "on";
+      } catch {
+        return false;
+      }
+    })
 };

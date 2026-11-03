@@ -12,7 +12,8 @@
  * reduces the exception RD. The prepared data is restored right after the call; nothing is persisted. The wrapper
  * only acts on the verified applyDamageV2 source (tormenta20 1.6.5).
  */
-import { MODULE_ID, sourceFingerprint, unwrap } from "../utils.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
+import { sourceFingerprint, unwrap } from "../lib/source.mjs";
 import { wraps } from "../kernel/wrap.mjs";
 
 const LOG = `${MODULE_ID} | rd-exception-once:`;

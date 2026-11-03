@@ -13,8 +13,8 @@
  * contributions ("add" 8 on .bonus) that do not win are skipped in memory. The condition's reduction is kept out of the
  * optional source-stacking rule. Nothing is written to the documents.
  */
-import { registerStackingExclusion } from "../rules/source-stacking.mjs";
 import { wraps } from "../kernel/wrap.mjs";
+import { findWithRetry } from "../lib/async.mjs";
 
 export const PETRIFIED = "petrificado";
 export const RD_VALUE_KEY = "system.tracos.resistencias.dano.value";
@@ -158,20 +158,6 @@ export function pickPetrifiedDocument(docs) {
 }
 
 /**
- * Calls lookup until it returns a document, for the lists the system and patch #1 build asynchronously after ready.
- * @param {() => Promise<object|null|undefined>} lookup
- * @param {{attempts?: number, delay?: number, sleep?: (ms: number) => Promise<void>}} [options]
- */
-export async function findWithRetry(lookup, { attempts = 10, delay = 1000, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) } = {}) {
-  for (let i = 0; i < attempts; i++) {
-    const found = await lookup();
-    if (found) return found;
-    if (i < attempts - 1) await sleep(delay);
-  }
-  return null;
-}
-
-/**
  * Lookup of the Petrificado document the token HUD clones: CONFIG.statusEffects first, then world.statuses by status.
  * @param {{statusUuid: () => unknown, fromUuid: (uuid: string) => Promise<object|null>, packDocuments: () => Promise<object[]|undefined>}} deps
  */
@@ -197,7 +183,7 @@ function actorOf(effect) {
   return parent?.documentName === "Item" ? parent.parent : parent;
 }
 
-function apply() {
+function install(ctx) {
   const EffectClass = CONFIG.ActiveEffect.documentClass;
   const actorProto = CONFIG.Actor.documentClass.prototype;
   const applyChange = EffectClass.applyChange;
@@ -246,7 +232,8 @@ function apply() {
     return applyChange.call(this, targetDoc, normalized ?? change, options);
   });
 
-  registerStackingExclusion(isPetrifiedContribution);
+  // Its own reduction never competes in source-stacking (#45), whatever the order of the two.
+  ctx.services["stacking-exclusions"].register(isPetrifiedContribution);
 }
 
 function isNeeded() {
@@ -271,7 +258,8 @@ export default {
   group: "conditions",
   issue: 63,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  services: ["stacking-exclusions"],
   isNeeded,
   lateProbe,
-  apply
+  install
 };

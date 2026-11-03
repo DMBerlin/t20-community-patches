@@ -9,7 +9,7 @@ import patch, {
   resolveReductions
 } from "../scripts/patches/rd-exception-once.mjs";
 import { resolvePatchState } from "../scripts/registry.mjs";
-import { sourceFingerprint } from "../scripts/utils.mjs";
+import { sourceFingerprint } from "../scripts/lib/source.mjs";
 import { APPLY_DAMAGE_V2 } from "./fixtures/apply-damage-v2-1.6.5.mjs";
 
 /* -------------------------------------------- */

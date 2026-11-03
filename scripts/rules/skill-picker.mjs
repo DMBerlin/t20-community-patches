@@ -7,7 +7,7 @@
  * while one of these powers is created on a character (any path) and stores the training as transfer effects on
  * the power, in the same shape as the system's _applyTreinado, so removing the power removes the training.
  */
-import { MODULE_ID } from "../utils.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
 import { wraps } from "../kernel/wrap.mjs";
 
 export const SKILL_PICKER_SETTING = "skillPickerRule";

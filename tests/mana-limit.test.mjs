@@ -1,18 +1,16 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { automaticApplied, evaluateManaLimit } from "../scripts/lib/mana.mjs";
 import {
-  automaticApplied,
   checkManaLimit,
   estimateUseCost,
-  evaluateManaLimit,
-  installManaLimitRule,
   MANA_LIMIT_SETTING,
   manaLimitSource,
   resolveManaLimitFormula
 } from "../scripts/rules/mana-limit.mjs";
-import { runValidators } from "../scripts/rules/use-dialog-guard.mjs";
+import { runValidators } from "../scripts/services/use-dialog-guard.mjs";
 import manaLimit from "../scripts/rules/mana-limit.mjs";
-import { createFakeContext, createFakePlatform } from "./support/fake-platform.mjs";
+import { createFakePlatform, createTestKernel } from "./support/fake-platform.mjs";
 
 const slugify = (text) => String(text).trim().toLowerCase().replace(/\s+/g, "-");
 
@@ -174,7 +172,7 @@ function setupFoundry() {
   };
   /** Notifications shown by the guard: {level, message}. */
   const warnings = platform.notes;
-  installManaLimitRule(createFakeContext(manaLimit, platform));
+  createTestKernel({ platform }).install(manaLimit);
 
   const actor = (level, extra = {}) => ({
     items: [{ type: "classe", name: "Bardo" }],

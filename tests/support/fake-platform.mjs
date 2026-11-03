@@ -2,9 +2,12 @@
  * In-memory platform for the tests (#86): the same ports as scripts/platform/foundry.mjs, without Foundry globals.
  * Every port can be replaced through `overrides`; `notes` and `logs` record what the code under test showed.
  */
-import { unwrap } from "../../scripts/utils.mjs";
+import { unwrap } from "../../scripts/lib/source.mjs";
 import { createWrapRegistry } from "../../scripts/kernel/wrap.mjs";
-import { createFeatureContext } from "../../scripts/kernel/context.mjs";
+import { createFeatureContext, createServiceContext } from "../../scripts/kernel/context.mjs";
+import { createServiceRegistry } from "../../scripts/kernel/services.mjs";
+import { createFeatureDirectory } from "../../scripts/kernel/features.mjs";
+import { SERVICES } from "../../scripts/services/index.mjs";
 
 const getProperty = (object, key) => key.split(".").reduce((value, part) => value?.[part], object);
 
@@ -46,6 +49,7 @@ let ids = 0;
  * @param {object} [overrides.forms]
  * @param {object} [overrides.i18n]
  * @param {Function} [overrides.sourceOf]
+ * @param {() => Iterable<object>} [overrides.targets]   Value of platform.user.targets().
  */
 export function createFakePlatform(overrides = {}) {
   const store = new Map(Object.entries(overrides.settings ?? {}));
@@ -63,7 +67,12 @@ export function createFakePlatform(overrides = {}) {
     logs,
     registered,
     hookCalls: hooks,
-    user: { isGM: () => user.isGM, isActiveGM: () => user.isActiveGM, id: () => "user" },
+    user: {
+      isGM: () => user.isGM,
+      isActiveGM: () => user.isActiveGM,
+      id: () => "user",
+      targets: overrides.targets ?? (() => [])
+    },
     system: overrides.system ?? { id: "tormenta20", version: "1.6.6", title: "Tormenta20" },
     classes: overrides.classes ?? {},
     t20: () => overrides.t20,
@@ -125,8 +134,44 @@ export function createFakePlatform(overrides = {}) {
 
 /**
  * Context of a feature on a fake platform, with its own wrapper registry.
+ * @param {object} [kernel]  `services` (registry) and `features` (directory), as createTestKernel builds them.
  * @returns {import("../../scripts/kernel/feature.mjs").FeatureContext}
  */
-export function createFakeContext(feature, platform = createFakePlatform(), wraps = createWrapRegistry()) {
-  return createFeatureContext(platform, feature, { wraps });
+export function createFakeContext(feature, platform = createFakePlatform(), wraps = createWrapRegistry(), kernel = {}) {
+  return createFeatureContext(platform, feature, { wraps, ...kernel });
+}
+
+/**
+ * A kernel for tests: one service registry and one feature directory over `platform`, as main.mjs wires them.
+ * `install(feature)` installs the declared services, then the feature (one context per feature id); `service(id)`
+ * gives a service API, installing it if needed.
+ * @param {object} options
+ * @param {object} options.platform  A fake platform, or createPlatform() over a fake Foundry.
+ * @param {{wrap: Function}} [options.wraps]
+ * @param {object[]} [options.features]  Features `ctx.features` knows about.
+ * @param {object[]} [options.status]    Status entries read by ctx.features.isActive.
+ * @param {object[]} [options.services]
+ */
+export function createTestKernel({ platform, wraps = createWrapRegistry(), features = [], status = [], services = SERVICES }) {
+  const registry = createServiceRegistry(services, (service) => createServiceContext(platform, service, { wraps }));
+  const directory = createFeatureDirectory({ features, status: () => status, getSetting: (key) => platform.settings.get(key) });
+  const contexts = new Map();
+  const contextFor = (feature) => {
+    if (!contexts.has(feature.id)) {
+      contexts.set(feature.id, createFeatureContext(platform, feature, { wraps, services: registry, features: directory }));
+    }
+    return contexts.get(feature.id);
+  };
+  return {
+    services: registry,
+    status,
+    contextFor,
+    service: (id) => registry.ensure(id),
+    install(feature) {
+      for (const id of feature.services ?? []) registry.ensure(id);
+      const ctx = contextFor(feature);
+      feature.install(ctx);
+      return ctx;
+    }
+  };
 }

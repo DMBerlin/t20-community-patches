@@ -9,12 +9,12 @@ import patch, {
   diagnoseSaveDC,
   findArcaneEmpowerments,
   isShippedEmpowermentEffect,
-  matchesSource,
   normalizeSource,
   withoutEmpowermentEffects
 } from "../scripts/patches/spell-dc-bonus.mjs";
+import { matchesSource } from "../scripts/lib/spell-source.mjs";
 import { resolvePatchState } from "../scripts/registry.mjs";
-import { markWrapper } from "../scripts/utils.mjs";
+import { markWrapper } from "../scripts/lib/source.mjs";
 
 const SOURCE_165 = `prepareFinalAttributes() {
 		const item = this.parent;

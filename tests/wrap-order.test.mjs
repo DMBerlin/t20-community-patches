@@ -5,7 +5,7 @@
  * The fake classes answer any method name with a no-op function, so each apply() finds what it wraps, and declare their
  * own members where the Tormenta20 1.6.6 bundle does. Any error, unexpected warning or patch in "error" fails the test (a partial
  * install would hide chains); the patches applied without any wrapper are listed in `noWraps`
- * (hooks or accessors only). The patches that recognize the system's code first get the verbatim sources the other
+ * (hooks or accessors only), and `status` keeps the state of every patch and rule. The patches that recognize the system's code first get the verbatim sources the other
  * tests already use. Regenerate with `UPDATE_WRAP_ORDER=1 node --test tests/wrap-order.test.mjs`, or in a real world with
  * `copy(JSON.stringify(game.modules.get("t20-community-patches").api.wraps()))`.
  */
@@ -236,7 +236,9 @@ async function installAll() {
   const skipped = api.status.filter((s) => s.state === "error").map((s) => ({ id: s.id, reason: s.reason }));
   // Patches only: the rules without wrappers (hooks only) and death-threshold-floor (owner death-threshold) are not listed.
   const noWraps = api.status.filter((s) => s.kind === "patch" && s.state !== "error" && !owners.has(s.id)).map((s) => s.id);
-  return { wraps: list, skipped, noWraps, errors, warnings };
+  // Baseline of api.status (#87): moving code between lib, services and features must not change any state.
+  const status = api.status.map(({ id, kind, group, mode, state }) => JSON.parse(JSON.stringify({ id, kind, group, mode, state })));
+  return { wraps: list, skipped, noWraps, status, errors, warnings };
 }
 
 test("api.wraps lists every wrapper chain in the order the patches and rules compose them", async () => {
@@ -250,7 +252,7 @@ test("api.wraps lists every wrapper chain in the order the patches and rules com
   const chain = (label) => actual.wraps.filter((w) => w.label === label).map((w) => w.owners);
   assert.deepEqual(chain("BasesData#prepareDerivedData"), [["armor-penalty-reduction", "source-stacking"]]);
   assert.deepEqual(chain("StatblockParser#parseData"), [["bestiary-creature-type"]]);
-  const snapshot = { wraps: actual.wraps, noWraps: actual.noWraps };
+  const snapshot = { wraps: actual.wraps, noWraps: actual.noWraps, status: actual.status };
   if (process.env.UPDATE_WRAP_ORDER) writeFileSync(FIXTURE, `${JSON.stringify(snapshot, null, 2)}\n`);
   const expected = JSON.parse(readFileSync(FIXTURE, "utf8"));
   assert.deepEqual(snapshot, expected);

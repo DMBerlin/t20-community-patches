@@ -8,11 +8,13 @@
  * no class or power fills them, so the proficiencies are derived here (initial class, recognized powers, Traits tab)
  * on every use, without writing anything. Characters only: threats have no proficiencies recorded.
  */
-import { MODULE_ID, addTooltipLine, sourceFingerprint, unwrap } from "../utils.mjs";
-import { APPLY_STATES } from "../registry.mjs";
-import { isArmorPenaltyReducer, parseReduction, resolveDataRefs } from "../patches/armor-penalty-reduction.mjs";
-import { keyAbility } from "../patches/condition-skill-lists.mjs";
-import { allActors } from "./source-stacking.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
+import { addTooltipLine } from "../lib/tooltip.mjs";
+import { sourceFingerprint, unwrap } from "../lib/source.mjs";
+import { isArmorPenaltyReducer, parseReduction } from "../lib/armor-penalty.mjs";
+import { resolveDataRefs } from "../lib/data-refs.mjs";
+import { keyAbility } from "../lib/skills.mjs";
+import { allActors } from "../lib/actors.mjs";
 import { wraps } from "../kernel/wrap.mjs";
 
 export { sourceFingerprint };
@@ -294,10 +296,8 @@ function warnOnce(err) {
   console.error(`${LOG} failed, the system's value was kept`, err);
 }
 
-function isPatchApplied(id) {
-  const entry = game.modules.get(MODULE_ID)?.api?.status?.find((s) => s.id === id);
-  return Boolean(entry && APPLY_STATES.has(entry.state));
-}
+/** Whether armor-penalty-reduction is applied; set by the install. */
+let reductionApplied = () => false;
 
 function slotsEnabled() {
   return game.settings.get("tormenta20", "equipmentSlots");
@@ -363,12 +363,12 @@ function effectItemId(actor, effect) {
 function armorEntries(actor) {
   const items = defenseItems(actor);
   const ids = new Set(items.map((i) => i.id));
-  const reductionsOn = isPatchApplied("armor-penalty-reduction");
+  const reductionsOn = reductionApplied();
   const increase = new Map();
   const reduction = new Map();
   let rollData;
   const evaluate = (formula) =>
-    foundry.dice.Roll.create(resolveDataRefs(formula, (rollData ??= actor.getRollData()))).evaluateSync().total;
+    foundry.dice.Roll.create(resolveDataRefs(formula, (rollData ??= actor.getRollData()), foundry.dice.Roll.defaultImplementation)).evaluateSync().total;
   const add = (map, id, amount) => map.set(id, (map.get(id) ?? 0) + amount);
   for (const effect of actor.allApplicableEffects()) {
     if (!effect.active) continue;
@@ -533,8 +533,12 @@ function markRows(actor, html) {
   }
 }
 
+/** Documents port of the platform, set when the rule is installed; null until then. */
+let documents = null;
+
 function refreshActors() {
-  for (const actor of allActors()) {
+  if (!documents) return;
+  for (const actor of allActors(documents)) {
     try {
       actor.reset();
       if (actor.sheet?.rendered) actor.sheet.render(false);
@@ -562,8 +566,12 @@ const SETTING_SPEC = {
   }
 };
 
-/** Installs both wrappers and the sheet marker. The wrappers are inert while the setting is off. */
-export function installNonProficiencyRule() {
+/**
+ * Installs both wrappers and the sheet marker. The wrappers are inert while the setting is off.
+ * @param {() => boolean} [isReductionApplied]  Whether armor-penalty-reduction is applied, read on every use.
+ */
+export function installNonProficiencyRule(isReductionApplied = () => false) {
+  reductionApplied = isReductionApplied;
   installAttack();
   installSkills();
   installSkillTooltip();
@@ -584,5 +592,10 @@ export default {
   group: "items",
   system: { id: "tormenta20" },
   settings: [SETTING_SPEC],
-  install: () => installNonProficiencyRule()
+  // The armor penalty follows armor-penalty-reduction when that patch is applied.
+  interactsWith: ["armor-penalty-reduction"],
+  install: (ctx) => {
+    documents = ctx.platform.documents;
+    installNonProficiencyRule(() => ctx.features.isActive("armor-penalty-reduction"));
+  }
 };

@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { installManaQueue, withManaTurn } from "../scripts/rules/mana-queue.mjs";
+import manaQueueRule from "../scripts/rules/mana-queue.mjs";
+import { createFakePlatform, createTestKernel } from "./support/fake-platform.mjs";
 
 /**
  * Actor whose spendMana copies the system's (T20:7553-7579): reads pm before the first await and writes absolute
@@ -51,6 +52,11 @@ class FakeActor {
   }
 }
 
+// One kernel for the file: the "control" tests run before the first install and see the unwrapped prototype.
+const kernel = createTestKernel({ platform: createFakePlatform({ classes: { actor: FakeActor } }) });
+const installManaQueue = () => kernel.install(manaQueueRule);
+const withManaTurn = (actor, fn) => kernel.service("mana-queue").withManaTurn(actor, fn);
+
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 /** Resolves every pending update, including the ones queued meanwhile, until the queue is idle. */
@@ -89,7 +95,7 @@ test("without the queue, the last of two overlapping absolute PM edits wins (con
 });
 
 test("queued: absolute PM edits read the confirmed balance; other attributes pass through", async () => {
-  installManaQueue(FakeActor.prototype);
+  installManaQueue();
   const actor = new FakeActor(10);
   actor.spendMana(3, 0, false);
   const first = actor.modifyTokenAttribute("attributes.pm", 8, false, true);
@@ -105,7 +111,7 @@ test("queued: absolute PM edits read the confirmed balance; other attributes pas
 });
 
 test("queued: spell 3 fired without await, then Eclético 1 in withManaTurn -> 1", async () => {
-  installManaQueue(FakeActor.prototype);
+  installManaQueue();
   const actor = new FakeActor(5);
   actor.spendMana(3, 0, false); // T20:8669, no await
   const paid = chargeGrant(actor, 1);
@@ -115,7 +121,7 @@ test("queued: spell 3 fired without await, then Eclético 1 in withManaTurn -> 1
 });
 
 test("queued: no balance for the grant after the spell -> not granted, only the spell is spent", async () => {
-  installManaQueue(FakeActor.prototype);
+  installManaQueue();
   const actor = new FakeActor(3);
   actor.spendMana(3, 0, false);
   const paid = chargeGrant(actor, 1);
@@ -132,7 +138,7 @@ test("queued: no balance for the grant after the spell -> not granted, only the 
 });
 
 test("withManaTurn: a spendMana fired during the turn waits for it; an error does not block the queue", async () => {
-  installManaQueue(FakeActor.prototype);
+  installManaQueue();
   const actor = new FakeActor(10);
   const order = [];
   let release;
@@ -166,9 +172,9 @@ test("withManaTurn: a spendMana fired during the turn waits for it; an error doe
 });
 
 test("the queue is per actor and installs once", async () => {
-  installManaQueue(FakeActor.prototype);
+  installManaQueue();
   const wrapped = FakeActor.prototype.spendMana;
-  installManaQueue(FakeActor.prototype);
+  installManaQueue();
   assert.equal(FakeActor.prototype.spendMana, wrapped);
 
   const a = new FakeActor(5);

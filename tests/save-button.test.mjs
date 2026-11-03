@@ -12,7 +12,8 @@ import {
   saveOutcome,
   shouldHideDc
 } from "../scripts/rules/save-button.mjs";
-import { USE_PURPOSES, withUsePurpose } from "../scripts/rules/shared/targets.mjs";
+import { USE_PURPOSES } from "../scripts/lib/targets.mjs";
+import { currentUseTargets as uses } from "./support/legacy-services.mjs";
 
 const MODULE = "t20-community-patches";
 
@@ -270,7 +271,7 @@ function setupFoundry({ isGM = false, rule = "on", showFoeDc = false } = {}) {
     },
     document: { createElement: (tag) => new FakeElement(tag) }
   });
-  installSaveButtonRule();
+  installSaveButtonRule(uses());
 
   const addToken = (id, { name = id, displayName = 50, isOwner = true, rollPericia } = {}) => {
     const doc = {
@@ -376,7 +377,7 @@ test("off, an unrecognized save or a maneuver resistance use: the original gets 
   }
   const env = setupFoundry();
   const item = new env.ItemT20();
-  const message = await withUsePurpose(USE_PURPOSES.MANEUVER_RESISTANCE, () => item.roll());
+  const message = await uses().withUsePurpose(USE_PURPOSES.MANEUVER_RESISTANCE, () => item.roll());
   assert.equal(item.displayCalls[0].createMessage, true);
   assert.equal(message.flags[MODULE], undefined);
 });

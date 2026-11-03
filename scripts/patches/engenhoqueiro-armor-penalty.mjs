@@ -6,7 +6,8 @@
  * written: CONFIG and stored actor data are left as they are, and the condition penalty (condi) is untouched. Updates
  * that carry the prepared value back (the system's custom Ofício creation) get the stored pda again.
  */
-import { MODULE_ID, markWrapper, stripComments, unwrap } from "../utils.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
+import { markWrapper, stripComments, unwrap } from "../lib/source.mjs";
 import { fromFactory, wraps } from "../kernel/wrap.mjs";
 
 const PATCH_ID = "engenhoqueiro-armor-penalty";

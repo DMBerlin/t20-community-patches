@@ -7,11 +7,11 @@ import {
   createKeyedQueue,
   createPvTracker,
   isOrphanChild,
-  isTracked,
   orphansOf,
   planDyingStates
 } from "../scripts/rules/dying-states.mjs";
-import { lethalSnapshot } from "../scripts/rules/nonlethal-damage.mjs";
+import { isTracked } from "../scripts/lib/dying-states.mjs";
+import { lethalSnapshot } from "../scripts/lib/nonlethal.mjs";
 
 const MODULE = "t20-community-patches";
 const plan = (state) => planDyingStates({ max: 8, statuses: new Set(), owned: {}, ...state });
@@ -289,7 +289,7 @@ class Client {
   async load() {
     this.activate();
     const mod = await import(`../scripts/rules/dying-states.mjs?client=${this.user.id}-${Math.random()}`);
-    mod.installDyingStatesRule();
+    mod.installDyingStatesRule(() => settings.get("nonlethalDamageRule") === "on");
   }
   actor(id) {
     return this.actors.get(id);

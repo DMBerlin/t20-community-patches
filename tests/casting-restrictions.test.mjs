@@ -1,7 +1,9 @@
 import { test } from "node:test";
+import { createPlatform } from "../scripts/platform/foundry.mjs";
+import { createTestKernel } from "./support/fake-platform.mjs";
 import assert from "node:assert/strict";
-import { markCastFailed } from "../scripts/rules/cast-outcome.mjs";
-import { markWrapper } from "../scripts/utils.mjs";
+import { markCastFailed } from "../scripts/lib/cast-outcome.mjs";
+import { markWrapper } from "../scripts/lib/source.mjs";
 import {
   CAST_FLAG,
   activeSustainedCasts,
@@ -339,7 +341,7 @@ function setupFoundry(modes = {}) {
       escapeHTML: (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
     }
   };
-  installCastingRestrictionsRule();
+  installCastingRestrictionsRule(createTestKernel({ platform: createPlatform() }).service("use-dialog-guard"));
 
   const makeActor = (name, { statuses = [], powers = [] } = {}) => {
     const actor = { name, uuid: `Actor.${name}-${++uid}`, statuses: new Set(statuses), effects: [], items: [] };

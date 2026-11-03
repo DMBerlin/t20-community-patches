@@ -5,14 +5,17 @@ import petrified, {
   RD_VALUE_KEY,
   createReductionTracker,
   diagnosePetrifiedData,
-  findWithRetry,
   isPetrifiedContribution,
   isPetrifiedReductionChange,
   normalizePetrifiedChange,
   petrifiedLookup,
   planPetrifiedReduction
 } from "../scripts/patches/petrified-damage-reduction.mjs";
-import { installSourceStackingRule } from "../scripts/rules/source-stacking.mjs";
+import { findWithRetry } from "../scripts/lib/async.mjs";
+import sourceStacking from "../scripts/rules/source-stacking.mjs";
+import { patchFeature } from "../scripts/kernel/feature.mjs";
+import { createPlatform } from "../scripts/platform/foundry.mjs";
+import { createTestKernel } from "./support/fake-platform.mjs";
 
 const A = (value = 8) => ({ key: RD_VALUE_KEY, type: "downgrade", value, phase: "initial" });
 /** Legacy form stored on actors: the system's migrateResistancesPath moves the key to .bonus and keeps downgrade. */
@@ -308,7 +311,9 @@ function setupFoundry(order) {
       }
     }
   });
-  for (const step of order) (step === "patch" ? () => petrified.apply() : installSourceStackingRule)();
+  // One kernel: the patch and the rule share the stacking-exclusions service, as in main.mjs.
+  const kernel = createTestKernel({ platform: createPlatform() });
+  for (const step of order) kernel.install(step === "patch" ? patchFeature(petrified) : sourceStacking);
   return { settings, Actor };
 }
 

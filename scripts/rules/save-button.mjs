@@ -6,17 +6,12 @@
  * tokens the user targeted. The card lists the targets with a roll button per skill; the owner of each target (the
  * GM for NPCs) rolls the system's skill test, the roll message stores the outcome and every client redraws the card.
  */
-import { MODULE_ID } from "../utils.mjs";
-import {
-  canSeeTokenName,
-  installUseTargets,
-  registerTargetConsumer,
-  targetRecord,
-  useTargetRecords,
-  usePurposeOf,
-  USE_PURPOSES
-} from "./shared/targets.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
+import { canSeeTokenName, targetRecord, USE_PURPOSES } from "../lib/targets.mjs";
 import { wraps } from "../kernel/wrap.mjs";
+
+/** The use-targets service; null before the install. */
+let uses = null;
 
 export const SAVE_BUTTON_SETTING = "saveButtonRule";
 export const SAVE_FLAG = "save";
@@ -415,25 +410,29 @@ const SETTING_SPEC = {
   onChange: () => redrawAll()
 };
 
-export function installSaveButtonRule() {
+/**
+ * Installs the rule. The setting is read on every use, so a change applies without reloading.
+ * @param {ReturnType<typeof import("../services/use-targets.mjs").createUseTargets>} useTargets  The use-targets service.
+ */
+export function installSaveButtonRule(useTargets) {
+  uses = useTargets;
   resultIndex = null;
   pendingSaves.clear();
-  registerTargetConsumer(isEnabled);
-  installUseTargets();
+  uses.registerTargetConsumer(isEnabled);
   const proto = CONFIG.Item?.documentClass?.prototype;
   const original = proto?.displayCard;
   if (typeof original !== "function") throw new Error("ItemT20#displayCard not found");
   wraps.wrap(proto, "displayCard", "save-button", async function (original, params = {}, ...rest) {
     let save = null;
     try {
-      if (isEnabled() && usePurposeOf(this) !== USE_PURPOSES.MANEUVER_RESISTANCE) {
+      if (isEnabled() && uses.usePurposeOf(this) !== USE_PURPOSES.MANEUVER_RESISTANCE) {
         save = buildSaveData({
           txt: this.system?.resistencia?.txt,
           dc: this.system?.resistencia?.cd,
           itemName: this.name,
           casterType: this.actor?.type,
           // Records frozen when ItemT20#roll started (shared use context), before any dialog, attack or damage roll.
-          targets: useTargetRecords(this)
+          targets: uses.useTargetRecords(this)
         });
       }
     } catch (err) {
@@ -460,5 +459,6 @@ export default {
   group: "combat",
   system: { id: "tormenta20" },
   settings: [SETTING_SPEC],
-  install: () => installSaveButtonRule()
+  services: ["use-targets"],
+  install: (ctx) => installSaveButtonRule(ctx.services["use-targets"])
 };

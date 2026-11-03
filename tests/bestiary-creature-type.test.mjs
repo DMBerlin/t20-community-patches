@@ -11,8 +11,8 @@ import patch, {
   parserRecognized,
   typeTokens
 } from "../scripts/patches/bestiary-creature-type.mjs";
-import { classify, summarize } from "../scripts/compendium-copy.mjs";
-import { unwrap } from "../scripts/utils.mjs";
+import { classify, summarize } from "../scripts/lib/compendium-copy/index.mjs";
+import { unwrap } from "../scripts/lib/source.mjs";
 import { LABELS_EN, LABELS_PT, PARSE_DATA_1_6_5 } from "./fixtures/bestiary-parser-1.6.5.mjs";
 
 // Foundry's String#capitalize (common/primitives/string.mjs).

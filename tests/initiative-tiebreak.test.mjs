@@ -12,7 +12,8 @@ import patch, {
   tiebreakValues
 } from "../scripts/patches/initiative-tiebreak.mjs";
 import { resolvePatchState } from "../scripts/registry.mjs";
-import { MODULE_ID, markWrapper, sourceFingerprint } from "../scripts/utils.mjs";
+import { MODULE_ID } from "../scripts/lib/module.mjs";
+import { markWrapper, sourceFingerprint } from "../scripts/lib/source.mjs";
 
 // Copied verbatim from Foundry v14 client/documents/combat.mjs:569-573 (also public/scripts/foundry.mjs:51676-51680).
 const CORE_SORT_SOURCE = `_sortCombatants(a, b) {

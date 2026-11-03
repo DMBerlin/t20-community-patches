@@ -10,21 +10,23 @@
  * - ItemT20#rollAttack: the penalty goes in the formula of the per-use clone, with a label, like #59.
  * - ItemT20#rollDamage: the damage rolls record the choice; the chat toggle of #55 starts pressed from it.
  * - Shortcut without dialog: the natural type, no penalty.
- * - Only the per-use clone of ItemT20#roll (shared/targets.mjs): direct calls of rollAttack/rollDamage on a document
+ * - Only the per-use clone of ItemT20#roll (use-targets service): direct calls of rollAttack/rollDamage on a document
  *   keep the official behavior.
  * - Weapon sheet: the "Dano natural" field (Automático / Letal / Não letal).
  * Everything is gated by the "Dano não letal" setting, read on every use.
  */
-import { MODULE_ID } from "../utils.mjs";
-import { matchesSource } from "../patches/spell-dc-bonus.mjs";
-import { ROLL_DATA_KEY, ruleEnabled } from "./nonlethal-damage.mjs";
-import { sanitizeFlavor } from "./situational-modifiers.mjs";
-import { USE_PURPOSES, inItemUse, installUseTargets, registerTargetConsumer, usePurposeOf } from "./shared/targets.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
+import { matchesSource } from "../lib/spell-source.mjs";
+import { sanitizeFlavor } from "../lib/text.mjs";
+import { USE_PURPOSES } from "../lib/targets.mjs";
 import { wraps } from "../kernel/wrap.mjs";
+import { NONLETHAL_FIELD, NONLETHAL_SETTING, ROLL_DATA_KEY, readsOn } from "../lib/nonlethal.mjs";
+
+/** The use-targets service; null before the install. */
+let uses = null;
 
 export const NATURAL_FLAG = "naturalDamage";
 export const NATURAL_MODES = Object.freeze(["auto", "lethal", "nonlethal"]);
-export const FORM_FIELD = "t20cpNonlethal";
 export const CHOICES = Object.freeze(["lethal", "nonlethal"]);
 export const PENALTY = -5;
 export const DATA_VERSION = 1;
@@ -40,6 +42,8 @@ const NOT_DAMAGE_TYPES = new Set(["curapv", "curatpv", "curapm", "curatpm", "per
 const LINE_CLASS = "t20cp-nonlethal-attack";
 const FIELD_CLASS = "t20cp-natural-damage";
 const LOG = `${MODULE_ID} | nonlethal-attack:`;
+/** Whether the nonlethal damage rule is on; set by installNonlethalAttackRule. */
+let ruleEnabled = () => false;
 
 /* -------------------------------------------- */
 /*  Pure logic                                  */
@@ -101,7 +105,7 @@ export function applies(item) {
     && item?.type === "arma"
     && hasRoll(item, "ataque")
     && hasRoll(item, "dano")
-    && usePurposeOf(item) !== USE_PURPOSES.MANEUVER_RESISTANCE
+    && uses.usePurposeOf(item) !== USE_PURPOSES.MANEUVER_RESISTANCE
   );
 }
 
@@ -153,7 +157,7 @@ export function buildLine(item) {
     option.style.cssText = "display:flex; align-items:center; gap:4px; flex:none;";
     const input = document.createElement("input");
     input.type = "radio";
-    input.name = FORM_FIELD;
+    input.name = NONLETHAL_FIELD;
     input.value = choice;
     input.checked = choice === context.natural;
     input.addEventListener?.("change", () => update(choice));
@@ -193,9 +197,9 @@ export function onRenderDialog(app, html) {
  * @returns {{choice: string, natural: string, waivers: string[], penalty: number} | null}
  */
 export function resolveChoice(item, options) {
-  if (!options || typeof options !== "object" || !inItemUse(item) || !applies(item)) return null;
+  if (!options || typeof options !== "object" || !uses.inItemUse(item) || !applies(item)) return null;
   const context = weaponContext(item);
-  return decide({ choice: parseChoice(options[FORM_FIELD]) ?? context.natural, ...context });
+  return decide({ choice: parseChoice(options[NONLETHAL_FIELD]) ?? context.natural, ...context });
 }
 
 /**
@@ -260,8 +264,14 @@ export function onRenderItemSheet(app, html) {
   (wielding.closest(".form-group") ?? wielding).after(row);
 }
 
-/** Installs the wrappers and hooks. The setting is read on every use, so a change applies without reloading. */
-export function installNonlethalAttackRule() {
+/**
+ * Installs the wrappers and hooks. The setting is read on every use, so a change applies without reloading.
+ * @param {ReturnType<typeof import("../services/use-targets.mjs").createUseTargets>} useTargets  The use-targets service.
+ * @param {() => boolean} enabled  Whether the nonlethal damage rule is on.
+ */
+export function installNonlethalAttackRule(useTargets, enabled) {
+  uses = useTargets;
+  ruleEnabled = enabled;
   const proto = CONFIG.Item?.documentClass?.prototype;
   const rollAttack = proto?.rollAttack;
   const rollDamage = proto?.rollDamage;
@@ -269,8 +279,7 @@ export function installNonlethalAttackRule() {
     throw new Error("ItemT20#rollAttack or #rollDamage not found");
   }
   // The use's clone (inItemUse) is only tracked while some consumer is on.
-  registerTargetConsumer(ruleEnabled);
-  installUseTargets();
+  uses.registerTargetConsumer(ruleEnabled);
 
   wraps.wrap(proto, "rollAttack", "nonlethal-attack", async function (rollAttack, ...args) {
     let undo = () => {};
@@ -325,5 +334,11 @@ export default {
   group: "combat",
   system: { id: "tormenta20" },
   after: ["situational-modifiers"],
-  install: () => installNonlethalAttackRule()
+  // Only acts while the nonlethal damage rule is on.
+  interactsWith: ["nonlethal-damage"],
+  services: ["use-targets"],
+  install: (ctx) => {
+    const enabled = () => readsOn(() => ctx.features.setting("nonlethal-damage", NONLETHAL_SETTING));
+    installNonlethalAttackRule(ctx.services["use-targets"], enabled);
+  }
 };

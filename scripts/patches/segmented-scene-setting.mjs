@@ -12,7 +12,7 @@
  * setting (default 10). Values above the cap are rejected; a stored value above it only warns the GMs.
  */
 
-import { MODULE_ID } from "../utils.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
 
 export const SETTING_NAMESPACE = "tormenta20";
 export const SETTING_KEY = "segmentedScene";

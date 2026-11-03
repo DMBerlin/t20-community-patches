@@ -124,6 +124,7 @@ As convenções completas estão em [`AGENTS.md`](AGENTS.md).
   - `install(ctx)`: instala a correção com o contexto injetado (`ctx.platform`, `ctx.wrap`, `ctx.setting`); os globais do Foundry só são lidos em `scripts/platform/`. O `apply()` sem contexto é legado;
   - sempre que possível, `isNeeded(ctx)`: um teste síncrono, seguro no `init`, que devolve um diagnóstico `{ bug, confidence, evidence }` (ou o booleano legado). Um teste que só lê código-fonte nunca devolve "corrigido" com confiança alta;
   - opcionalmente, `guarded` (o `install()` só age quando o bug aparece) e `lateProbe(ctx)` (diagnóstico depois do `ready`).
+- Uma correção não importa outra: o código puro compartilhado fica em `scripts/lib/`, o código com estado vira um serviço em `scripts/services/` (declarado em `services` e lido em `ctx.services`), e o estado ou a configuração de outra correção é lido por `ctx.features`, declarado em `interactsWith`.
 - O nome e a descrição de cada correção vão em `lang/pt-BR.json` e `lang/en.json`.
 - O repositório usa worktrees no layout `.bare`: `main/` é a principal e cada issue ganha a sua (`<n>-<slug>/`, branch `issue/<n>-<slug>`).
 

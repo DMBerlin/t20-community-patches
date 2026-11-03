@@ -2,11 +2,11 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import patch, {
   diagnoseHelperSource,
-  fieldTerms,
   helperBugs,
   missingDefenseCondition,
   rootForHelper
 } from "../scripts/patches/field-bonuses-tooltip.mjs";
+import { fieldTerms } from "../scripts/lib/tooltip.mjs";
 
 const tooltip = (lines) => {
   const total = lines.reduce((sum, [, v]) => sum + v, 0);

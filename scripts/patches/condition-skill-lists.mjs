@@ -11,9 +11,10 @@
  * go through the core like the system's changes (shouldApplyChange, priority order). The condition is skipped when
  * it penalizes skills in any other way. Stored data is never changed.
  */
-import { statusEffectSources } from "../utils.mjs";
-import { findWithRetry } from "./petrified-damage-reduction.mjs";
+import { statusEffectSources } from "../lib/status-effects.mjs";
+import { findWithRetry } from "../lib/async.mjs";
 import { wraps } from "../kernel/wrap.mjs";
+import { keyAbility } from "../lib/skills.mjs";
 
 /** Attributes whose skills each condition penalizes (Tormenta20 JdA, Apêndice, pp. 394-395). */
 export const CONDITION_ABILITIES = Object.freeze({
@@ -39,19 +40,6 @@ export function conditionAbilities(statuses) {
   const abilities = new Set();
   for (const id of statuses ?? []) for (const abl of CONDITION_ABILITIES[id] ?? []) abilities.add(abl);
   return abilities;
-}
-
-/**
- * Key attribute of a skill: the system's table (`CONFIG.T20.pericias[id].abl`) for the system's skills, so changing
- * their attribute on the sheet does not matter, and the attribute currently stored in the skill for custom skills,
- * which have no other definition.
- * @param {string} id
- * @param {{atributo?: string}} skill                  The actor's skill data.
- * @param {Record<string, {abl?: string}>} skillConfig
- * @returns {string|undefined}
- */
-export function keyAbility(id, skill, skillConfig) {
-  return Object.hasOwn(skillConfig ?? {}, id) ? skillConfig[id]?.abl : skill?.atributo;
 }
 
 /**

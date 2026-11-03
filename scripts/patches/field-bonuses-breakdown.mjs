@@ -18,12 +18,15 @@
  * Each part is installed only when its bug is recognized in the helper's source, so a partial fix upstream is never
  * doubled.
  */
-import { isPatchApplied } from "../registry.mjs";
-import { MODULE_ID, addTooltipLine, stripComments, unwrap } from "../utils.mjs";
-import { resolveDataRefs } from "./armor-penalty-reduction.mjs";
-import { fieldTerms } from "./field-bonuses-tooltip.mjs";
-import { PRONE, collectProneCandidates, isProneDefenseChange, planProneChange } from "./prone-defense.mjs";
+import { addTooltipLine } from "../lib/tooltip.mjs";
+import { stripComments, unwrap } from "../lib/source.mjs";
+import { resolveDataRefs } from "../lib/data-refs.mjs";
+import { fieldTerms } from "../lib/tooltip.mjs";
+import { PRONE, collectProneCandidates, isProneDefenseChange, planProneChange } from "../lib/prone.mjs";
 import { wraps } from "../kernel/wrap.mjs";
+
+/** Data references of a formula, resolved as core does. */
+const dataRefs = (raw, data) => resolveDataRefs(raw, data, foundry.dice.Roll.defaultImplementation);
 
 const LOG = "t20-community-patches | field-bonuses-breakdown:";
 export const PARTS = ["manual", "zeroLevel", "formula", "types", "wildcard", "heavyArmor", "defenseSources"];
@@ -585,9 +588,9 @@ function heavyArmorLine(actor, rollData) {
   return { label, value: delta };
 }
 
-function moduleStatus() {
-  return game.modules?.get(MODULE_ID)?.api?.status;
-}
+/** Other features this patch reads (ctx.features); null before the install. */
+let features = null;
+const isActive = (id) => !!features?.isActive(id);
 
 /**
  * The changes the core applies to defesa.outros and defesa.condi (Actor#applyActiveEffects: active applicable
@@ -599,7 +602,7 @@ function defenseChanges(actor) {
   const condi = [];
   const skipped = [];
   const effects = [...(actor.allApplicableEffects?.() ?? [])].filter((e) => e?.active);
-  const proneOn = isPatchApplied(moduleStatus(), "prone-defense");
+  const proneOn = isActive("prone-defense");
   const candidates = proneOn ? collectProneCandidates(effects) : [];
   let counted = false;
   for (const effect of effects) {
@@ -628,7 +631,7 @@ function defenseSourcesHTML(html, actor) {
   const defesa = actor.system?.attributes?.defesa;
   const source = actor._source?.system?.attributes?.defesa;
   if (!defesa || !source) return html;
-  const includeCondi = isPatchApplied(moduleStatus(), "field-bonuses-tooltip");
+  const includeCondi = isActive("field-bonuses-tooltip");
   const changes = defenseChanges(actor);
   const lines = defenseSourceLines({
     sourceOutros: source.outros,
@@ -660,7 +663,7 @@ function resourceHTML(html, actor, type, rollData, context) {
       const bonus = actor.system.attributes.pv.bonus;
       const sum = (list) =>
         (Array.isArray(list) ? list : []).reduce(
-          (total, v) => total + Number(evaluateValue(v, (f) => foundry.dice.Roll.create(resolveDataRefs(f, rollData)).evaluateSync().total)),
+          (total, v) => total + Number(evaluateValue(v, (f) => foundry.dice.Roll.create(dataRefs(f, rollData)).evaluateSync().total)),
           0
         );
       const compensation = pvMinimumCompensation({
@@ -678,7 +681,8 @@ function resourceHTML(html, actor, type, rollData, context) {
   return appendTooltipLine(html, game.i18n.localize(ROUNDING_KEY), roundingDelta(html));
 }
 
-function apply() {
+function install(ctx) {
+  features = ctx.features;
   const original = globalThis.Handlebars?.helpers?.fieldBonuses;
   if (typeof original !== "function") throw new Error("Handlebars helper fieldBonuses not found");
   const parts = helperParts(helperSource(original));
@@ -710,8 +714,8 @@ function apply() {
             parts,
             changes: appliedChanges(actor),
             keysOf: (p) => proxyKeys(actor, p),
-            evaluate: (formula) => foundry.dice.Roll.create(resolveDataRefs(formula, data)).evaluateSync().total,
-            resolve: (value) => resolveDataRefs(value, data),
+            evaluate: (formula) => foundry.dice.Roll.create(dataRefs(formula, data)).evaluateSync().total,
+            resolve: (value) => dataRefs(value, data),
             seeds,
             level: Number(actor.system?.attributes?.nivel?.value) || 0
           });
@@ -760,6 +764,8 @@ export default {
   group: "sheet-effects",
   issue: 70,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  // The breakdown mirrors what prone-defense and field-bonuses-tooltip change when they are applied.
+  interactsWith: ["prone-defense", "field-bonuses-tooltip"],
   isNeeded,
-  apply
+  install
 };

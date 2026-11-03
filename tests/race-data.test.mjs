@@ -12,7 +12,7 @@ import patch, {
   racialUnset,
   senseIsCorrect
 } from "../scripts/patches/race-data.mjs";
-import { classify, classifyEntry, effectSignature, embeddedItemFixes, sameSignature, summarize } from "../scripts/compendium-copy.mjs";
+import { classify, classifyEntry, effectSignature, embeddedItemFixes, sameSignature, summarize } from "../scripts/lib/compendium-copy/index.mjs";
 import { applyUpdate, cleanItem, withEffect, withExtraEffect } from "./fixtures/clean-source.mjs";
 import {
   CONHECIMENTO_DAS_ROCHAS,

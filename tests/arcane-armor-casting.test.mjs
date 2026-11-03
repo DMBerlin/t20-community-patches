@@ -18,10 +18,11 @@ import {
   withGrantPayment,
   wornArmor
 } from "../scripts/rules/arcane-armor-casting.mjs";
-import { castCompleted, castFailed, isCastUse } from "../scripts/rules/cast-outcome.mjs";
-import { automaticApplied } from "../scripts/rules/mana-limit.mjs";
-import { installManaQueue } from "../scripts/rules/mana-queue.mjs";
-import { isTrainedFor, plainUseEffect, trainingGrants } from "../scripts/rules/skill-training.mjs";
+import { castCompleted, castFailed, isCastUse } from "../scripts/lib/cast-outcome.mjs";
+import { automaticApplied } from "../scripts/lib/mana.mjs";
+import manaQueueRule from "../scripts/rules/mana-queue.mjs";
+import { createFakePlatform, createTestKernel } from "./support/fake-platform.mjs";
+import { isTrainedFor, plainUseEffect, trainingGrants } from "../scripts/lib/skill-training.mjs";
 
 const slugify = (text) =>
   String(text)
@@ -252,7 +253,8 @@ class FakeActor {
     await this.displayDamageCard();
   }
 }
-installManaQueue(FakeActor.prototype);
+const kernel = createTestKernel({ platform: createFakePlatform({ classes: { actor: FakeActor } }) });
+kernel.install(manaQueueRule);
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -310,8 +312,7 @@ function setup({ mode = "roll", d20s = [], messageMode = "public", autoSpend = t
   globalThis.CONFIG = { Item: { documentClass: ItemT20 }, T20: { pericias: { mist: { trainedOnly: true } } } };
   globalThis.game = {
     settings: { get: (scope, key) => settings[key], register() {} },
-    i18n: { lang: "pt-BR", localize: (key) => key, format: (key, data) => `${key}${JSON.stringify(data)}` },
-    modules: { get: () => ({ api: { status: [] } }) }
+    i18n: { lang: "pt-BR", localize: (key) => key, format: (key, data) => `${key}${JSON.stringify(data)}` }
   };
   globalThis.ui = { notifications: { warn: (m) => warnings.push(m) } };
   globalThis.Hooks = { on() {} };
@@ -345,12 +346,12 @@ function setup({ mode = "roll", d20s = [], messageMode = "public", autoSpend = t
     };
   };
   if (wrapOrder === "outside") {
-    installArcaneArmorRule();
+    installArcaneArmorRule(kernel.service("mana-queue"));
     installOuter();
   } else if (wrapOrder === "inside") {
     installOuter();
-    installArcaneArmorRule();
-  } else installArcaneArmorRule();
+    installArcaneArmorRule(kernel.service("mana-queue"));
+  } else installArcaneArmorRule(kernel.service("mana-queue"));
 
   return { ItemT20, log, created, warnings, settings, sustain };
 }

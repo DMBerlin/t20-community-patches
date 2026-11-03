@@ -3,23 +3,26 @@ import assert from "node:assert/strict";
 import {
   effectiveNonlethal,
   hpSnapshotOf,
-  isExplicitNonlethalEdit,
+  readsOn,
   lethalHp,
   lethalSnapshot,
+  nonlethalOf,
+  readChange,
+  rebaseSnapshot,
+  touchesLethalHp
+} from "../scripts/lib/nonlethal.mjs";
+import {
+  isExplicitNonlethalEdit,
   hpForNonlethalEdit,
   nonlethalForUpdate,
-  nonlethalOf,
   onCaptureClick,
   onPreUpdateActor,
   pickDamageRoll,
-  readChange,
   restorePreparedMin,
-  rebaseSnapshot,
   recognizesDamageMethod,
   resolveHpUpdate,
   ruleEnabled,
   syncChatToggles,
-  touchesLethalHp,
   widenedMin,
   widenPreparedMin,
   withNonlethalCall
@@ -110,10 +113,16 @@ test("rebaseSnapshot recomputes under the other mode from the confirmed data", (
   assert.equal(rebaseSnapshot(undefined, true), undefined);
 });
 
-test("hpSnapshotOf reads the prepared HP, the flag and the mode", () => {
+test("hpSnapshotOf reads the prepared HP, the flag and the given mode", () => {
   const actor = { system: { attributes: { pv: { value: 6, max: 10 } } }, getFlag: () => 4 };
-  assert.equal(withSetting("on", () => hpSnapshotOf(actor)).lethal, 10);
-  assert.equal(withSetting("off", () => hpSnapshotOf(actor)).lethal, 6);
+  assert.equal(hpSnapshotOf(actor, true).lethal, 10);
+  assert.equal(hpSnapshotOf(actor, false).lethal, 6);
+});
+
+test("readsOn: only 'on'; false when the reader throws", () => {
+  assert.equal(readsOn(() => "on"), true);
+  assert.equal(readsOn(() => "off"), false);
+  assert.equal(readsOn(() => { throw new Error("not registered"); }), false);
 });
 
 test("touchesLethalHp: nested and dotted keys", () => {

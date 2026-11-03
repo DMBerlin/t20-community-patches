@@ -10,8 +10,9 @@
  * Armor and shield Defense (and their upgrades) always add; among the other equipped items, only the one with the
  * greatest Defense counts. The user who caused a suppression is notified, and the sheet marks what is suppressed.
  */
-import { MODULE_ID } from "../utils.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
 import { wraps } from "../kernel/wrap.mjs";
+import { allActors } from "../lib/actors.mjs";
 
 export const SOURCE_STACKING_SETTING = "sourceStackingRule";
 export const SOURCE_FLAG = "source";
@@ -354,30 +355,8 @@ function fieldKind(actor, key, type) {
   return undefined;
 }
 
-const exclusions = new Set();
-
-/**
- * Registers a predicate that keeps a change out of the source dispute (for example, a condition's own reduction
- * handled by a patch). Registering the same function twice has no effect.
- * @param {(effect: object, change: object) => boolean} predicate
- * @returns {() => void}  Unregisters the predicate.
- */
-export function registerStackingExclusion(predicate) {
-  exclusions.add(predicate);
-  return () => exclusions.delete(predicate);
-}
-
-/** Whether a registered predicate keeps the change out of the plan; a predicate that throws excludes nothing. */
-export function isStackingExcluded(effect, change) {
-  for (const predicate of exclusions) {
-    try {
-      if (predicate(effect, change)) return true;
-    } catch {
-      // A broken predicate must not hide a change from the rule.
-    }
-  }
-  return false;
-}
+/** The stacking-exclusions service (#87); null before the install. */
+let exclusions = null;
 
 function buildPlan(actor, phase) {
   const rollData = actor.getRollData();
@@ -400,7 +379,7 @@ function buildPlan(actor, phase) {
     };
     for (const change of effect.system?.changes ?? []) {
       if (!change?.key || (change.type !== "add" && change.type !== "subtract")) continue;
-      if (isStackingExcluded(effect, change)) continue;
+      if (exclusions?.isExcluded(effect, change)) continue;
       if (isArmorExempt({ itemType: info.itemType, tipo: info.tipo, key: change.key })) continue;
       if (!effect.shouldApplyChange(change, { phase, replacementData })) continue;
       entries.push({ ...info, ref: change, key: change.key, amount: changeAmount(change, resolve, kindOf(change.key, change.type)) });
@@ -531,16 +510,12 @@ function markSheet(app, html) {
   for (const li of root.querySelectorAll("li[data-item-id]")) decorate(li, byItem.get(li.dataset.itemId));
 }
 
-/** Actors to prepare again when the setting changes: world actors and the synthetic actors of unlinked tokens. */
-export function* allActors() {
-  yield* game.actors ?? [];
-  for (const scene of game.scenes ?? []) {
-    for (const token of scene.tokens ?? []) if (!token.actorLink && token.actor) yield token.actor;
-  }
-}
+/** Documents port of the platform, set when the rule is installed; null until then. */
+let documents = null;
 
 function refreshActors() {
-  for (const actor of allActors()) {
+  if (!documents) return;
+  for (const actor of allActors(documents)) {
     try {
       actor.reset();
       if (actor.sheet?.rendered) actor.sheet.render(false);
@@ -570,7 +545,9 @@ const SETTING_SPEC = {
  * actor wrappers sit outside armor-penalty-reduction's (the phase is passed through untouched).
  * The stamp is always applied (it is inert), so effects applied while the rule is off are recognized later.
  */
-export function installSourceStackingRule() {
+/** @param {{isExcluded: (effect: object, change: object) => boolean}} stackingExclusions  The service API. */
+export function installSourceStackingRule(stackingExclusions) {
+  exclusions = stackingExclusions;
   const itemProto = CONFIG.Item?.documentClass?.prototype;
   const onUse = itemProto?._allApplicableOnUseEffects;
   const effectProto = CONFIG.ActiveEffect?.documentClass?.prototype;
@@ -689,5 +666,9 @@ export default {
   group: "sheet-effects",
   system: { id: "tormenta20" },
   settings: [SETTING_SPEC],
-  install: () => installSourceStackingRule()
+  services: ["stacking-exclusions"],
+  install: (ctx) => {
+    documents = ctx.platform.documents;
+    installSourceStackingRule(ctx.services["stacking-exclusions"]);
+  }
 };

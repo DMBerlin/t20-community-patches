@@ -9,7 +9,8 @@
  * +1 toggle buttons: exactly three distinct attributes, the others locked at three, Apply enabled only with three.
  * The system's callback still reads the (hidden, numeric) inputs. Closing without applying warns the user.
  */
-import { MODULE_ID, stripComments, unwrap } from "../utils.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
+import { stripComments, unwrap } from "../lib/source.mjs";
 
 export const PICK_COUNT = 3;
 const KNOWN_DESCRIPTIONS = ["+1 em tres atributos diferentes", "+1 in three different attributes"];

@@ -6,8 +6,8 @@
  * not enforce it. This rule checks the cost the system will actually spend, before the dialog applies the form,
  * and warns or blocks (setting). A per-item flag overrides the limit; an unknown source only warns.
  */
-import { MODULE_ID } from "../utils.mjs";
-import { installUseDialogGuard, registerUseValidator } from "./use-dialog-guard.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
+import { evaluateManaLimit, automaticApplied } from "../lib/mana.mjs";
 
 export const MANA_LIMIT_SETTING = "manaLimitRule";
 export const MANA_LIMIT_FLAG = "manaLimit";
@@ -56,28 +56,6 @@ export function resolveManaLimitFormula({ flag, source }) {
 }
 
 /**
- * Evaluates a dice-free formula with the actor's roll data. Never uses eval: the formula goes through Roll.
- * @param {string} formula
- * @param {object} rollData
- * @param {typeof foundry.dice.Roll} Roll
- * @returns {number|null}  null when the formula is invalid, references missing data, has dice or is not finite.
- */
-export function evaluateManaLimit(formula, rollData, Roll) {
-  try {
-    // Roll replaces missing data with 0, which would turn a typo into a limit of 0: resolve it first.
-    const resolved = Roll.replaceFormulaData(String(formula), rollData);
-    if (resolved.includes("@")) return null;
-    const roll = new Roll(resolved);
-    if (!roll.isDeterministic) return null;
-    roll.evaluateSync({ strict: true });
-    const total = Number(roll.total);
-    return Number.isFinite(total) ? total : null;
-  } catch {
-    return null;
-  }
-}
-
-/**
  * @typedef {object} UseEffect
  * @property {string} id
  * @property {boolean} [automatic]  abilityUse.automatic ("Aplicar Sempre").
@@ -115,18 +93,6 @@ export function estimateUseCost({ itemType, baseCost, effects = [], applied = {}
   cost += Number(extraCost) || 0;
   if (halfCost) cost = Math.floor(cost / 2);
   return cost;
-}
-
-/**
- * The `aprs` the system builds when the item is used without the dialog: only "Aplicar Sempre" effects.
- * @param {UseEffect[]} effects
- */
-export function automaticApplied(effects = []) {
-  const applied = {};
-  for (const effect of effects) {
-    if (effect.automatic) applied[effect.id] = { aplica: 1, custo: effect.custo || 0 };
-  }
-  return applied;
 }
 
 /**
@@ -309,8 +275,7 @@ const SETTING_SPEC = {
  * @param {import("../kernel/feature.mjs").FeatureContext} ctx
  */
 export function installManaLimitRule(ctx) {
-  installUseDialogGuard(ctx.platform);
-  registerUseValidator((context) => validate(ctx, context));
+  ctx.services["use-dialog-guard"].register((context) => validate(ctx, context));
   ctx.hooks.on("renderAbilityUseDialog", (app, html) => {
     try {
       renderDialogLine(ctx, app, html);
@@ -334,5 +299,6 @@ export default {
   group: "usage-effects",
   system: { id: "tormenta20" },
   settings: [SETTING_SPEC],
+  services: ["use-dialog-guard"],
   install: (ctx) => installManaLimitRule(ctx)
 };

@@ -15,8 +15,8 @@ import {
   targetLabel
 } from "../scripts/rules/concealment-miss-chance.mjs";
 import { installAttackVsDefenseRule } from "../scripts/rules/attack-vs-defense.mjs";
-import { getConcealmentChecks } from "../scripts/rules/shared/attack-outcome.mjs";
-import { USE_PURPOSES, withUsePurpose } from "../scripts/rules/shared/targets.mjs";
+import { USE_PURPOSES } from "../scripts/lib/targets.mjs";
+import { currentUseTargets as uses, currentAttackOutcome as outcome } from "./support/legacy-services.mjs";
 
 const MODULE = "t20-community-patches";
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -256,7 +256,7 @@ function setup({ rule = "on", avd = "off", order = ["concealment"], isGM = true 
     /** Fake original: one roll per attack entry, with the d20 picked by the test. */
     async rollAttack(...args) {
       counts.original++;
-      calls.push({ self: this, args, checks: getConcealmentChecks(this) });
+      calls.push({ self: this, args, checks: outcome().getConcealmentChecks(this) });
       hooks.duringAttack?.(this);
       await tick();
       if (this.system.cancel) return null;
@@ -288,8 +288,8 @@ function setup({ rule = "on", avd = "off", order = ["concealment"], isGM = true 
     };
   };
   for (const key of order) {
-    if (key === "concealment") installConcealmentRule();
-    else installAttackVsDefenseRule();
+    if (key === "concealment") installConcealmentRule(uses(), outcome());
+    else installAttackVsDefenseRule(uses(), outcome());
     count(key);
   }
 
@@ -363,7 +363,7 @@ test("duplicate attack names: one d10 per kept roll, so a shadowed duplicate nev
   env.target(makeToken("A", { statuses: ["invisivel"] }));
   env.dice.queue = [10, 1];
   let checks;
-  env.hooks.duringAttack = (self) => (checks = getConcealmentChecks(self));
+  env.hooks.duringAttack = (self) => (checks = outcome().getConcealmentChecks(self));
   const rolls = [{ type: "ataque", name: "Ataque", parts: [["1d20"], ["luta"]] }, { type: "ataque", name: "Ataque", parts: [["1d20"], ["luta"]] }];
   const item = await env.weapon({ rolls, naturals: [19, 19] }).roll();
   assert.equal(env.dice.created.length, 1);
@@ -433,7 +433,7 @@ test("consecutive calls on the same object never inherit the previous checks", a
     item.system.rolled = {};
     env.dice.queue = [1];
     await item.rollAttack({ options: {} });
-    assert.equal(getConcealmentChecks(item)[0].missed, true, second);
+    assert.equal(outcome().getConcealmentChecks(item)[0].missed, true, second);
     assert.equal(item.system.rolled.Ataque._critical, false, second);
 
     if (second === "off") env.settings[`${MODULE}.concealmentMissChance`] = "off";
@@ -448,7 +448,7 @@ test("consecutive calls on the same object never inherit the previous checks", a
     }
     assert.equal(env.counts.original, 2, second);
     assert.deepEqual(env.calls[1].checks, [], second);
-    assert.deepEqual(getConcealmentChecks(item), [], second);
+    assert.deepEqual(outcome().getConcealmentChecks(item), [], second);
     assert.equal(item.system.rolled.Ataque._critical, true, second);
     assert.equal(item.system.rolled.Ataque.options[MODULE].attackVsDefense.targets[0].outcome, "hit", second);
   }
@@ -478,11 +478,11 @@ test("a maneuver resistance use rolls no d10 and records nothing", async () => {
   env.attacker.statuses = new Set(["cego"]);
   let clone;
   env.hooks.duringAttack = (self) => (clone = self);
-  const item = await withUsePurpose(USE_PURPOSES.MANEUVER_RESISTANCE, () => env.weapon({ naturals: [19] }).roll());
+  const item = await uses().withUsePurpose(USE_PURPOSES.MANEUVER_RESISTANCE, () => env.weapon({ naturals: [19] }).roll());
   assert.equal(env.dice.created.length, 0);
   assert.equal(env.counts.original, 1);
   assert.equal(clone, item);
-  assert.deepEqual(getConcealmentChecks(item), []);
+  assert.deepEqual(outcome().getConcealmentChecks(item), []);
   assert.equal(env.data(item), undefined);
   assert.equal(item.system.rolled.Ataque._critical, true);
 });
@@ -801,6 +801,6 @@ test("dialog: nothing with the rule off, without an attack roll or in a maneuver
 
   const c = dialogForm();
   env.hooks.duringDialog = (clone) => onRenderDialog({ item: clone }, c.root);
-  await withUsePurpose(USE_PURPOSES.MANEUVER_RESISTANCE, () => env.weapon().roll());
+  await uses().withUsePurpose(USE_PURPOSES.MANEUVER_RESISTANCE, () => env.weapon().roll());
   assert.equal(c.form.querySelector(".t20cp-concealment"), null);
 });

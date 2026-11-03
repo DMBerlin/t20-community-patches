@@ -14,7 +14,7 @@ import {
   outdatedItemIds,
   outdatedMarker,
   summarize
-} from "../scripts/compendium-copy.mjs";
+} from "../scripts/lib/compendium-copy/index.mjs";
 import { applyUpdate, cleanItem, withEffect } from "./fixtures/clean-source.mjs";
 import { COMBATENTE } from "./fixtures/partner-combatant-1.6.5.mjs";
 
@@ -189,10 +189,6 @@ test("outdatedMarker: marks the rows of the outdated items once, and fails safe"
     created.push(icon);
     return icon;
   });
-  globalThis.game ??= {};
-  const prevI18n = game.i18n;
-  game.i18n = { localize: (key) => `L(${key})` };
-  t.after(() => (game.i18n = prevI18n));
 
   const row = (id) => {
     const children = [];
@@ -201,7 +197,7 @@ test("outdatedMarker: marks the rows of the outdated items once, and fails safe"
   const rows = [row("COPY000000000000"), row("COPY000000000001")];
   const root = { querySelectorAll: (sel) => rows.filter((r) => sel === `[data-item-id="${r.id}"]`) };
   const items = [dragged(), { ...dragged(fixed()), _id: "COPY000000000001" }];
-  const hook = outdatedMarker(ENTRIES, "T20CP.PartnerCombatant.Outdated", "partner-combatant");
+  const hook = outdatedMarker(ENTRIES, () => "L(T20CP.PartnerCombatant.Outdated)", "partner-combatant");
 
   hook({ actor: { items } }, [root]);
   hook({ actor: { items } }, [root]);

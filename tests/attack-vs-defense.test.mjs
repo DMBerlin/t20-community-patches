@@ -13,9 +13,10 @@ import attackVsDefense, {
   resolveAttack,
   resultVisibility
 } from "../scripts/rules/attack-vs-defense.mjs";
-import { finalOutcome, keepCritical, setConcealmentChecks } from "../scripts/rules/shared/attack-outcome.mjs";
-import { USE_PURPOSES, addDefenseAdjustments, withUsePurpose } from "../scripts/rules/shared/targets.mjs";
-import { markWrapper } from "../scripts/utils.mjs";
+import { finalOutcome, keepCritical } from "../scripts/lib/attack-outcome.mjs";
+import { USE_PURPOSES } from "../scripts/lib/targets.mjs";
+import { markWrapper } from "../scripts/lib/source.mjs";
+import { currentUseTargets as uses, currentAttackOutcome as outcome } from "./support/legacy-services.mjs";
 
 const MODULE = "t20-community-patches";
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -256,7 +257,7 @@ function setup({ rule = "on", lang = "pt-BR", isGM = true, showFoeDc = true, vis
   }
   globalThis.CONFIG = { Item: { documentClass: ItemT20 }, ChatMessage: { documentClass: ChatMessageT20 } };
   before?.();
-  installAttackVsDefenseRule();
+  installAttackVsDefenseRule(uses(), outcome());
 
   const weapon = (overrides = {}) =>
     new ItemT20({
@@ -296,7 +297,7 @@ test("rule off, no targets or a maneuver resistance use: the system's result is 
     const env = setup({ rule: variant === "off" ? "off" : "on" });
     if (variant !== "none") env.target(makeToken("A", { defense: 20 }));
     const weapon = env.weapon({ naturals: [19] });
-    const item = variant === "maneuver" ? await withUsePurpose(USE_PURPOSES.MANEUVER_RESISTANCE, () => weapon.roll()) : await weapon.roll();
+    const item = variant === "maneuver" ? await uses().withUsePurpose(USE_PURPOSES.MANEUVER_RESISTANCE, () => weapon.roll()) : await weapon.roll();
     assert.equal(item.system.rolled.Ataque._critical, true, variant);
     assert.equal(env.data(item), undefined, variant);
     assert.equal(env.seen[0].critical, true, variant);
@@ -405,7 +406,7 @@ test("Defense adjustments registered on the clone are added per target", async (
   const env = setup();
   env.target(makeToken("A", { defense: 10 }), makeToken("B", { defense: 10, prone: true, outros: -5 }));
   env.hooks.duringDialog = (clone) =>
-    addDefenseAdjustments(clone, new Map([["Scene.s.Token.A", [{ id: "cover", delta: 5 }]], ["Scene.s.Token.B", [{ id: "x", delta: -2 }]]]));
+    uses().addDefenseAdjustments(clone, new Map([["Scene.s.Token.A", [{ id: "cover", delta: 5 }]], ["Scene.s.Token.B", [{ id: "x", delta: -2 }]]]));
   const item = await env.weapon({ rolls: [{ type: "ataque", name: "Ataque", parts: [["1d20"], ["pont"]] }] }).roll();
   assert.deepEqual(env.data(item).targets.map((t) => [t.defense, t.adjustments]), [[15, ["cover"]], [18, ["prone-ranged", "x"]]]);
 });
@@ -430,7 +431,7 @@ function installConcealmentDouble(missedUuids) {
   const proto = CONFIG.Item.documentClass.prototype;
   const original = proto.rollAttack;
   proto.rollAttack = markWrapper(async function (...args) {
-    setConcealmentChecks(this, missedUuids.map((uuid) => ({ rollName: "Ataque", targetUuid: uuid, missed: true })));
+    outcome().setConcealmentChecks(this, missedUuids.map((uuid) => ({ rollName: "Ataque", targetUuid: uuid, missed: true })));
     const result = await original.apply(this, args);
     const roll = this.system.rolled?.Ataque;
     const uuids = [...game.user.targets].map((t) => t.document.uuid);

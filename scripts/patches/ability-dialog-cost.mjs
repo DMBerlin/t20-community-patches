@@ -9,7 +9,8 @@
  *
  * Fix: data-initial-cost holds only the base activation cost, and the total is computed from the checked boxes.
  */
-import { MODULE_ID, unwrap } from "../utils.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
+import { unwrap } from "../lib/source.mjs";
 import { wraps } from "../kernel/wrap.mjs";
 
 /**

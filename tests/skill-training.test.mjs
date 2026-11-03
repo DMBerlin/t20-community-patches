@@ -8,8 +8,8 @@ import {
   skillUseEffects,
   trainingGrantKind,
   trainingGrants
-} from "../scripts/rules/skill-training.mjs";
-import { automaticApplied } from "../scripts/rules/mana-limit.mjs";
+} from "../scripts/lib/skill-training.mjs";
+import { automaticApplied } from "../scripts/lib/mana.mjs";
 
 const CONFIG_PERICIAS = { mist: { trainedOnly: true }, atle: {}, ladi: { trainedOnly: true } };
 
@@ -140,14 +140,7 @@ test("skillUseEffects collects like rollPericia and drops suppressed item effect
         ["items.effects", temporaryOnItem]
       ][Symbol.iterator]()
   };
-  const status = [];
-  globalThis.game = { modules: { get: () => ({ api: { status } }) } };
-  try {
-    assert.deepEqual(skillUseEffects(actor, "ladi").map((ef) => ef.id), ["a", "i"]);
-    status.push({ id: "suppressed-usage-effects", state: "applied" });
-    assert.deepEqual(skillUseEffects(actor, "ladi").map((ef) => ef.id), ["a"]);
-    assert.deepEqual(skillUseEffects(actor, "nope"), []);
-  } finally {
-    delete globalThis.game;
-  }
+  assert.deepEqual(skillUseEffects(actor, "ladi", false).map((ef) => ef.id), ["a", "i"]);
+  assert.deepEqual(skillUseEffects(actor, "ladi", true).map((ef) => ef.id), ["a"]);
+  assert.deepEqual(skillUseEffects(actor, "nope", true), []);
 });

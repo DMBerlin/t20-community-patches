@@ -8,7 +8,7 @@
  * same identity, either replaces the previous one or keeps the greater one. The GM picks off (default), replace
  * or highest.
  */
-import { MODULE_ID } from "../utils.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
 import { wraps } from "../kernel/wrap.mjs";
 
 export const SAME_ABILITY_SETTING = "sameAbilityStackingRule";

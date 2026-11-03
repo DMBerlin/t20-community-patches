@@ -10,7 +10,7 @@
  * Fix: the getter skips changes of type downgrade or upgrade, whatever their value, and keeps everything else in
  * the same order and shape ({label, value, type}).
  */
-import { markWrapper, unwrap } from "../utils.mjs";
+import { markWrapper, unwrap } from "../lib/source.mjs";
 
 export const SKIPPED_TYPES = new Set(["downgrade", "upgrade"]);
 

@@ -1,14 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import patch, {
-  allowsBelowThreshold,
-  applyDeathThreshold,
-  deathThreshold,
-  diagnoseNpcSource,
-  diagnoseSamples,
-  wrapDamageFloor
-} from "../scripts/patches/death-threshold.mjs";
-import { isSystemVersionAffected } from "../scripts/utils.mjs";
+import { allowsBelowThreshold, deathThreshold } from "../scripts/lib/death-threshold.mjs";
+import patch, { applyDeathThreshold, diagnoseNpcSource, diagnoseSamples } from "../scripts/patches/death-threshold.mjs";
+import { wrapDamageFloor } from "../scripts/lib/death-threshold.mjs";
+import { isSystemVersionAffected } from "../scripts/lib/version.mjs";
 import { withNonlethalCall } from "../scripts/rules/nonlethal-damage.mjs";
 
 test("deathThreshold uses -10 or minus half the maximum, whichever is lower", () => {

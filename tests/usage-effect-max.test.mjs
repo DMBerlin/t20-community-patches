@@ -1,20 +1,17 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { buildDefaults, nameKey, resolveMaxFormula, sourceKey } from "../scripts/lib/usage-limits.mjs";
 import {
-  buildDefaults,
   evaluateMax,
   findViolations,
   installUsageEffectMaxRule,
-  mergeLimits,
-  nameKey,
-  pseudoItemEffects,
-  resolveMaxFormula,
-  skipsDialog,
-  sourceKey
+  mergeLimits
 } from "../scripts/rules/usage-effect-max.mjs";
+import { pseudoItemEffects, skipsDialog } from "../scripts/lib/usage-effects.mjs";
 import { createPlatform } from "../scripts/platform/foundry.mjs";
 import { createFeatureContext } from "../scripts/kernel/context.mjs";
 import { createWrapRegistry } from "../scripts/kernel/wrap.mjs";
+import { createTestKernel } from "./support/fake-platform.mjs";
 
 const INSPIRACAO_SOURCE = "Compendium.tormenta20.poderes.Item.Uv6GW8R54wUtv3sm";
 const INSPIRACAO_EFFECT = "gpuEqXYdlZr1nrNK";
@@ -221,7 +218,7 @@ function setupFoundry({ patches = [] } = {}) {
   console.warn = (msg) => consoleWarnings.push(msg);
   // Migrated patches install through the real platform, which reads the fake globals above (#86).
   for (const patch of patches) patch.install(createFeatureContext(createPlatform(), patch, { wraps: createWrapRegistry() }));
-  installUsageEffectMaxRule();
+  installUsageEffectMaxRule(createTestKernel({ platform: createPlatform() }).service("use-dialog-guard"));
 
   const actor = (level) => ({ name: "Bardo", getRollData: () => ({ nvl: { bardo: level } }) });
   const owner = (source, name = "Inspiração") => ({ documentName: "Item", name, _stats: { compendiumSource: source } });

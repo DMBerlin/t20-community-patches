@@ -11,11 +11,10 @@
  * Three points: a synchronous check before rollPericia, a validator of the use dialog (use-dialog-guard) and the
  * card note in ActorT20#displayCard. Nothing is kept between calls.
  */
-import { MODULE_ID } from "../utils.mjs";
-import { installUseDialogGuard, registerUseValidator } from "./use-dialog-guard.mjs";
-import { automaticApplied } from "./mana-limit.mjs";
-import { skipsDialog } from "./usage-effect-max.mjs";
-import { appliedGrant, isTrainedFor, plainUseEffect, skillUseEffects, trainingGrants } from "./skill-training.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
+import { automaticApplied } from "../lib/mana.mjs";
+import { skipsDialog } from "../lib/usage-effects.mjs";
+import { appliedGrant, isTrainedFor, plainUseEffect, skillUseEffects, trainingGrants } from "../lib/skill-training.mjs";
 import { wraps } from "../kernel/wrap.mjs";
 
 export const TRAINED_ONLY_SETTING = "trainedOnlySkillsRule";
@@ -56,6 +55,10 @@ export function needsCardNote({ mode, required, trained, grants = [], applied = 
 /* -------------------------------------------- */
 
 const LOG = `${MODULE_ID} | trained-only-skills:`;
+
+/** Other features this rule reads (ctx.features); null before the install. */
+let features = null;
+const dropSuppressed = () => !!features?.isActive("suppressed-usage-effects");
 
 function getMode() {
   try {
@@ -116,7 +119,7 @@ function checkRoll(actor, key, options) {
   if (mode === "off" || !appliesToActor(actor)) return { action: "roll", notify: false };
   const skill = actor.system?.pericias?.[key];
   if (!skill) return { action: "roll", notify: false };
-  const grants = trainingGrants(skillUseEffects(actor, key).map(plainUseEffect));
+  const grants = trainingGrants(skillUseEffects(actor, key, dropSuppressed()).map(plainUseEffect));
   const { required, trained } = isTrainedFor({ key, skill, config: CONFIG.T20?.pericias, grants, applied: {} });
   const opensDialog = !skipsDialog({
     usageDefault: usageDefault(),
@@ -181,15 +184,17 @@ const SETTING_SPEC = {
   default: "off"
 };
 
-/** Installs the rule. The mode is read on every use, so a change applies without reloading. */
-export function installTrainedOnlyRule() {
+/**
+ * Installs the rule. The mode is read on every use, so a change applies without reloading.
+ * @param {{register: (validator: Function) => void}} useDialogGuard  The use-dialog-guard service.
+ */
+export function installTrainedOnlyRule(useDialogGuard) {
   const proto = CONFIG.Actor?.documentClass?.prototype;
   const roll = proto?.rollPericia;
   const display = proto?.displayCard;
   if (typeof roll !== "function" || typeof display !== "function") throw new Error("ActorT20#rollPericia/displayCard not found");
 
-  installUseDialogGuard();
-  registerUseValidator(validate);
+  useDialogGuard.register(validate);
 
   wraps.wrap(proto, "rollPericia", "trained-only-skills", function (roll, ...args) {
     let verdict = { action: "roll", notify: false };
@@ -224,5 +229,11 @@ export default {
   system: { id: "tormenta20" },
   settings: [SETTING_SPEC],
   after: ["usage-effect-max"],
-  install: () => installTrainedOnlyRule()
+  // Training ignores the usage effects suppressed-usage-effects hides, as rollPericia does with that patch.
+  interactsWith: ["suppressed-usage-effects"],
+  services: ["use-dialog-guard"],
+  install: (ctx) => {
+    features = ctx.features;
+    installTrainedOnlyRule(ctx.services["use-dialog-guard"]);
+  }
 };

@@ -504,5 +504,454 @@
     "hide-legacy-upgrades",
     "segmented-scene-setting",
     "racial-attribute-choice"
+  ],
+  "status": [
+    {
+      "id": "status-effects-compendium",
+      "kind": "patch",
+      "group": "conditions",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "encumbered-status-sync",
+      "kind": "patch",
+      "group": "conditions",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "petrified-damage-reduction",
+      "kind": "patch",
+      "group": "conditions",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "ongoing-damage-conditions",
+      "kind": "patch",
+      "group": "conditions",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "prone-defense",
+      "kind": "patch",
+      "group": "conditions",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "condition-skill-lists",
+      "kind": "patch",
+      "group": "conditions",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "death-threshold",
+      "kind": "patch",
+      "group": "conditions",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "item-effects-on-actor-sheet",
+      "kind": "patch",
+      "group": "sheet-effects",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "usage-effect-toggle",
+      "kind": "patch",
+      "group": "sheet-effects",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "conditional-powers",
+      "kind": "patch",
+      "group": "sheet-effects",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "modified-fields-filter",
+      "kind": "patch",
+      "group": "sheet-effects",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "field-bonuses-breakdown",
+      "kind": "patch",
+      "group": "sheet-effects",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "field-bonuses-tooltip",
+      "kind": "patch",
+      "group": "sheet-effects",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "attribute-breakdown",
+      "kind": "patch",
+      "group": "sheet-effects",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "suppressed-usage-effects",
+      "kind": "patch",
+      "group": "usage-effects",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "appended-usage-changes",
+      "kind": "patch",
+      "group": "usage-effects",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "linked-usage-effects",
+      "kind": "patch",
+      "group": "usage-effects",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "usage-buff-templates",
+      "kind": "patch",
+      "group": "usage-effects",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "temporary-usage-effect-expiry",
+      "kind": "patch",
+      "group": "usage-effects",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "sustained-spell-cost",
+      "kind": "patch",
+      "group": "usage-effects",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "ability-dialog-cost",
+      "kind": "patch",
+      "group": "usage-effects",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "spell-cost-zero",
+      "kind": "patch",
+      "group": "usage-effects",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "armor-penalty-reduction",
+      "kind": "patch",
+      "group": "items",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "finesse-agile-weapons",
+      "kind": "patch",
+      "group": "items",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "default-damage-attribute",
+      "kind": "patch",
+      "group": "items",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "spell-dc-bonus",
+      "kind": "patch",
+      "group": "items",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "threatening-crit-range",
+      "kind": "patch",
+      "group": "items",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "alchemical-damage-bonus",
+      "kind": "patch",
+      "group": "items",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "hide-legacy-upgrades",
+      "kind": "patch",
+      "group": "items",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "segmented-scene-setting",
+      "kind": "patch",
+      "group": "settings",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "rest-recovery",
+      "kind": "patch",
+      "group": "actor",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "menace-xp-fraction",
+      "kind": "patch",
+      "group": "actor",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "save-skill-bonus",
+      "kind": "patch",
+      "group": "actor",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "sheet-initiative-token",
+      "kind": "patch",
+      "group": "actor",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "spell-compendium-data",
+      "kind": "patch",
+      "group": "items",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "enchantment-data",
+      "kind": "patch",
+      "group": "items",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "race-data",
+      "kind": "patch",
+      "group": "items",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "partner-combatant",
+      "kind": "patch",
+      "group": "items",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "skill-modifier-attributes",
+      "kind": "patch",
+      "group": "actor",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "engenhoqueiro-armor-penalty",
+      "kind": "patch",
+      "group": "actor",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "bestiary-creature-type",
+      "kind": "patch",
+      "group": "actor",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "initiative-tiebreak",
+      "kind": "patch",
+      "group": "combat",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "initial-class",
+      "kind": "patch",
+      "group": "actor",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "racial-attribute-choice",
+      "kind": "patch",
+      "group": "items",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "rd-exception-once",
+      "kind": "patch",
+      "group": "combat",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "mana-queue",
+      "kind": "rule",
+      "group": "usage-effects",
+      "state": "installed"
+    },
+    {
+      "id": "mana-limit",
+      "kind": "rule",
+      "group": "usage-effects",
+      "state": "installed"
+    },
+    {
+      "id": "usage-effect-max",
+      "kind": "rule",
+      "group": "usage-effects",
+      "state": "installed"
+    },
+    {
+      "id": "same-ability-stacking",
+      "kind": "rule",
+      "group": "usage-effects",
+      "state": "installed"
+    },
+    {
+      "id": "source-stacking",
+      "kind": "rule",
+      "group": "sheet-effects",
+      "state": "installed"
+    },
+    {
+      "id": "non-proficiency",
+      "kind": "rule",
+      "group": "items",
+      "state": "installed"
+    },
+    {
+      "id": "save-button",
+      "kind": "rule",
+      "group": "combat",
+      "state": "installed"
+    },
+    {
+      "id": "attack-vs-defense",
+      "kind": "rule",
+      "group": "combat",
+      "state": "installed"
+    },
+    {
+      "id": "situational-modifiers",
+      "kind": "rule",
+      "group": "combat",
+      "state": "installed"
+    },
+    {
+      "id": "concealment-miss-chance",
+      "kind": "rule",
+      "group": "combat",
+      "state": "installed"
+    },
+    {
+      "id": "combat-maneuvers",
+      "kind": "rule",
+      "group": "combat",
+      "state": "installed"
+    },
+    {
+      "id": "arcane-armor",
+      "kind": "rule",
+      "group": "usage-effects",
+      "state": "installed"
+    },
+    {
+      "id": "casting-restrictions",
+      "kind": "rule",
+      "group": "usage-effects",
+      "state": "installed"
+    },
+    {
+      "id": "trained-only-skills",
+      "kind": "rule",
+      "group": "actor",
+      "state": "installed"
+    },
+    {
+      "id": "nonlethal-damage",
+      "kind": "rule",
+      "group": "combat",
+      "state": "installed"
+    },
+    {
+      "id": "nonlethal-attack",
+      "kind": "rule",
+      "group": "combat",
+      "state": "installed"
+    },
+    {
+      "id": "dying-states",
+      "kind": "rule",
+      "group": "actor",
+      "state": "installed"
+    },
+    {
+      "id": "death-threshold-floor",
+      "kind": "rule",
+      "group": "actor",
+      "state": "installed"
+    },
+    {
+      "id": "creature-type-traits",
+      "kind": "rule",
+      "group": "actor",
+      "state": "installed"
+    },
+    {
+      "id": "encounter-xp",
+      "kind": "rule",
+      "group": "settings",
+      "state": "installed"
+    },
+    {
+      "id": "skill-picker",
+      "kind": "rule",
+      "group": "actor",
+      "state": "installed"
+    },
+    {
+      "id": "item-effective-stats",
+      "kind": "rule",
+      "group": "items",
+      "state": "installed"
+    }
   ]
 }

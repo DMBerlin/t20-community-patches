@@ -17,8 +17,8 @@ import {
   summarize,
   wrapActorPreCreate,
   wrapPreCreate
-} from "../scripts/compendium-copy.mjs";
-import { unwrap } from "../scripts/utils.mjs";
+} from "../scripts/lib/compendium-copy/index.mjs";
+import { unwrap } from "../scripts/lib/source.mjs";
 import { cleanItem } from "./fixtures/clean-source.mjs";
 
 const SYS = "Compendium.tormenta20.poderes.Item.PEn3CaxnaMEIAXUR";

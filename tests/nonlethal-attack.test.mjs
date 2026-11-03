@@ -1,8 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { NONLETHAL_FIELD } from "../scripts/lib/nonlethal.mjs";
 import {
-  FORM_FIELD,
   NATURAL_FLAG,
   PENALTY,
   decide,
@@ -15,7 +15,9 @@ import {
   penaltyFor,
   waiversFor
 } from "../scripts/rules/nonlethal-attack.mjs";
-import { ROLL_DATA_KEY, pickDamageRoll, recordedNonlethal } from "../scripts/rules/nonlethal-damage.mjs";
+import { ROLL_DATA_KEY } from "../scripts/lib/nonlethal.mjs";
+import { pickDamageRoll, recordedNonlethal } from "../scripts/rules/nonlethal-damage.mjs";
+import { currentUseTargets as uses } from "./support/legacy-services.mjs";
 
 const MODULE = "t20-community-patches";
 
@@ -214,7 +216,7 @@ function setup({ rule = "on", powers = [] } = {}) {
     }
   }
   globalThis.CONFIG = { Item: { documentClass: ItemT20 } };
-  installNonlethalAttackRule();
+  installNonlethalAttackRule(uses(), () => settings[`${MODULE}.nonlethalDamageRule`] === "on");
 
   const weapon = ({ name = "Espada longa", source, proposito = "corpo-a-corpo", natural, effects = [], heal = false } = {}) =>
     new ItemT20({
@@ -270,7 +272,7 @@ function sheetRoot() {
 test("nonlethal with a lethal weapon: -5 labelled in the clone's attack, choice recorded in the damage", async () => {
   const env = setup();
   const original = env.weapon();
-  const { item } = await original.roll({ form: { [FORM_FIELD]: "nonlethal" } });
+  const { item } = await original.roll({ form: { [NONLETHAL_FIELD]: "nonlethal" } });
   assert.equal(env.seen[0], "1d20 + luta + -5[Não letal]");
   assert.deepEqual(original.system.rolls[0].parts, [["1d20"], ["luta"]]);
   assert.deepEqual(recorded(item), { v: 1, nonlethal: true });
@@ -279,7 +281,7 @@ test("nonlethal with a lethal weapon: -5 labelled in the clone's attack, choice 
 test("lethal with the unarmed attack costs -5; the shortcut uses the natural type without penalty", async () => {
   const env = setup();
   const fist = env.weapon({ name: "Ataque desarmado", source: UNARMED });
-  const lethal = await fist.roll({ form: { [FORM_FIELD]: "lethal" } });
+  const lethal = await fist.roll({ form: { [NONLETHAL_FIELD]: "lethal" } });
   assert.equal(env.seen[0], "1d20 + luta + -5[Letal]");
   assert.deepEqual(recorded(lethal.item), { v: 1, nonlethal: false });
   const shortcut = await fist.roll();
@@ -289,24 +291,24 @@ test("lethal with the unarmed attack costs -5; the shortcut uses the natural typ
 
 test("the weapon field and an active Piedosa set the natural type", async () => {
   const env = setup();
-  await env.weapon({ natural: "nonlethal" }).roll({ form: { [FORM_FIELD]: "nonlethal" } });
+  await env.weapon({ natural: "nonlethal" }).roll({ form: { [NONLETHAL_FIELD]: "nonlethal" } });
   const merciful = env.weapon({ effects: [{ system: { identifier: "merciful" }, disabled: false }] });
   const { item } = await merciful.roll();
-  await env.weapon({ effects: [{ system: { identifier: "merciful" }, disabled: true }] }).roll({ form: { [FORM_FIELD]: "nonlethal" } });
+  await env.weapon({ effects: [{ system: { identifier: "merciful" }, disabled: true }] }).roll({ form: { [NONLETHAL_FIELD]: "nonlethal" } });
   assert.deepEqual(env.seen, ["1d20 + luta", "1d20 + luta", "1d20 + luta + -5[Não letal]"]);
   assert.equal(recorded(item).nonlethal, true);
 });
 
 test("a waiver removes the -5 within its limits", async () => {
   const env = setup({ powers: [power("whJFemzRCrz6gvtp", "Ataque Piedoso")] });
-  await env.weapon().roll({ form: { [FORM_FIELD]: "nonlethal" } });
-  await env.weapon({ proposito: "disparo" }).roll({ form: { [FORM_FIELD]: "nonlethal" } });
+  await env.weapon().roll({ form: { [NONLETHAL_FIELD]: "nonlethal" } });
+  await env.weapon({ proposito: "disparo" }).roll({ form: { [NONLETHAL_FIELD]: "nonlethal" } });
   assert.deepEqual(env.seen, ["1d20 + luta", "1d20 + luta + -5[Não letal]"]);
 });
 
 test("healing rolls are not recorded; damage without an attack records without pushing", async () => {
   const env = setup();
-  const { item } = await env.weapon({ heal: true }).roll({ form: { [FORM_FIELD]: "nonlethal" }, attack: false });
+  const { item } = await env.weapon({ heal: true }).roll({ form: { [NONLETHAL_FIELD]: "nonlethal" }, attack: false });
   assert.deepEqual(recorded(item), { v: 1, nonlethal: true });
   assert.equal(recorded(item, "Cura"), undefined);
   assert.deepEqual(item.system.rolls[0].parts, [["1d20"], ["luta"]]);
@@ -315,7 +317,7 @@ test("healing rolls are not recorded; damage without an attack records without p
 test("rule off: no penalty, nothing recorded, no dialog line, no sheet field", async () => {
   const env = setup({ rule: "off" });
   const weapon = env.weapon();
-  const { item } = await weapon.roll({ form: { [FORM_FIELD]: "nonlethal" } });
+  const { item } = await weapon.roll({ form: { [NONLETHAL_FIELD]: "nonlethal" } });
   assert.equal(env.seen[0], "1d20 + luta");
   assert.equal(recorded(item), undefined);
   const d = dialog(weapon);
@@ -336,7 +338,7 @@ test("dialog line: above the situational section, natural type checked, note fol
   assert.equal(lines.length, 1);
   assert.deepEqual(d.form.children.map((c) => c.className), ["form-group", "form-group t20cp-nonlethal-attack", "t20cp-situational"]);
   const radios = lines[0].querySelectorAll("input");
-  assert.deepEqual(radios.map((r) => [r.name, r.value, r.checked]), [[FORM_FIELD, "lethal", false], [FORM_FIELD, "nonlethal", true]]);
+  assert.deepEqual(radios.map((r) => [r.name, r.value, r.checked]), [[NONLETHAL_FIELD, "lethal", false], [NONLETHAL_FIELD, "nonlethal", true]]);
   const note = lines[0].querySelector(".hint");
   assert.equal(note.textContent, "");
   radios[0].listeners.change();
@@ -372,11 +374,11 @@ test("weapon sheet: a 'Dano natural' select after 'Empunhadura' with the stored 
 test("the penalty lives only during the clone's attack; direct calls on a document keep the official behavior", async () => {
   const env = setup();
   const weapon = env.weapon();
-  const { item } = await weapon.roll({ form: { [FORM_FIELD]: "nonlethal" } });
+  const { item } = await weapon.roll({ form: { [NONLETHAL_FIELD]: "nonlethal" } });
   assert.deepEqual(item.system.rolls[0].parts, [["1d20"], ["luta"]]);
   weapon.system.rolled = {};
-  await weapon.rollAttack({ options: { [FORM_FIELD]: "nonlethal" } });
-  await weapon.rollDamage({ options: { [FORM_FIELD]: "nonlethal" } });
+  await weapon.rollAttack({ options: { [NONLETHAL_FIELD]: "nonlethal" } });
+  await weapon.rollDamage({ options: { [NONLETHAL_FIELD]: "nonlethal" } });
   assert.deepEqual(env.seen, ["1d20 + luta + -5[Não letal]", "1d20 + luta"]);
   assert.equal(recorded(weapon), undefined);
 });
@@ -388,7 +390,7 @@ test("each use resolves its own choice; the rule is read again at damage time", 
   assert.deepEqual([recorded(fist.item).nonlethal, recorded(sword.item).nonlethal], [true, false]);
   assert.deepEqual(env.seen, ["1d20 + luta", "1d20 + luta"]);
   const { item } = await env.weapon().roll({
-    form: { [FORM_FIELD]: "nonlethal" },
+    form: { [NONLETHAL_FIELD]: "nonlethal" },
     between: () => (env.settings[`${MODULE}.nonlethalDamageRule`] = "off")
   });
   assert.equal(env.seen[2], "1d20 + luta + -5[Não letal]");

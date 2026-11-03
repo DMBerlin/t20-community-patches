@@ -9,7 +9,7 @@
  * Fix: while the system rolls the damage of an alchemical item whose actor has "alq" bonuses and no "mag" bonus,
  * each plain damage roll receives the "@danoALQ" part the system would have added. The part is removed afterwards.
  */
-import { stripComments, unwrap } from "../utils.mjs";
+import { stripComments, unwrap } from "../lib/source.mjs";
 import { wraps } from "../kernel/wrap.mjs";
 
 export const ALCHEMICAL_PART = "@danoALQ";

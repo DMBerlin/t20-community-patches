@@ -8,7 +8,7 @@
  * Fix: when curaCP is set, the original method runs with curaCP off and one more extra HP per level, so the system
  * computes floor(level × (condition + extra HP)) + level. MP, chat cards and the other options stay the same.
  */
-import { stripComments, unwrap } from "../utils.mjs";
+import { stripComments, unwrap } from "../lib/source.mjs";
 import { wraps } from "../kernel/wrap.mjs";
 
 /**

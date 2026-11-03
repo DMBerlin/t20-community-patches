@@ -1,13 +1,11 @@
 /**
- * Validation guard for the Tormenta20 ability use dialog, shared by the optional rules.
+ * Validation guard for the Tormenta20 ability use dialog (service, #87), shared by the optional rules.
  *
  * Wraps AbilityUseDialog#submit (Dialog v1: runs the button callback, then closes). Each registered validator
  * reads the submitted form before the system applies it. Warnings are shown and the use goes on; a blocking
  * result skips the original submit, so the dialog stays open and nothing is spent. Covers every button
  * ("Usar", "Poção") and the Enter key, which all go through submit.
  */
-import { wraps } from "../kernel/wrap.mjs";
-import { createPlatform } from "../platform/foundry.mjs";
 
 /**
  * @typedef {object} UseViolation
@@ -22,14 +20,6 @@ import { createPlatform } from "../platform/foundry.mjs";
  * @property {object} formData  Flat FormDataExtended object of the dialog form, as the system reads it.
  * @property {object} [button]  Configuration of the clicked button.
  */
-
-/** @type {((context: UseContext) => UseViolation[]|UseViolation|null|undefined)[]} */
-const validators = [];
-
-/** @param {(context: UseContext) => UseViolation[]|UseViolation|null|undefined} validator */
-export function registerUseValidator(validator) {
-  if (typeof validator === "function" && !validators.includes(validator)) validators.push(validator);
-}
 
 /**
  * Runs every validator on its own; a validator that throws is reported and ignored, so it never stops a use.
@@ -64,19 +54,25 @@ function toElement(html) {
   return typeof html?.[0]?.querySelector === "function" ? html[0] : null;
 }
 
-let installed = false;
-
 /**
- * Installs the submit wrapper once. Throws when the system's dialog is missing.
- * @param {import("../platform/foundry.mjs").Platform} [platform]  The legacy callers use the real platform.
+ * Wraps the submit of the system's dialog. When the dialog is missing the service still installs, and `register`
+ * throws: each rule decides whether that stops it (casting-restrictions goes on without its dialog check).
+ * @param {import("../kernel/services.mjs").ServiceContext} ctx
  */
-export function installUseDialogGuard(platform = createPlatform()) {
-  if (installed) return;
+export function installUseDialogGuard(ctx) {
+  const { platform } = ctx;
+  /** @type {((context: UseContext) => UseViolation[]|UseViolation|null|undefined)[]} */
+  const validators = [];
   const AbilityUseDialog = platform.t20()?.applications?.AbilityUseDialog;
-  const original = AbilityUseDialog?.prototype?.submit;
-  if (typeof original !== "function") throw new Error("Tormenta20 AbilityUseDialog not found");
+  if (typeof AbilityUseDialog?.prototype?.submit !== "function") {
+    return {
+      register() {
+        throw new Error("Tormenta20 AbilityUseDialog not found");
+      }
+    };
+  }
 
-  wraps.wrap(AbilityUseDialog.prototype, "submit", "use-dialog-guard", function (original, button, event) {
+  ctx.wrap(AbilityUseDialog.prototype, "submit", function (original, button, event) {
     let verdict = { block: false, messages: [] };
     try {
       const form = toElement(this.element)?.querySelector("form");
@@ -93,5 +89,17 @@ export function installUseDialogGuard(platform = createPlatform()) {
     if (verdict.block) return;
     return original.call(this, button, event);
   });
-  installed = true;
+
+  return {
+    /** @param {(context: UseContext) => UseViolation[]|UseViolation|null|undefined} validator */
+    register(validator) {
+      if (typeof validator === "function" && !validators.includes(validator)) validators.push(validator);
+    }
+  };
 }
+
+/** @type {import("../kernel/services.mjs").Service} */
+export default {
+  id: "use-dialog-guard",
+  install: installUseDialogGuard
+};

@@ -1,5 +1,7 @@
 /** Shared contract between the module's ItemT20#displayCard wrappers (arcane-armor-casting, casting-restrictions). */
-export const CAST_OUTCOME_KEY = "t20-community-patches";
+import { MODULE_ID } from "./module.mjs";
+
+export const CAST_OUTCOME_KEY = MODULE_ID;
 
 /** Marks the cast as failed on the options object every displayCard wrapper receives (born per use in ItemT20#roll). */
 export function markCastFailed(options, { rule, reason, messageId = null } = {}) {

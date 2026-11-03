@@ -17,11 +17,11 @@
  * Wrapper order: this rule is installed after the patches (scripts/main.mjs), so its wrappers sit outside those of
  * armor-penalty-reduction (ActiveEffect.applyChange) and threatening-crit-range (_allApplicableOnUseEffects).
  */
-import { MODULE_ID, markWrapper } from "../utils.mjs";
-import { isPatchApplied } from "../registry.mjs";
-import { computePenaltyAdjustments, isArmorPenaltyReducer } from "../patches/armor-penalty-reduction.mjs";
-import { rewriteThreatChanges } from "../patches/threatening-crit-range.mjs";
-import { hasUsageLimit } from "./usage-effect-max.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
+import { markWrapper } from "../lib/source.mjs";
+import { computePenaltyAdjustments, isArmorPenaltyReducer } from "../lib/armor-penalty.mjs";
+import { rewriteThreatChanges } from "../lib/threat.mjs";
+import { USAGE_EFFECT_MAX_SETTING, hasUsageLimit, usageLimitMode } from "../lib/usage-limits.mjs";
 import { fromFactory, wraps } from "../kernel/wrap.mjs";
 
 export const ITEM_EFFECTIVE_STATS_SETTING = "itemEffectiveStats";
@@ -613,13 +613,18 @@ export function currentMode() {
   }
 }
 
+/** Other features this rule reads (ctx.features); null before the install. */
+let features = null;
+
 export function patchState() {
-  const status = globalThis.game?.modules?.get?.(MODULE_ID)?.api?.status;
   return {
-    penaltyFix: isPatchApplied(status, "armor-penalty-reduction"),
-    threatFix: isPatchApplied(status, "threatening-crit-range")
+    penaltyFix: !!features?.isActive("armor-penalty-reduction"),
+    threatFix: !!features?.isActive("threatening-crit-range")
   };
 }
+
+const getProperty = (obj, path) => foundry.utils.getProperty(obj, path);
+const usageLimitModeNow = () => usageLimitMode(() => features.setting("usage-effect-max", USAGE_EFFECT_MAX_SETTING));
 
 function setHas(collection, value) {
   if (!collection) return false;
@@ -674,7 +679,7 @@ export function auraAppliesToBearer(system) {
 function isUsageBound(effect) {
   const use = effect?.system?.abilityUse ?? {};
   const cost = use.custo;
-  return (cost !== null && cost !== undefined && Number(cost) !== 0) || !!use.aumenta || hasUsageLimit(effect);
+  return (cost !== null && cost !== undefined && Number(cost) !== 0) || !!use.aumenta || hasUsageLimit(effect, usageLimitModeNow(), getProperty);
 }
 
 function describeItemEffects(item) {
@@ -1230,5 +1235,10 @@ export default {
   system: { id: "tormenta20" },
   settings: [SETTING_SPEC],
   after: ["*"],
-  install: () => installItemEffectiveStatsRule()
+  // Folds like the patches that are applied, and leaves the effects limited by usage-effect-max unfolded.
+  interactsWith: ["armor-penalty-reduction", "threatening-crit-range", "usage-effect-max"],
+  install: (ctx) => {
+    features = ctx.features;
+    installItemEffectiveStatsRule();
+  }
 };

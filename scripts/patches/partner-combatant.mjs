@@ -17,8 +17,8 @@ import {
   summarize,
   wrapActorPreCreate,
   wrapPreCreate
-} from "../compendium-copy.mjs";
-import { MODULE_ID } from "../utils.mjs";
+} from "../lib/compendium-copy/index.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
 import { fromFactory, wraps } from "../kernel/wrap.mjs";
 
 const PATCH_ID = "partner-combatant";
@@ -131,7 +131,7 @@ function isNeeded() {
 
 async function lateProbe() {
   try {
-    return summarize(await readEntries(ENTRIES));
+    return summarize(await readEntries(ENTRIES, game.packs));
   } catch (error) {
     console.warn(`${MODULE_ID} | ${PATCH_ID}: probe failed`, error);
     return undefined;
@@ -147,7 +147,7 @@ function apply() {
   if (typeof actor?._preCreate === "function") {
     wraps.wrap(actor, "_preCreate", PATCH_ID, fromFactory((original) => wrapActorPreCreate(original, ENTRIES, PATCH_ID)));
   }
-  Hooks.on("renderActorSheetT20", outdatedMarker(ENTRIES, "T20CP.PartnerCombatant.Outdated", PATCH_ID));
+  Hooks.on("renderActorSheetT20", outdatedMarker(ENTRIES, () => game.i18n.localize("T20CP.PartnerCombatant.Outdated"), PATCH_ID));
 }
 
 export default {

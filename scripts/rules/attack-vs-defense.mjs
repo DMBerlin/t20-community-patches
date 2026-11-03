@@ -8,19 +8,15 @@
  * the attack roll, the result against each target the user marked when the use started, cancels the critical when
  * every target was missed, and shows the result on the chat card.
  */
-import { MODULE_ID } from "../utils.mjs";
-import {
-  canSeeTokenName,
-  defenseAdjustmentsFor,
-  installUseTargets,
-  registerTargetConsumer,
-  USE_PURPOSES,
-  usePurposeOf,
-  useTargetRecords,
-  useTargets
-} from "./shared/targets.mjs";
-import { finalOutcome, getConcealmentChecks, keepCritical, missedByConcealment } from "./shared/attack-outcome.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
+import { canSeeTokenName, USE_PURPOSES } from "../lib/targets.mjs";
+import { finalOutcome, keepCritical, missedByConcealment } from "../lib/attack-outcome.mjs";
 import { wraps } from "../kernel/wrap.mjs";
+
+/** The use-targets service; null before the install. */
+let uses = null;
+/** The attack-outcome service; null before the install. */
+let outcome = null;
 
 export const ATTACK_VS_DEFENSE_SETTING = "attackVsDefenseRule";
 export const ATTACK_VS_DEFENSE_VISIBILITY_SETTING = "attackVsDefenseVisibility";
@@ -201,10 +197,10 @@ export function annotate(item, records, tokens, before = {}) {
     .map((record) => ({
       ...readDefense(byUuid.get(record.uuid)),
       ...record,
-      extra: defenseAdjustmentsFor(item, record.uuid)
+      extra: uses.defenseAdjustmentsFor(item, record.uuid)
     }));
   if (!snapshots.length) return;
-  const checks = getConcealmentChecks(item);
+  const checks = outcome.getConcealmentChecks(item);
   for (const r of item.system.rolls ?? []) {
     if (r?.type !== "ataque") continue;
     const roll = rolled[r.name];
@@ -338,10 +334,15 @@ const VISIBILITY_SPEC = {
   onChange: () => redrawDecorated()
 };
 
-/** Installs the rule. The setting is read on every attack, so a change applies without reloading. */
-export function installAttackVsDefenseRule() {
-  registerTargetConsumer(isOn);
-  installUseTargets();
+/**
+ * Installs the rule. The setting is read on every attack, so a change applies without reloading.
+ * @param {ReturnType<typeof import("../services/use-targets.mjs").createUseTargets>} useTargets  The use-targets service.
+ * @param {ReturnType<typeof import("../services/attack-outcome.mjs").createAttackOutcome>} attackOutcome  The attack-outcome service.
+ */
+export function installAttackVsDefenseRule(useTargets, attackOutcome) {
+  uses = useTargets;
+  outcome = attackOutcome;
+  uses.registerTargetConsumer(isOn);
   const itemProto = CONFIG.Item.documentClass?.prototype;
   const rollAttack = itemProto?.rollAttack;
   if (typeof rollAttack !== "function") throw new Error("ItemT20#rollAttack not found");
@@ -351,9 +352,9 @@ export function installAttackVsDefenseRule() {
     try {
       // Read synchronously, before the first await: records (persisted) and tokens (live Defense).
       // The defender's test of a maneuver is not an attack against the defender's own targets.
-      if (isOn() && usePurposeOf(this) !== USE_PURPOSES.MANEUVER_RESISTANCE) {
-        records = useTargetRecords(this);
-        tokens = useTargets(this);
+      if (isOn() && uses.usePurposeOf(this) !== USE_PURPOSES.MANEUVER_RESISTANCE) {
+        records = uses.useTargetRecords(this);
+        tokens = uses.useTargets(this);
       }
     } catch (err) {
       console.error(`${MODULE_ID} | attack-vs-defense: failed to read the targets`, err);
@@ -391,5 +392,6 @@ export default {
   group: "combat",
   system: { id: "tormenta20" },
   settings: [SETTING_SPEC, VISIBILITY_SPEC],
-  install: () => installAttackVsDefenseRule()
+  services: ["use-targets", "attack-outcome"],
+  install: (ctx) => installAttackVsDefenseRule(ctx.services["use-targets"], ctx.services["attack-outcome"])
 };

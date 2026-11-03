@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createWrapRegistry, fromFactory } from "../scripts/kernel/wrap.mjs";
-import { unwrap } from "../scripts/utils.mjs";
+import { unwrap } from "../scripts/lib/source.mjs";
 
 test("the first registered wrapper is the innermost and chain lists owners inside out", () => {
   const { wrap, chain, list } = createWrapRegistry();

@@ -1,4 +1,4 @@
-import { MODULE_ID } from "../utils.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
 import { getPatchMode } from "../kernel/patch-settings.mjs";
 import { centerSettings } from "../kernel/settings.mjs";
 import {

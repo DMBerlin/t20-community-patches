@@ -7,9 +7,8 @@
  * - Conditions that prevent casting (p. 394-395, p. 170; reactions follow p. 233): checked before the use dialog.
  * - Concentration in a bad condition (p. 170): casting while Caído or Surdo posts the Vontade DC (15 + PM spent).
  */
-import { MODULE_ID } from "../utils.mjs";
-import { castCompleted, isCastUse } from "./cast-outcome.mjs";
-import { installUseDialogGuard, registerUseValidator } from "./use-dialog-guard.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
+import { castCompleted, isCastUse } from "../lib/cast-outcome.mjs";
 import { wraps } from "../kernel/wrap.mjs";
 
 export const SUSTAINED_SPELL_SETTING = "sustainedSpellRule";
@@ -615,8 +614,9 @@ const SETTING_SPECS = [
 /**
  * Installs the rules. Must run after the patches and the other rules, arcane-armor-casting included (it stays inside
  * this displayCard wrapper). The cast stamp is always applied (it is inert).
+ * @param {{register: (validator: Function) => void}} useDialogGuard  The use-dialog-guard service.
  */
-export function installCastingRestrictionsRule() {
+export function installCastingRestrictionsRule(useDialogGuard) {
   const itemProto = CONFIG.Item?.documentClass?.prototype;
   const roll = itemProto?.roll;
   const displayCard = itemProto?.displayCard;
@@ -655,8 +655,7 @@ export function installCastingRestrictionsRule() {
   });
 
   try {
-    installUseDialogGuard();
-    registerUseValidator(validateCastingDialog);
+    useDialogGuard.register(validateCastingDialog);
   } catch (err) {
     console.error(`${MODULE_ID} | casting-restrictions: failed to install the use dialog check`, err);
   }
@@ -678,5 +677,6 @@ export default {
   system: { id: "tormenta20" },
   settings: SETTING_SPECS,
   after: ["save-button", "attack-vs-defense", "situational-modifiers", "concealment-miss-chance", "combat-maneuvers", "arcane-armor", "usage-effect-max"],
-  install: () => installCastingRestrictionsRule()
+  services: ["use-dialog-guard"],
+  install: (ctx) => installCastingRestrictionsRule(ctx.services["use-dialog-guard"])
 };

@@ -17,12 +17,13 @@ import {
   normalizeValues,
   onRenderDialog,
   parseDefenseSelection,
-  sanitizeFlavor,
   shouldCreateCharge
 } from "../scripts/rules/situational-modifiers.mjs";
-import { USE_PURPOSES, defenseAdjustmentsFor, withUsePurpose } from "../scripts/rules/shared/targets.mjs";
-import { markCastFailed } from "../scripts/rules/cast-outcome.mjs";
-import { markWrapper } from "../scripts/utils.mjs";
+import { sanitizeFlavor } from "../scripts/lib/text.mjs";
+import { USE_PURPOSES } from "../scripts/lib/targets.mjs";
+import { markCastFailed } from "../scripts/lib/cast-outcome.mjs";
+import { markWrapper } from "../scripts/lib/source.mjs";
+import { currentUseTargets as uses } from "./support/legacy-services.mjs";
 
 const MODULE = "t20-community-patches";
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -232,7 +233,7 @@ function setup({ rule = "on", isGM = true, invisible = false, wrapBefore, wrapAf
     async rollAttack({ options } = {}) {
       const first = this.system.rolls.find((r) => r.type === "ataque");
       const formula = first.parts.map((p) => p[0]).join(" + ");
-      seen.push({ formula, adjustments: defenseAdjustmentsFor(this, "Scene.s.Token.A") });
+      seen.push({ formula, adjustments: uses().defenseAdjustmentsFor(this, "Scene.s.Token.A") });
       for (const r of this.system.rolls.filter((x) => x.type === "ataque")) this.system.rolled[r.name] = { formula, options: {} };
       return "attack-result";
     }
@@ -243,7 +244,7 @@ function setup({ rule = "on", isGM = true, invisible = false, wrapBefore, wrapAf
   }
   globalThis.CONFIG = { Item: { documentClass: ItemT20 } };
   wrapBefore?.(ItemT20.prototype, seen);
-  installSituationalModifiersRule();
+  installSituationalModifiersRule(uses());
   wrapAfter?.(ItemT20.prototype, seen);
 
   const weapon = () =>
@@ -328,7 +329,7 @@ test("Defense boxes register per-target adjustments for attack-vs-defense, in ei
     const inner = proto.rollAttack;
     proto.rollAttack = markWrapper(async function (...args) {
       const result = await inner.apply(this, args);
-      seen.push({ avd: defenseAdjustmentsFor(this, "Scene.s.Token.A") });
+      seen.push({ avd: uses().defenseAdjustmentsFor(this, "Scene.s.Token.A") });
       return result;
     }, inner);
   };
@@ -358,7 +359,7 @@ test("targets changed with the dialog open: the frozen targets are used", async 
 test("maneuver resistance: only higher ground, no Defense, no charge", async () => {
   const env = setup();
   env.target(token("A"));
-  const { item } = await withUsePurpose(USE_PURPOSES.MANEUVER_RESISTANCE, () =>
+  const { item } = await uses().withUsePurpose(USE_PURPOSES.MANEUVER_RESISTANCE, () =>
     env.weapon().roll({ form: { [FORM_ATTACK]: ["elevated", "charge", "flank"], [FORM_DEFENSE]: "*|cover" } })
   );
   assert.equal(env.seen[0].formula, "1d20 + luta + 2[Posição elevada]");
@@ -443,7 +444,7 @@ test("dialog: the maneuver resistance test only shows higher ground", async () =
     rendered = dialog(item);
     onRenderDialog(rendered.app, rendered.root);
   };
-  await withUsePurpose(USE_PURPOSES.MANEUVER_RESISTANCE, () => env.weapon().roll());
+  await uses().withUsePurpose(USE_PURPOSES.MANEUVER_RESISTANCE, () => env.weapon().roll());
   assert.deepEqual(inputs(rendered.form).map((b) => b.value), ["elevated"]);
 });
 

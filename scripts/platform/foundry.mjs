@@ -3,7 +3,8 @@
  * CONFIG.*.documentClass, game.user, CONFIG.statusEffects and the translations change between "init" and "ready".
  * Methods of game.settings, game.i18n, Hooks and ui.notifications are always called on their owner, never detached.
  */
-import { MODULE_ID, unwrap } from "../utils.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
+import { unwrap } from "../lib/source.mjs";
 
 /**
  * @typedef {object} SystemClasses   Document classes registered by the system (CONFIG.<Doc>.documentClass).
@@ -28,7 +29,7 @@ import { MODULE_ID, unwrap } from "../utils.mjs";
  * @property {{info(msg: string, opts?: object), warn(msg: string, opts?: object), error(msg: string, opts?: object)}} notify
  * @property {{on(name: string, fn: Function): number, once(name: string, fn: Function): number,
  *   off(name: string, id: number|Function): void}} hooks
- * @property {{isGM(): boolean, isActiveGM(): boolean, id(): string|undefined}} user
+ * @property {{isGM(): boolean, isActiveGM(): boolean, id(): string|undefined, targets(): Iterable<object>}} user
  * @property {{fromUuid(uuid: string): Promise<object|null>, fromUuidSync(uuid: string): object|null,
  *   actors(): object, messages(): object, combats(): object, packs(): object, scenes(): object}} documents
  * @property {{getProperty: Function, setProperty: Function, hasProperty: Function, deepClone: Function,
@@ -187,7 +188,9 @@ export function createPlatform() {
     user: Object.freeze({
       isGM: () => !!game.user?.isGM,
       isActiveGM: () => !!game.user?.isActiveGM,
-      id: () => game.user?.id ?? game.userId
+      id: () => game.user?.id ?? game.userId,
+      /** The user's current targets (a Set of Tokens), read on every call. */
+      targets: () => game.user?.targets ?? []
     }),
     documents: createDocuments(),
     utils: createUtils(),

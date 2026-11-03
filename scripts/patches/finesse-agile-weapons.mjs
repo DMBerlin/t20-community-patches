@@ -17,8 +17,9 @@
  * (1.6.5 or 1.6.6); otherwise, or when the probe is inconclusive, the source diagnosis is the fallback.
  */
 
-import { stripComments, unwrap } from "../utils.mjs";
+import { stripComments, unwrap } from "../lib/source.mjs";
 import { wraps } from "../kernel/wrap.mjs";
+import { prefersDexterity } from "../lib/weapons.mjs";
 
 const RANGED = new Set(["arremesso", "disparo"]);
 
@@ -56,17 +57,6 @@ export function isAgileMeleeWeapon(item) {
   if (item?.type !== "arma" || !system) return false;
   if (system.empunhadura === "leve" || RANGED.has(system.proposito)) return false;
   return !!system.propriedades?.agi;
-}
-
-/**
- * Mirrors the system's `usarAcuidade` (T20:8172-8173 and T20:9136-9137).
- * @param {{optionalRule?: boolean, acuidade?: unknown, atributos?: object}} args
- * @returns {boolean}
- */
-export function prefersDexterity({ optionalRule, acuidade, atributos }) {
-  const des = atributos?.des?.value;
-  const str = atributos?.for?.value;
-  return !!(optionalRule || acuidade) && des > str;
 }
 
 /**

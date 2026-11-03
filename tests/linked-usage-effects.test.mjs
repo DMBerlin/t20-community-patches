@@ -1,11 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import patch, {
-  OwnChangeList,
-  findLinkedCandidates,
-  linkedValues,
-  plainText
-} from "../scripts/patches/linked-usage-effects.mjs";
+import patch, { OwnChangeList, findLinkedCandidates, linkedValues } from "../scripts/patches/linked-usage-effects.mjs";
+import { plainText } from "../scripts/lib/text.mjs";
 import { PATCHES } from "../scripts/patches/index.mjs";
 import appendedUsageChanges from "../scripts/patches/appended-usage-changes.mjs";
 import { createFakeContext, createFakePlatform } from "./support/fake-platform.mjs";

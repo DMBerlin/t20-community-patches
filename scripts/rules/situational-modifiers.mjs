@@ -9,18 +9,14 @@
  *   (defenseAdjustmentsFor, read by attack-vs-defense) and recorded in the roll, so the card can show them as a note;
  * - a charge gives the attacker a -2 Defense effect, which the table removes by hand.
  */
-import { MODULE_ID } from "../utils.mjs";
-import {
-  addDefenseAdjustments,
-  canSeeTokenName,
-  installUseTargets,
-  registerTargetConsumer,
-  USE_PURPOSES,
-  usePurposeOf,
-  useTargetRecords
-} from "./shared/targets.mjs";
-import { castCompleted } from "./cast-outcome.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
+import { canSeeTokenName, USE_PURPOSES } from "../lib/targets.mjs";
+import { castCompleted } from "../lib/cast-outcome.mjs";
 import { wraps } from "../kernel/wrap.mjs";
+import { sanitizeFlavor } from "../lib/text.mjs";
+
+/** The use-targets service; null before the install. */
+let uses = null;
 
 export const SITUATIONAL_SETTING = "situationalModifiersRule";
 export const FORM_ATTACK = "t20cpSituationalAttack";
@@ -66,9 +62,6 @@ export function attackSelection(raw) {
   const known = new Set(ATTACK_MODIFIERS.map((m) => m.id));
   return normalizeValues(raw).filter((id) => known.has(id));
 }
-
-/** Roll flavor cannot hold brackets (core:client/dice/grammar.pegjs). */
-export const sanitizeFlavor = (text) => String(text ?? "").replace(/[[\]]/g, "").trim();
 
 /** Roll parts in table order; each label becomes the core roll flavor. */
 export function attackParts(selection, labels = {}) {
@@ -259,9 +252,9 @@ export function onRenderDialog(app, html) {
   const root = html?.[0] ?? html;
   const form = root?.querySelector?.("form#ability-use-form") ?? root?.querySelector?.("form");
   if (!form || form.querySelector(`.${SECTION_CLASS}`)) return;
-  const allowed = allowedModifiers(usePurposeOf(item));
+  const allowed = allowedModifiers(uses.usePurposeOf(item));
   // The records frozen when ItemT20#roll started; changing targets with the dialog open changes nothing.
-  const section = buildSection(item, allowed.defense ? useTargetRecords(item) : [], allowed);
+  const section = buildSection(item, allowed.defense ? uses.useTargetRecords(item) : [], allowed);
   const anchor = form.querySelector("[name=rollKeep]")?.closest?.(".form-group");
   if (anchor) anchor.after(section);
   else form.append(section);
@@ -280,7 +273,7 @@ export function prepareUse(item, options) {
   if (!options || typeof options !== "object" || prepared.has(options) || !ruleOn()) return null;
   if (!(FORM_ATTACK in options) && !(FORM_DEFENSE in options)) return null;
   prepared.add(options);
-  const allowed = allowedModifiers(usePurposeOf(item));
+  const allowed = allowedModifiers(uses.usePurposeOf(item));
   const attack = attackSelection(options[FORM_ATTACK]).filter((id) => allowed.attack.includes(id));
   const entries = allowed.defense ? parseDefenseSelection(options[FORM_DEFENSE]) : [];
   options[FORM_ATTACK] = attack;
@@ -292,9 +285,9 @@ export function prepareUse(item, options) {
     if (Array.isArray(first?.parts)) first.parts.push(...attackParts(attack, labels));
   }
 
-  const records = allowed.defense ? useTargetRecords(item) : [];
+  const records = allowed.defense ? uses.useTargetRecords(item) : [];
   const byTarget = defenseAdjustmentsByTarget(entries, records.map((r) => r.uuid));
-  if (byTarget.size) addDefenseAdjustments(item, byTarget);
+  if (byTarget.size) uses.addDefenseAdjustments(item, byTarget);
   const defense = defenseRecord(records, entries);
   return attack.length || defense.length ? { attack, defense } : null;
 }
@@ -377,16 +370,19 @@ const SETTING_SPEC = {
   default: "off"
 };
 
-/** Installs the rule. The setting is read on every use, so a change applies without reloading. */
-export function installSituationalModifiersRule() {
+/**
+ * Installs the rule. The setting is read on every use, so a change applies without reloading.
+ * @param {ReturnType<typeof import("../services/use-targets.mjs").createUseTargets>} useTargets  The use-targets service.
+ */
+export function installSituationalModifiersRule(useTargets) {
+  uses = useTargets;
   const proto = CONFIG.Item?.documentClass?.prototype;
   const rollAttack = proto?.rollAttack;
   const displayCard = proto?.displayCard;
   if (typeof rollAttack !== "function" || typeof displayCard !== "function") {
     throw new Error("ItemT20#rollAttack or #displayCard not found");
   }
-  registerTargetConsumer(ruleOn);
-  installUseTargets();
+  uses.registerTargetConsumer(ruleOn);
 
   wraps.wrap(proto, "rollAttack", "situational-modifiers", async function (rollAttack, ...args) {
     let record = null;
@@ -414,7 +410,7 @@ export function installSituationalModifiersRule() {
       charge =
         ruleOn() &&
         prepared.has(options) &&
-        usePurposeOf(this) !== USE_PURPOSES.MANEUVER_RESISTANCE &&
+        uses.usePurposeOf(this) !== USE_PURPOSES.MANEUVER_RESISTANCE &&
         Array.isArray(options[FORM_ATTACK]) &&
         options[FORM_ATTACK].includes("charge");
     } catch (err) {
@@ -454,5 +450,6 @@ export default {
   group: "combat",
   system: { id: "tormenta20" },
   settings: [SETTING_SPEC],
-  install: () => installSituationalModifiersRule()
+  services: ["use-targets"],
+  install: (ctx) => installSituationalModifiersRule(ctx.services["use-targets"])
 };

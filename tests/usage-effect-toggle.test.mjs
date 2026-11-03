@@ -5,7 +5,7 @@ import {
   toggleIconClasses,
   usesAutomaticToggle
 } from "../scripts/patches/usage-effect-toggle.mjs";
-import { markWrapper, unwrap } from "../scripts/utils.mjs";
+import { markWrapper, unwrap } from "../scripts/lib/source.mjs";
 
 const item = { documentName: "Item" };
 const actor = { documentName: "Actor" };

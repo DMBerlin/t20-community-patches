@@ -2,7 +2,7 @@
  * Platform adapter of the Center (#86): registers its settings menu and, once the translations load, appends the
  * system compatibility line to the menu hint.
  */
-import { MODULE_ID } from "../utils.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
 import { PatchManager } from "../apps/patch-manager.mjs";
 
 const MENU = "manager";

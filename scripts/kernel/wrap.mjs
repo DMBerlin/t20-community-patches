@@ -2,7 +2,7 @@
  * Central wrapper registry. Every method the module replaces on a system or core class goes through wrap(), so
  * the composition order is known at runtime (api.wraps) and in tests. The kernel never reads Foundry globals.
  */
-import { markWrapper } from "../utils.mjs";
+import { markWrapper } from "../lib/source.mjs";
 
 /**
  * @typedef {object} WrapEntry

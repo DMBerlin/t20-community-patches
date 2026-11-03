@@ -12,9 +12,10 @@
  * - Damage: wraps ActorT20#applyDamageV2 (T20:7360) and makes ONE call to the inner chain with rewritten terms, so the
  *   HP change stays a single update; a view of the actor splits the chat card per operation.
  */
-import { MODULE_ID, markWrapper } from "../utils.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
+import { markWrapper } from "../lib/source.mjs";
 import { fromFactory, wraps } from "../kernel/wrap.mjs";
-import { allActors } from "./source-stacking.mjs";
+import { allActors } from "../lib/actors.mjs";
 
 export const CREATURE_TYPE_TRAITS_SETTING = "creatureTypeTraitsRule";
 export const UNDEAD = "mor";
@@ -358,8 +359,12 @@ export function wrapApplyDamage(original, { ask = askLight, notify, enabled = ru
   };
 }
 
+/** Documents port of the platform, set when the rule is installed; null until then. */
+let documents = null;
+
 function refreshActors() {
-  for (const actor of allActors()) {
+  if (!documents) return;
+  for (const actor of allActors(documents)) {
     try {
       actor.reset();
       if (actor.sheet?.rendered) actor.sheet.render(false);
@@ -424,5 +429,8 @@ export default {
   system: { id: "tormenta20" },
   settings: [SETTING_SPEC],
   after: ["death-threshold-floor", "nonlethal-damage"],
-  install: () => installCreatureTypeTraitsRule()
+  install: (ctx) => {
+    documents = ctx.platform.documents;
+    installCreatureTypeTraitsRule();
+  }
 };

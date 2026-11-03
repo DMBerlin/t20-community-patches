@@ -13,23 +13,13 @@
  * uuid; the Defesa breakdown gets a "Condição" line before the total, which is corrected. Each part is installed
  * only when its bug is recognized in the helper's source, so a partial fix upstream is never undone or doubled.
  */
-import { addTooltipLine, stripComments, unwrap } from "../utils.mjs";
+import { addTooltipLine } from "../lib/tooltip.mjs";
+import { stripComments, unwrap } from "../lib/source.mjs";
 import { wraps } from "../kernel/wrap.mjs";
+import { fieldTerms } from "../lib/tooltip.mjs";
 
 const LOG = "t20-community-patches | field-bonuses-tooltip:";
 export const CONDITION_KEY = "T20CP.FieldBonuses.Condition";
-const IGNORED_TERMS = new Set(["system", "attributes", "tracos"]);
-
-/**
- * The helper's [type, key] of a field path (T20:4262).
- * @param {string|{string: string}} path
- * @returns {string[]}
- */
-export function fieldTerms(path) {
-  const text = typeof path === "object" ? path?.string : path;
-  return typeof text === "string" ? text.split(".").filter((t) => !IGNORED_TERMS.has(t)) : [];
-}
-
 /**
  * Condition penalty the Defesa breakdown leaves out, or 0.
  * @param {string|{string: string}} path

@@ -1,6 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { CAST_OUTCOME_KEY, castCompleted, castFailed, isCastUse, markCastFailed } from "../scripts/rules/cast-outcome.mjs";
+import {
+  CAST_OUTCOME_KEY,
+  castCompleted,
+  castFailed,
+  isCastUse,
+  markCastFailed
+} from "../scripts/lib/cast-outcome.mjs";
 
 test("castCompleted: a message, the card data and a spell without effects count; null, true and failures do not", () => {
   assert.equal(castCompleted({ documentName: "ChatMessage" }, { effects: [] }), true);

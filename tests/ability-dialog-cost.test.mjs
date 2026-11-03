@@ -5,7 +5,7 @@ import patch, {
   computeDialogCost,
   dialogCostIsBroken
 } from "../scripts/patches/ability-dialog-cost.mjs";
-import { unwrap } from "../scripts/utils.mjs";
+import { unwrap } from "../scripts/lib/source.mjs";
 
 test("base activation cost is the positive numeric ativacao.custo", () => {
   assert.equal(baseActivationCost({ ativacao: { custo: 3 } }), 3);

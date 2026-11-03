@@ -19,8 +19,10 @@ import {
   weaponRequirements,
   weaponStatus
 } from "../scripts/rules/non-proficiency-penalties.mjs";
-import { computePenaltyAdjustments } from "../scripts/patches/armor-penalty-reduction.mjs";
-import { MODULE_ID, addTooltipLine } from "../scripts/utils.mjs";
+import { APPLY_STATES } from "../scripts/registry.mjs";
+import { computePenaltyAdjustments } from "../scripts/lib/armor-penalty.mjs";
+import { MODULE_ID } from "../scripts/lib/module.mjs";
+import { addTooltipLine } from "../scripts/lib/tooltip.mjs";
 import { CreatureData165, Item165 } from "./fixtures/non-proficiency-1.6.5.mjs";
 import { Item166 } from "./fixtures/non-proficiency-1.6.6.mjs";
 
@@ -318,7 +320,6 @@ function setup({ rule = "on", reduction = "applied", slots = false, gm = true } 
   globalThis.game = {
     settings: { get: (scope, key) => settings[`${scope}.${key}`] },
     system: { version: "1.6.5" },
-    modules: { get: () => ({ api: { status: [{ id: "armor-penalty-reduction", state: reduction }] } }) },
     user: { isGM: gm },
     i18n: { format: (key, data) => `${key} ${JSON.stringify(data)}`, localize: (key) => key }
   };
@@ -334,7 +335,7 @@ function setup({ rule = "on", reduction = "applied", slots = false, gm = true } 
   const warn = console.warn;
   console.warn = (message) => warnings.push(String(message));
   try {
-    installNonProficiencyRule();
+    installNonProficiencyRule(() => APPLY_STATES.has(reduction));
   } finally {
     console.warn = warn;
   }

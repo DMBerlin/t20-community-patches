@@ -1,33 +1,9 @@
 /**
- * Suppressed usage effects (tormenta20 1.6.5).
- *
- * Bug: usage effects (system.onuse) held by unequipped weapons/equipment are still offered in the usage
- * dialog and auto-applied ("Aplicar Sempre") on item, skill and attribute rolls, although the same effects are
- * shown as suppressed and give no passive bonus.
- *
- * Fix: usage effects held by another item whose effects are suppressed (ItemT20#areEffectsSuppressed or
- * ActiveEffect#isSuppressed) are removed from the applicable lists. The rolled item's own effects and the
- * actor's own effects are kept.
- */
-
-/**
- * @param {object} effect                 ActiveEffect
- * @param {string|null} rolledItemId      Id of the rolled item (null for skill/attribute rolls)
- * @returns {boolean}
- */
-export function isSuppressedUsageEffect(effect, rolledItemId) {
-  if (!effect?.system?.onuse) return false;
-  const parent = effect.parent;
-  if (parent?.documentName !== "Item") return false;
-  if (rolledItemId && parent.id === rolledItemId) return false;
-  return Boolean(effect.isSuppressed || parent.areEffectsSuppressed);
-}
-
-/**
  * Whether a system function collects usage effects without looking at suppression.
  * @param {string} source
  * @returns {boolean}
  */
+import { isSuppressedUsageEffect } from "../lib/usage-effects.mjs";
 export function collectsIgnoringSuppression(source) {
   return source.includes("onuse") && !/suppress/i.test(source);
 }

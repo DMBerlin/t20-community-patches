@@ -11,8 +11,8 @@
  * melee and other items: For). Parts the system resolves itself, explicit attributes and stored data are untouched.
  */
 
-import { sourceFingerprint, unwrap } from "../utils.mjs";
-import { prefersDexterity } from "./finesse-agile-weapons.mjs";
+import { sourceFingerprint, unwrap } from "../lib/source.mjs";
+import { prefersDexterity } from "../lib/weapons.mjs";
 import { wraps } from "../kernel/wrap.mjs";
 
 /** sourceFingerprint of ItemT20#rollDamage in tormenta20 1.6.6. */

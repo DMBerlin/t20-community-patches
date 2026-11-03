@@ -9,13 +9,13 @@ import patch, {
   diagnoseFinesseSource,
   isAgileMeleeWeapon,
   isProbeSafe,
-  prefersDexterity,
   probeDamage,
   probeItem,
   REFERENCE,
   rollsForCall,
   rollsWithDexterity
 } from "../scripts/patches/finesse-agile-weapons.mjs";
+import { prefersDexterity } from "../scripts/lib/weapons.mjs";
 import { ATTACK_1_6_5 as ATTACK, DAMAGE_1_6_5 as DAMAGE } from "./fixtures/finesse-agile-weapons-1.6.5.mjs";
 import { ATTACK_1_6_6 } from "./fixtures/finesse-agile-weapons-1.6.6.mjs";
 import { ROLL_DAMAGE_1_6_6 } from "./fixtures/roll-damage-1.6.6.mjs";

@@ -9,7 +9,7 @@
  * system's ND table) get 250 and 500 XP. The creature level (1, the book minimum) and everything derived from
  * it stay as the system computes them. Any other ND is untouched.
  */
-import { stripComments, unwrap } from "../utils.mjs";
+import { stripComments, unwrap } from "../lib/source.mjs";
 import { wraps } from "../kernel/wrap.mjs";
 
 /** Fractional NDs handled by the patch, with the XP the book gives them (ND × 1000). */

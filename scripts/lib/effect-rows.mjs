@@ -23,9 +23,10 @@ export function parseOwnedEffectUuid(uuid, ownerUuid) {
  * then `owner.effects.get(data-effect-id)` (system behaviour).
  * @param {HTMLElement} li
  * @param {foundry.abstract.Document} owner  Actor or Item that owns the sheet (or the effect parent)
+ * @param {(uuid: string, options: object) => object} [fromUuidSync]  foundry.utils.fromUuidSync, for other owners.
  * @returns {ActiveEffect|null}
  */
-export function resolveEffectFromRow(li, owner) {
+export function resolveEffectFromRow(li, owner, fromUuidSync) {
   const uuid = li?.dataset?.effectUuid;
   if (uuid) {
     const parsed = parseOwnedEffectUuid(uuid, owner?.uuid);
@@ -35,7 +36,7 @@ export function resolveEffectFromRow(li, owner) {
     }
     try {
       // strict:false – fromUuidSync throws for embedded documents of compendium actors otherwise.
-      return globalThis.foundry?.utils?.fromUuidSync(uuid, { strict: false }) ?? null;
+      return fromUuidSync?.(uuid, { strict: false }) ?? null;
     } catch {
       return null;
     }

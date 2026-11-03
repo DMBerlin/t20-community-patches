@@ -9,10 +9,13 @@
  * same set Foundry v10 showed). Rows of item effects show the item as source; Toggle/Edit/Delete (with
  * confirmation) and drag act on the effect inside the item.
  */
-import { MODULE_ID, stripComments, unwrap } from "../utils.mjs";
-import { resolveEffectFromRow } from "../effect-rows.mjs";
+import { MODULE_ID } from "../lib/module.mjs";
+import { stripComments, unwrap } from "../lib/source.mjs";
+import { resolveEffectFromRow } from "../lib/effect-rows.mjs";
 import { sheetEffectClass } from "../platform/foundry.mjs";
 import { wraps } from "../kernel/wrap.mjs";
+
+const fromUuidSync = (uuid, options) => foundry.utils.fromUuidSync(uuid, options);
 
 /**
  * Groups the categorized effects by id, in render order (category key order, then insertion order).
@@ -163,7 +166,7 @@ function apply() {
     const li = anchor?.closest?.("li");
     const action = anchor?.dataset?.action;
     if (li && owner && ["edit", "toggle", "delete"].includes(action)) {
-      const effect = resolveEffectFromRow(li, owner);
+      const effect = resolveEffectFromRow(li, owner, fromUuidSync);
       if (effect?.parent && effect.parent !== owner) {
         if (action === "delete") {
           event.preventDefault();
@@ -179,7 +182,7 @@ function apply() {
   wraps.wrap(ActorSheetBase.prototype, "_onDragStart", "item-effects-on-actor-sheet", function (onDragStart, event) {
     const li = event?.currentTarget;
     if (li?.dataset?.effectUuid) {
-      const effect = resolveEffectFromRow(li, this.actor);
+      const effect = resolveEffectFromRow(li, this.actor, fromUuidSync);
       if (effect && effect.parent !== this.actor) {
         event.dataTransfer.setData("text/plain", JSON.stringify(effect.toDragData()));
         return;

@@ -155,6 +155,10 @@
         "Name": "Damage reduction with exception once per attack",
         "Hint": "Damage reduction with an exception (such as the Vampire's 10/light) is applied once per attack, not once per damage type. Penetrating also reduces it now."
       },
+      "d20-roll-bonus-zero": {
+        "Name": "\"+ 0\" parts in rolls",
+        "Hint": "Skill, ability and attack rolls show \"+ 0\" in the formula: the @bonus term, which is never filled, and the weapons' \"0\" attack bonus. Removes these parts without changing any total."
+      },
       "skill-modifier-attributes": {
         "Name": "Temporary attribute bonuses in global modifiers",
         "Hint": "Global skill, attribute, damage and healing modifiers that use an attribute (such as the @car of Aura Sagrada or the @con of Trincado) now use the attribute with its temporary bonuses (items, spells, potions), on the sheet and on rolls, as the breakdown already showed. PV and PM still ignore those bonuses."

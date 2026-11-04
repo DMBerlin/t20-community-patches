@@ -4,6 +4,7 @@
     "#local:applyEffectChanges": "3a1dc13d:742",
     "#local:applyItemChanges": "424e4140:1469",
     "#local:applyOnUseEffects": "5b9594ea:8106",
+    "#local:d20Roll": "1f5c4755:1185",
     "#local:hooks": "24f88d6c:7007",
     "#local:SystemSettings": "a7bd1516:5812",
     "AbilityUseDialog.create": "7a7469c5:2606",

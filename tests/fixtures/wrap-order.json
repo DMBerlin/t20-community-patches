@@ -251,6 +251,7 @@
       "label": "ItemT20#getAttackToHit",
       "owners": [
         "finesse-agile-weapons",
+        "d20-roll-bonus-zero",
         "non-proficiency-penalties"
       ]
     },
@@ -472,6 +473,12 @@
       "owners": [
         "initial-class",
         "skill-picker"
+      ]
+    },
+    {
+      "label": "Roll.parse",
+      "owners": [
+        "d20-roll-bonus-zero"
       ]
     },
     {
@@ -820,6 +827,13 @@
       "id": "rd-exception-once",
       "kind": "patch",
       "group": "combat",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "d20-roll-bonus-zero",
+      "kind": "patch",
+      "group": "actor",
       "mode": "force",
       "state": "forced"
     },

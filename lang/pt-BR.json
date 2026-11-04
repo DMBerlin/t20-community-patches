@@ -155,6 +155,10 @@
         "Name": "RD com exceção uma vez por ataque",
         "Hint": "A redução de dano com exceção (como 10/luz do Vampiro) é aplicada uma vez ao ataque, e não uma vez para cada tipo de dano. Penetrante também passa a reduzi-la."
       },
+      "d20-roll-bonus-zero": {
+        "Name": "Parcelas \"+ 0\" nas rolagens",
+        "Hint": "Testes de perícia, de atributo e ataques mostram \"+ 0\" na fórmula: o bônus @bonus, que nunca é preenchido, e o bônus de ataque \"0\" das armas. Remove essas parcelas sem mudar nenhum total."
+      },
       "skill-modifier-attributes": {
         "Name": "Bônus temporários de atributo nos modificadores globais",
         "Hint": "Modificadores globais de perícia, atributo, dano e cura que usam um atributo (como o @car da Aura Sagrada ou o @con de Trincado) passam a usar o atributo com os bônus temporários (itens, magias, poções), na ficha e nas rolagens, como o detalhamento já mostrava. PV e PM continuam ignorando esses bônus."

@@ -43,6 +43,7 @@ import initiativeTiebreak from "./initiative-tiebreak/index.mjs";
 import initialClass from "./initial-class/index.mjs";
 import racialAttributeChoice from "./racial-attribute-choice/index.mjs";
 import rdExceptionOnce from "./rd-exception-once/index.mjs";
+import d20RollBonusZero from "./d20-roll-bonus-zero/index.mjs";
 
 /**
  * Display groups, in the order they appear in the patch manager. i18n: T20CP.Groups.<id>.
@@ -84,4 +85,4 @@ export const GROUPS = ["conditions", "sheet-effects", "usage-effects", "items", 
  */
 
 /** @type {Patch[]} */
-export const PATCHES = [statusEffectsCompendium, encumberedStatusSync, petrifiedDamageReduction, ongoingDamageConditions, proneDefense, conditionSkillLists, deathThreshold, itemEffectsOnActorSheet, usageEffectToggle, conditionalPowers, modifiedFieldsFilter, fieldBonusesBreakdown, fieldBonusesTooltip, attributeBreakdown, suppressedUsageEffects, appendedUsageChanges, linkedUsageEffects, usageBuffTemplates, temporaryUsageEffectExpiry, sustainedSpellCost, abilityDialogCost, spellCostZero, armorPenaltyReduction, finesseAgileWeapons, defaultDamageAttribute, spellDcBonus, threateningCritRange, alchemicalDamageBonus, hideLegacyUpgrades, segmentedSceneSetting, restRecovery, menaceXpFraction, saveSkillBonus, sheetInitiativeToken, spellCompendiumData, enchantmentData, raceData, partnerCombatant, skillModifierAttributes, engenhoqueiroArmorPenalty, bestiaryCreatureType, initiativeTiebreak, initialClass, racialAttributeChoice, rdExceptionOnce];
+export const PATCHES = [statusEffectsCompendium, encumberedStatusSync, petrifiedDamageReduction, ongoingDamageConditions, proneDefense, conditionSkillLists, deathThreshold, itemEffectsOnActorSheet, usageEffectToggle, conditionalPowers, modifiedFieldsFilter, fieldBonusesBreakdown, fieldBonusesTooltip, attributeBreakdown, suppressedUsageEffects, appendedUsageChanges, linkedUsageEffects, usageBuffTemplates, temporaryUsageEffectExpiry, sustainedSpellCost, abilityDialogCost, spellCostZero, armorPenaltyReduction, finesseAgileWeapons, defaultDamageAttribute, spellDcBonus, threateningCritRange, alchemicalDamageBonus, hideLegacyUpgrades, segmentedSceneSetting, restRecovery, menaceXpFraction, saveSkillBonus, sheetInitiativeToken, spellCompendiumData, enchantmentData, raceData, partnerCombatant, skillModifierAttributes, engenhoqueiroArmorPenalty, bestiaryCreatureType, initiativeTiebreak, initialClass, racialAttributeChoice, rdExceptionOnce, d20RollBonusZero];

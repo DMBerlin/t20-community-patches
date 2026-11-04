@@ -1,7 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import patch, { diagnose, findDescriptor, isTrackableUsageEffect } from "../scripts/patches/temporary-usage-effect-expiry.mjs";
+import patch from "../scripts/features/temporary-usage-effect-expiry/index.mjs";
+import { diagnose, findDescriptor, isTrackableUsageEffect } from "../scripts/features/temporary-usage-effect-expiry/domain.mjs";
 import { unwrap } from "../scripts/lib/source.mjs";
+import { createFakeContext, createFakePlatform } from "./support/fake-platform.mjs";
 
 const usageEffect = (overrides = {}) => ({
   system: { onuse: true },
@@ -67,22 +69,18 @@ test("diagnoses the bug with the real active and tracking getters", () => {
 
 test("apply makes usage effects trackable and keeps other effects unchanged", () => {
   class Effect extends SystemEffect {}
-  globalThis.CONFIG = { ActiveEffect: { documentClass: Effect } };
-  try {
-    assert.equal(patch.isNeeded(), true);
-    patch.apply();
-    assert.equal(new Effect(usageEffect()).isExpiryTrackable, true);
-    assert.equal(new Effect(usageEffect({ disabled: true })).isExpiryTrackable, false);
-    assert.equal(new Effect(usageEffect({ parent: { documentName: "Item" } })).isExpiryTrackable, false);
-    assert.equal(new Effect(usageEffect({ system: { onuse: false } })).isExpiryTrackable, true);
-    const { get } = Object.getOwnPropertyDescriptor(Effect.prototype, "isExpiryTrackable");
-    assert.equal(unwrap(get), findDescriptor(Object.getPrototypeOf(Effect.prototype), "isExpiryTrackable").get, "the getter is tagged with the one it replaced");
-    assert.equal(new Effect(usageEffect({ system: { onuse: false }, isTemporary: false })).isExpiryTrackable, false);
-    const broken = new Effect(usageEffect());
-    Object.defineProperty(broken, "isTemporary", { get() { throw new Error("boom"); } });
-    assert.equal(broken.isExpiryTrackable, false);
-    assert.equal(new SystemEffect(usageEffect()).isExpiryTrackable, false);
-  } finally {
-    delete globalThis.CONFIG;
-  }
+  const ctx = createFakeContext(patch, createFakePlatform({ classes: { activeEffect: Effect } }));
+  assert.equal(patch.isNeeded(ctx), true);
+  patch.install(ctx);
+  assert.equal(new Effect(usageEffect()).isExpiryTrackable, true);
+  assert.equal(new Effect(usageEffect({ disabled: true })).isExpiryTrackable, false);
+  assert.equal(new Effect(usageEffect({ parent: { documentName: "Item" } })).isExpiryTrackable, false);
+  assert.equal(new Effect(usageEffect({ system: { onuse: false } })).isExpiryTrackable, true);
+  const { get } = Object.getOwnPropertyDescriptor(Effect.prototype, "isExpiryTrackable");
+  assert.equal(unwrap(get), findDescriptor(Object.getPrototypeOf(Effect.prototype), "isExpiryTrackable").get, "the getter is tagged with the one it replaced");
+  assert.equal(new Effect(usageEffect({ system: { onuse: false }, isTemporary: false })).isExpiryTrackable, false);
+  const broken = new Effect(usageEffect());
+  Object.defineProperty(broken, "isTemporary", { get() { throw new Error("boom"); } });
+  assert.equal(broken.isExpiryTrackable, false);
+  assert.equal(new SystemEffect(usageEffect()).isExpiryTrackable, false);
 });

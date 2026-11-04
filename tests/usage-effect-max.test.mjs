@@ -365,7 +365,7 @@ test("skill and attribute rolls without the dialog warn at maximum 0; with the d
 });
 
 test("skill rolls only check the effects the system collects (suppressed-usage-effects applied)", async () => {
-  const { default: suppressed } = await import("../scripts/patches/suppressed-usage-effects.mjs");
+  const { default: suppressed } = await import("../scripts/features/suppressed-usage-effects/index.mjs");
   const { warnings, ActorT20, effect, restore } = setupFoundry({ patches: [suppressed] });
   try {
     const held = (equipped) => ({

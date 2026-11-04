@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { computePenaltyAdjustments, isArmorPenaltyReducer, parseReduction } from "../scripts/lib/armor-penalty.mjs";
-import { diagnosePenaltyField } from "../scripts/patches/armor-penalty-reduction.mjs";
+import { diagnosePenaltyField } from "../scripts/features/armor-penalty-reduction/domain.mjs";
 import { resolveDataRefs } from "../scripts/lib/data-refs.mjs";
 import { isSystemVersionAffected } from "../scripts/lib/version.mjs";
 
@@ -61,7 +61,7 @@ test("system version range check", () => {
 test("formula data references resolve recursively and unresolved ones are rejected like core", () => {
   const FakeRoll = {
     replaceFormulaData(raw, data, { recursive }) {
-      let out = raw.replace(/@(\w+)/g, (m, k) => (k in data ? String(data[k]) : m));
+      const out = raw.replace(/@(\w+)/g, (m, k) => (k in data ? String(data[k]) : m));
       return recursive && out !== raw ? this.replaceFormulaData(out, data, { recursive }) : out;
     }
   };

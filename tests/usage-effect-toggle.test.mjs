@@ -4,7 +4,10 @@ import {
   toggleFlipsDisabled,
   toggleIconClasses,
   usesAutomaticToggle
-} from "../scripts/patches/usage-effect-toggle.mjs";
+} from "../scripts/features/usage-effect-toggle/domain.mjs";
+import itemEffectsPatch from "../scripts/features/item-effects-on-actor-sheet/index.mjs";
+import usageTogglePatch from "../scripts/features/usage-effect-toggle/index.mjs";
+import { createFakePlatform, createTestKernel } from "./support/fake-platform.mjs";
 import { markWrapper, unwrap } from "../scripts/lib/source.mjs";
 
 const item = { documentName: "Item" };
@@ -65,7 +68,6 @@ class ClassList {
  * also ships `tormenta20.documents`), 1.6.6 only has `tormenta20.documents`.
  */
 function setupFoundry(layout = "1.6.5") {
-  const hooks = {};
   class ActorSheet {}
   class ActorSheetT20 extends ActorSheet {
     async getData() { return { effects: {} }; }
@@ -86,14 +88,14 @@ function setupFoundry(layout = "1.6.5") {
   const t20 = layout === "1.6.5"
     ? { entities: { ActiveEffectT20: Sheet }, documents: { ActiveEffectT20: Other } }
     : { documents: { ActiveEffectT20: Sheet } };
-  Object.assign(globalThis, {
-    Hooks: { on: (name, fn) => (hooks[name] ??= []).push(fn) },
-    game: { i18n: { localize: (key) => key } },
-    HTMLElement: FakeElement,
-    foundry: { appv1: { sheets: { ActorSheet } }, utils: { fromUuidSync: () => null } },
-    tormenta20: { ...t20, applications: { ActorSheetT20Character } }
+  globalThis.HTMLElement = FakeElement;
+  const platform = createFakePlatform({
+    classes: { sheetEffect: Sheet },
+    core: { ActorSheetV1: ActorSheet },
+    t20: { ...t20, applications: { ActorSheetT20Character } },
+    documents: { fromUuidSync: () => null }
   });
-  return { hooks, Sheet, Other, ActorSheetT20Character };
+  return { platform, Sheet, Other, ActorSheetT20Character };
 }
 
 function makeEffect(id, parent, automatic) {
@@ -127,13 +129,11 @@ for (const [layout, order] of [
   ["1.6.6", ["usage-toggle", "item-effects"]]
 ]) {
   test(`icons follow each row's own effect with repeated ids (${layout}, ${order.join(" → ")})`, async () => {
-    const { hooks, Sheet, Other, ActorSheetT20Character } = setupFoundry(layout);
+    const { platform, Sheet, Other, ActorSheetT20Character } = setupFoundry(layout);
     const untouched = Other && { ...Other };
-    const patches = {
-      "item-effects": (await import("../scripts/patches/item-effects-on-actor-sheet.mjs")).default,
-      "usage-toggle": (await import("../scripts/patches/usage-effect-toggle.mjs")).default
-    };
-    for (const id of order) patches[id].apply();
+    const patches = { "item-effects": itemEffectsPatch, "usage-toggle": usageTogglePatch };
+    const kernel = createTestKernel({ platform });
+    for (const id of order) kernel.install(patches[id]);
 
     // Same effect id "E" on the actor and on two items created from the same source.
     const actor = { documentName: "Actor", uuid: "Actor.A" };
@@ -152,7 +152,7 @@ for (const [layout, order] of [
     const root = Object.assign(new FakeElement(), { querySelectorAll: () => rows.map((r) => r.li) });
     const app = Object.assign(new ActorSheetT20Character(), { actor });
     await app.getData();
-    for (const fn of hooks.renderActorSheetT20) fn(app, root);
+    platform.callHook("renderActorSheetT20", app, root);
     await Promise.resolve();
 
     const checked = rows.map((r) => r.icon.classList.contains("fa-square-check"));

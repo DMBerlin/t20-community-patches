@@ -12,11 +12,11 @@ import { compareVersions } from "./lib/version.mjs";
  * @property {string} [evidence]         Short text for the badge tooltip and the log.
  */
 
-/** States in which the patch's apply() must be called. */
+/** States in which the patch's install() must be called. */
 export const APPLY_STATES = new Set(["applied", "applied-unverified", "applied-guarded", "suspected-fixed", "forced"]);
 
 /**
- * Whether a patch's apply() ran, according to the status list built on init.
+ * Whether a patch's install() ran, according to the status list built on init.
  * @param {{id: string, state: PatchState}[]|undefined} status
  * @param {string} id
  * @returns {boolean}

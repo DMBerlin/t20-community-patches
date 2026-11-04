@@ -19,7 +19,7 @@ import { fieldBonuses165 } from "./fixtures/field-bonuses-1.6.5.mjs";
 import { PARSE_DATA_1_6_5 } from "./fixtures/bestiary-parser-1.6.5.mjs";
 import { APPLY_DAMAGE_V2 } from "./fixtures/apply-damage-v2-1.6.5.mjs";
 import { Item166 } from "./fixtures/non-proficiency-1.6.6.mjs";
-import { SYSTEM_FORMULA } from "../scripts/patches/initiative-tiebreak.mjs";
+import { SYSTEM_FORMULA } from "../scripts/features/initiative-tiebreak/domain.mjs";
 
 const FIXTURE = new URL("./fixtures/wrap-order.json", import.meta.url);
 const SYSTEM = JSON.parse(
@@ -212,7 +212,7 @@ ${ON_DELETE}
 
 async function installAll() {
   const { hooks, settings, modules } = setup();
-  const { PATCHES } = await import("../scripts/patches/index.mjs");
+  const { PATCHES } = await import("../scripts/features/patches.mjs");
   settings.patches = Object.fromEntries(PATCHES.map((p) => [p.id, "force"]));
   const errors = [];
   const warnings = [];

@@ -1,17 +1,18 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import patch, {
+import patch from "../scripts/features/rd-exception-once/index.mjs";
+import {
   KNOWN_APPLY_DAMAGE_V2,
   diagnoseFingerprint,
   groupDamage,
   handOver,
   readExceptionReduction,
   resolveReductions
-} from "../scripts/patches/rd-exception-once.mjs";
+} from "../scripts/features/rd-exception-once/domain.mjs";
 import { resolvePatchState } from "../scripts/registry.mjs";
 import { sourceFingerprint } from "../scripts/lib/source.mjs";
 import { APPLY_DAMAGE_V2 } from "./fixtures/apply-damage-v2-1.6.5.mjs";
-import { createProbeContext } from "./support/fake-platform.mjs";
+import { createFakeContext, createFakePlatform, createProbeContext } from "./support/fake-platform.mjs";
 
 /* -------------------------------------------- */
 /*  Helpers                                     */
@@ -52,13 +53,20 @@ function realClass() {
   }`)();
 }
 
+// Read by the system's own applyDamageV2 (the fixture), never by the patch.
 globalThis.foundry = { utils: { isEmpty: (o) => !o || Object.keys(o).length === 0 } };
 Math.clamp ??= (n, min, max) => Math.min(Math.max(n, min), max);
 
+/** Installs the patch over `Actor` as the system's Actor class; returns the fake platform. */
+function installOn(Actor) {
+  const platform = createFakePlatform({ classes: { actor: Actor } });
+  patch.install(createFakeContext(patch, platform));
+  return platform;
+}
+
 function patchedClass() {
   const Actor = realClass();
-  globalThis.CONFIG = { Actor: { documentClass: Actor } };
-  patch.apply();
+  installOn(Actor);
   return Actor;
 }
 
@@ -277,12 +285,12 @@ const MODES = [
 test("isNeeded never runs applyDamageV2 and only recognizes the 1.6.5 code", () => {
   let calls = 0;
   class Unknown {
-    async applyDamageV2(roll, multiplier = 1, type = "dano") {
+    async applyDamageV2(roll, _multiplier = 1, _type = "dano") {
       calls++;
     }
   }
-  globalThis.CONFIG = { Actor: { documentClass: Unknown } };
-  const probeCtx = createProbeContext(patch, { "ActorT20#applyDamageV2": () => globalThis.CONFIG.Actor.documentClass.prototype.applyDamageV2 });
+  let actorClass = Unknown;
+  const probeCtx = createProbeContext(patch, { "ActorT20#applyDamageV2": () => actorClass.prototype.applyDamageV2 });
   const unknownStates = MODES.map(([mode, systemVersion]) => {
     const { state, diagnosis } = resolvePatchState({ patch, mode, systemId: "tormenta20", systemVersion, probe: () => patch.isNeeded(probeCtx) });
     assert.equal(diagnosis.bug, "unknown");
@@ -292,7 +300,7 @@ test("isNeeded never runs applyDamageV2 and only recognizes the 1.6.5 code", () 
   assert.deepEqual(unknownStates, ["applied", "disabled", "forced", "unverified", "forced"]);
 
   // Running the real method on the prototype would throw (no this.system), and the probe would answer unknown.
-  globalThis.CONFIG = { Actor: { documentClass: realClass() } };
+  actorClass = realClass();
   const knownStates = MODES.map(([mode, systemVersion]) => {
     const { state, diagnosis } = resolvePatchState({ patch, mode, systemId: "tormenta20", systemVersion, probe: () => patch.isNeeded(probeCtx) });
     assert.equal(diagnosis.bug, "present");
@@ -309,18 +317,12 @@ test("on unrecognized code the wrapper passes the original roll and leaves the d
     constructor() {
       this.system = { tracos: { resistencias: resistances() } };
     }
-    async applyDamageV2(roll, multiplier = 1, type = "dano") {
+    async applyDamageV2(roll, _multiplier = 1, _type = "dano") {
       seen.push({ roll, excecao: this.system.tracos.resistencias.luz.excecao, general: this.system.tracos.resistencias.dano.value });
     }
   }
-  globalThis.CONFIG = { Actor: { documentClass: Unknown } };
-  const warn = console.warn;
-  console.warn = () => {};
-  try {
-    patch.apply();
-  } finally {
-    console.warn = warn;
-  }
+  const platform = installOn(Unknown);
+  assert.match(platform.logs[0].args.join(" "), /unrecognized applyDamageV2/);
   const roll = { terms: terms([[15, "corte"], [6, "fogo"]]), options: { rd: 4 } };
   await new Unknown().applyDamageV2(roll, 1);
   assert.equal(seen[0].roll, roll);
@@ -330,8 +332,7 @@ test("on unrecognized code the wrapper passes the original roll and leaves the d
 
 test("the wrapper restores the data even when the original throws synchronously", () => {
   const Real = realClass();
-  globalThis.CONFIG = { Actor: { documentClass: Real } };
-  patch.apply();
+  installOn(Real);
   const actor = new Real(resistances());
   const before = JSON.stringify(actor.system.tracos.resistencias);
   // A roll whose terms throw on the second read: the first read (patch) works, the system's loop throws.

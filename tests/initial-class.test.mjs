@@ -1,14 +1,16 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import patch, {
+import patch from "../scripts/features/initial-class/index.mjs";
+import {
   diagnoseInitialClass,
   initialMarksOnCreate,
   initialUpdatesOnChange,
   pickInitialClass,
   recognizeParts,
   sourceFingerprint
-} from "../scripts/patches/initial-class.mjs";
+} from "../scripts/features/initial-class/domain.mjs";
 import { ON_DELETE, ON_UPDATE, PRE_CREATE } from "./fixtures/initial-class-1.6.5.mjs";
+import { createFakeContext, createFakePlatform } from "./support/fake-platform.mjs";
 
 const cls = (id, inicial = false) => ({ id, inicial });
 
@@ -103,13 +105,14 @@ function makeItemClass() {
  * (client-backend.mjs:262), and a deleted item leaves the collection before _onDelete (client-backend.mjs:463-465).
  */
 function makeWorld(ItemClass, { patched }) {
+  // Only the verbatim 1.6.5 methods read these globals; the patch reads the platform.
   globalThis.game = { userId: USER };
   globalThis.foundry = {
     utils: { hasProperty: (obj, key) => obj != null && Object.prototype.hasOwnProperty.call(obj, key) }
   };
-  globalThis.CONFIG = { Item: { documentClass: ItemClass } };
+  const platform = createFakePlatform({ classes: { item: ItemClass }, userId: USER });
   const errors = [];
-  if (patched) patch.apply();
+  if (patched) patch.install(createFakeContext(patch, platform));
   const actor = {
     documentName: "Actor",
     type: "character",
@@ -156,7 +159,7 @@ function makeWorld(ItemClass, { patched }) {
     await flush();
   };
   const initial = () => actor.items.filter((i) => i.system.inicial).map((i) => i.id);
-  return { actor, add, mark, remove, initial, errors };
+  return { actor, add, mark, remove, initial, errors, platform };
 }
 
 test("baseline: without the patch the simulation reproduces cases A and C of the issue", async () => {
@@ -287,7 +290,7 @@ test("creation: vehicles and statblock imports are left alone", async () => {
   assert.equal(npcDoc.system.inicial, false);
 });
 
-test("apply leaves unrecognized system code untouched", () => {
+test("install leaves unrecognized system code untouched", () => {
   const Base = Object.getPrototypeOf(makeItemClass());
   const changed = new Function(
     "Item",
@@ -298,14 +301,8 @@ ${ON_DELETE}
 }`
   )(Base);
   const { _onUpdate: onUpdate, _onDelete: onDelete } = changed.prototype;
-  const warn = console.warn;
-  const warnings = [];
-  console.warn = (...args) => warnings.push(args.join(" "));
-  try {
-    makeWorld(changed, { patched: true });
-  } finally {
-    console.warn = warn;
-  }
+  const { platform } = makeWorld(changed, { patched: true });
+  const warnings = platform.logs.filter(({ level }) => level === "warn").map(({ args }) => args.join(" "));
   assert.equal(changed.prototype._onUpdate, onUpdate);
   assert.notEqual(changed.prototype._onDelete, onDelete);
   assert.equal(Object.prototype.hasOwnProperty.call(changed, "_preCreateOperation"), false);

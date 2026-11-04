@@ -1,12 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import patch, {
+import patch from "../scripts/features/ability-dialog-cost/index.mjs";
+import {
   baseActivationCost,
   computeDialogCost,
   dialogCostIsBroken
-} from "../scripts/patches/ability-dialog-cost.mjs";
+} from "../scripts/features/ability-dialog-cost/domain.mjs";
 import { unwrap } from "../scripts/lib/source.mjs";
-import { createProbeContext } from "./support/fake-platform.mjs";
+import { createFakeContext, createFakePlatform } from "./support/fake-platform.mjs";
 
 test("base activation cost is the positive numeric ativacao.custo", () => {
   assert.equal(baseActivationCost({ ativacao: { custo: 3 } }), 3);
@@ -87,9 +88,7 @@ function buildDialog({ rows = [], initialCost, adjustment }) {
 }
 
 function installSystem() {
-  const hooks = {};
   globalThis.HTMLElement = FakeElement;
-  globalThis.Hooks = { on: (name, fn) => (hooks[name] ??= []).push(fn) };
   class AbilityUseDialog {
     constructor(item) {
       this.item = item;
@@ -103,14 +102,14 @@ function installSystem() {
       for (const input of effects) {
         const cost = input.closest("div").querySelector("input[type=hidden]");
         if (!cost) continue;
-        if (input.type == "checkbox") {
+        if (input.type === "checkbox") {
           if (!input.checked) continue;
           if (Number(cost.value)) {
             totalCost += Number(cost.value);
             hasCost = true;
           }
         } else {
-          if (input.value == 0) continue;
+          if (Number(input.value) === 0) continue;
           if (Number(cost.value)) {
             totalCost += Number(cost.value) * input.value;
             hasCost = true;
@@ -129,22 +128,22 @@ function installSystem() {
       }
     }
   }
-  globalThis.tormenta20 = { applications: { AbilityUseDialog } };
-  const render = (app, html) => (hooks.renderAbilityUseDialog ?? []).forEach((fn) => fn(app, html));
-  return { AbilityUseDialog, render };
+  const platform = createFakePlatform({
+    t20: { applications: { AbilityUseDialog } },
+    sources: {
+      "AbilityUseDialog#_onInputChange": () => AbilityUseDialog.prototype._onInputChange,
+      "AbilityUseDialog.create": () => AbilityUseDialog.create
+    }
+  });
+  const render = (app, html) => platform.callHook("renderAbilityUseDialog", app, html);
+  return { AbilityUseDialog, render, ctx: createFakeContext(patch, platform) };
 }
 
 test("integration: initial total uses only base cost plus pre-checked rows, clicks do not double count", (t) => {
   t.after(() => {
-    delete globalThis.tormenta20;
-    delete globalThis.Hooks;
     delete globalThis.HTMLElement;
   });
-  const { AbilityUseDialog, render } = installSystem();
-  const ctx = createProbeContext(patch, {
-    "AbilityUseDialog#_onInputChange": () => AbilityUseDialog.prototype._onInputChange,
-    "AbilityUseDialog.create": () => AbilityUseDialog.create
-  });
+  const { AbilityUseDialog, render, ctx } = installSystem();
   assert.equal(patch.isNeeded(ctx), true);
 
   // Case A before the patch: the system pre-added a disabled=false +2 enhancement (initialCost 3); checking it shows 5.
@@ -152,7 +151,7 @@ test("integration: initial total uses only base cost plus pre-checked rows, clic
   new AbilityUseDialog({ system: { ativacao: { custo: 1 } } })._onInputChange([before.root]);
   assert.equal(before.total.value, 5);
 
-  patch.apply();
+  patch.install(ctx);
   assert.equal(patch.isNeeded(ctx), true, "probe inspects the system code below the wrapper");
   assert.equal(typeof unwrap(AbilityUseDialog.prototype._onInputChange), "function");
 

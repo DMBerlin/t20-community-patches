@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import patch, {
+import patch from "../scripts/features/skill-modifier-attributes/index.mjs";
+import {
   MODIFIER_KEYS,
   combineDiagnosis,
   diagnoseProbe,
@@ -11,7 +12,8 @@ import patch, {
   modifierFormula,
   probeInput,
   refreshModifiers
-} from "../scripts/patches/skill-modifier-attributes.mjs";
+} from "../scripts/features/skill-modifier-attributes/domain.mjs";
+import { createFakeContext, createFakePlatform } from "./support/fake-platform.mjs";
 
 /** Test simplify: resolves @key from data and sums integer terms joined by "+"; returns a string, like the system. */
 function simplify(formula, data) {
@@ -147,36 +149,26 @@ function setup(prepareAtributos = prepareAtributos165, { withSimplify = true, wi
     const schema = fakeSchema();
     Object.defineProperty(Character, "schema", { get: () => schema });
   }
-  globalThis.CONFIG = { Actor: { dataModels: { character: Character } } };
-  if (withSimplify) globalThis.tormenta20 = { dice: { simplifyRollFormula: simplify } };
-  return Character;
-}
-
-function teardown() {
-  delete globalThis.CONFIG;
-  delete globalThis.tormenta20;
+  const t20 = withSimplify ? { dice: { simplifyRollFormula: simplify } } : undefined;
+  const platform = createFakePlatform({ config: { Actor: { dataModels: { character: Character } } }, t20 });
+  return { Character, t20, ctx: createFakeContext(patch, platform) };
 }
 
 test("isNeeded: 1.6.5 is present/high; refreshing with fields that keep references is fixed/high; a throwing one only counts the change application", () => {
-  try {
-    setup();
-    assert.deepEqual([patch.isNeeded().bug, patch.isNeeded().confidence], ["present", "high"]);
-    const Character = setup(function (options) {
-      prepareAtributos165.call(this, options);
-      refreshModifiers(this, options.rollData, simplify);
-    });
-    for (const [, g, f] of MODIFIER_KEYS) Character.schema.getField(`modificadores.${g}.${f}`).element._replaceDataRefs = (raw) => raw;
-    assert.deepEqual([patch.isNeeded().bug, patch.isNeeded().confidence], ["fixed", "high"]);
-    const boom = () => {
-      throw new Error("boom");
-    };
-    setup(boom, { withFields: false });
-    assert.equal(patch.isNeeded().bug, "unknown");
-    setup(boom);
-    assert.equal(patch.isNeeded().bug, "present");
-  } finally {
-    teardown();
-  }
+  let { ctx } = setup();
+  assert.deepEqual([patch.isNeeded(ctx).bug, patch.isNeeded(ctx).confidence], ["present", "high"]);
+  const refreshing = setup(function (options) {
+    prepareAtributos165.call(this, options);
+    refreshModifiers(this, options.rollData, simplify);
+  });
+  ctx = refreshing.ctx;
+  for (const [, g, f] of MODIFIER_KEYS) refreshing.Character.schema.getField(`modificadores.${g}.${f}`).element._replaceDataRefs = (raw) => raw;
+  assert.deepEqual([patch.isNeeded(ctx).bug, patch.isNeeded(ctx).confidence], ["fixed", "high"]);
+  const boom = () => {
+    throw new Error("boom");
+  };
+  assert.equal(patch.isNeeded(setup(boom, { withFields: false }).ctx).bug, "unknown");
+  assert.equal(patch.isNeeded(setup(boom).ctx).bug, "present");
 });
 
 test("probeInput: the 1.6.5 method leaves every key stale", () => {
@@ -203,52 +195,37 @@ function makeActor(Character) {
 }
 
 test("integration: the skill uses the final attribute; PV keeps ignoring the temporary bonus", () => {
-  try {
-    const Character = setup();
-    const before = makeActor(Character);
-    prepareDerived(before);
-    assert.equal(before.acro, 8);
-    patch.apply();
-    const actor = makeActor(Character);
-    prepareDerived(actor);
-    assert.equal(actor.acro, 10);
-    assert.equal(actor.pv, 10);
-    const noBonus = Object.assign(makeActor(Character), { atributos: { con: { value: 0, bonus: 0 }, des: { value: 3, bonus: 0 } } });
-    prepareDerived(noBonus);
-    assert.equal(noBonus.acro, 6);
-  } finally {
-    teardown();
-  }
+  const { Character, ctx } = setup();
+  const before = makeActor(Character);
+  prepareDerived(before);
+  assert.equal(before.acro, 8);
+  patch.install(ctx);
+  const actor = makeActor(Character);
+  prepareDerived(actor);
+  assert.equal(actor.acro, 10);
+  assert.equal(actor.pv, 10);
+  const noBonus = Object.assign(makeActor(Character), { atributos: { con: { value: 0, bonus: 0 }, des: { value: 3, bonus: 0 } } });
+  prepareDerived(noBonus);
+  assert.equal(noBonus.acro, 6);
 });
 
-test("apply: requires the system's simplifyRollFormula; the wrapper keeps this/return and never throws", () => {
-  try {
-    setup(prepareAtributos165, { withSimplify: false });
-    assert.throws(() => patch.apply(), /simplifyRollFormula/);
-    const sentinel = {};
-    let seen;
-    const Character = setup(function (options) {
-      seen = this;
-      prepareAtributos165.call(this, options);
-      return sentinel;
-    });
-    globalThis.tormenta20.dice.simplifyRollFormula = () => {
-      throw new Error("boom");
-    };
-    patch.apply();
-    const actor = makeActor(Character);
-    actor.modificadores = new Proxy({}, { get() { throw new Error("broken"); } });
-    const warn = console.warn;
-    console.warn = () => {};
-    try {
-      assert.equal(actor.prepareAtributos({ rollData: { pericia: 0 } }), sentinel);
-    } finally {
-      console.warn = warn;
-    }
-    assert.equal(seen, actor);
-  } finally {
-    teardown();
-  }
+test("install: requires the system's simplifyRollFormula; the wrapper keeps this/return and never throws", () => {
+  assert.throws(() => patch.install(setup(prepareAtributos165, { withSimplify: false }).ctx), /simplifyRollFormula/);
+  const sentinel = {};
+  let seen;
+  const { Character, t20, ctx } = setup(function (options) {
+    seen = this;
+    prepareAtributos165.call(this, options);
+    return sentinel;
+  });
+  t20.dice.simplifyRollFormula = () => {
+    throw new Error("boom");
+  };
+  patch.install(ctx);
+  const actor = makeActor(Character);
+  actor.modificadores = new Proxy({}, { get() { throw new Error("broken"); } });
+  assert.equal(actor.prepareAtributos({ rollData: { pericia: 0 } }), sentinel);
+  assert.equal(seen, actor);
 });
 
 test("formulaRefs/isAttributeRef: attribute keys, atributoChave and atributos paths defined in the data", () => {
@@ -306,41 +283,27 @@ function prepareDerived14(Character) {
 }
 
 test("integration (Foundry 14): the change keeps @des and the skill uses the final attribute", () => {
-  try {
-    const Character = setup();
-    const before = prepareDerived14(Character);
-    assert.deepEqual(before.modificadores.pericias.geral, ["3"]);
-    assert.equal(before.acro, 8);
-    patch.apply();
-    const actor = prepareDerived14(Character);
-    assert.deepEqual(actor.modificadores.pericias.geral, ["@des"]);
-    assert.equal(actor.acro, 10);
-    assert.equal(actor.pv, 10);
-  } finally {
-    teardown();
-  }
+  const { Character, ctx } = setup();
+  const before = prepareDerived14(Character);
+  assert.deepEqual(before.modificadores.pericias.geral, ["3"]);
+  assert.equal(before.acro, 8);
+  patch.install(ctx);
+  const actor = prepareDerived14(Character);
+  assert.deepEqual(actor.modificadores.pericias.geral, ["@des"]);
+  assert.equal(actor.acro, 10);
+  assert.equal(actor.pv, 10);
 });
 
 test("isNeeded (Foundry 14): a refreshing prepareAtributos is still present while changes resolve attributes", () => {
-  try {
-    const refreshing = function (options) {
-      prepareAtributos165.call(this, options);
-      refreshModifiers(this, options.rollData, simplify);
-    };
-    setup(refreshing);
-    assert.deepEqual([patch.isNeeded().bug, patch.isNeeded().confidence], ["present", "high"]);
-    setup(refreshing, { withFields: false });
-    assert.equal(patch.isNeeded().bug, "unknown");
-  } finally {
-    teardown();
-  }
+  const refreshing = function (options) {
+    prepareAtributos165.call(this, options);
+    refreshModifiers(this, options.rollData, simplify);
+  };
+  const { ctx } = setup(refreshing);
+  assert.deepEqual([patch.isNeeded(ctx).bug, patch.isNeeded(ctx).confidence], ["present", "high"]);
+  assert.equal(patch.isNeeded(setup(refreshing, { withFields: false }).ctx).bug, "unknown");
 });
 
-test("apply: fails when the modifier list fields are missing", () => {
-  try {
-    setup(prepareAtributos165, { withFields: false });
-    assert.throws(() => patch.apply(), /list fields not found/);
-  } finally {
-    teardown();
-  }
+test("install: fails when the modifier list fields are missing", () => {
+  assert.throws(() => patch.install(setup(prepareAtributos165, { withFields: false }).ctx), /list fields not found/);
 });

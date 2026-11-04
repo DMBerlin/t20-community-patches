@@ -1,14 +1,16 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import patch, {
+import patch from "../scripts/features/spell-cost-zero/index.mjs";
+import {
   CANTRIP_COST,
   cantripLocks,
   isDisposableEffect,
   safeUsageCost,
   systemReadsAsCantrip,
   withSafeCost
-} from "../scripts/patches/spell-cost-zero.mjs";
-import dialogCostPatch from "../scripts/patches/ability-dialog-cost.mjs";
+} from "../scripts/features/spell-cost-zero/domain.mjs";
+import dialogCostPatch from "../scripts/features/ability-dialog-cost/index.mjs";
+import { createFakePlatform, createTestKernel } from "./support/fake-platform.mjs";
 
 test("the system's cantrip test also matches -1 and a missing cost", () => {
   for (const custo of [CANTRIP_COST, -1, undefined]) assert.equal(systemReadsAsCantrip(custo), true, String(custo));
@@ -172,7 +174,7 @@ class FakeElement {
     let scope = [this];
     for (const part of parts) {
       const found = new Set();
-      for (const node of scope) for (const el of node.descendants()) if (el.matches(part)) found.add(el);
+      for (const node of scope) [...node.descendants()].filter((el) => el.matches(part)).forEach((el) => found.add(el));
       scope = [...found];
     }
     const order = [...this.descendants()];
@@ -242,17 +244,13 @@ function buildDialog({ rows, initialCost }) {
 }
 
 function installSystem() {
-  const hooks = {};
   globalThis.HTMLElement = FakeElement;
   globalThis.document = { createElement: (tag) => new FakeElement(tag) };
-  globalThis.game = { i18n: { localize: (key) => key } };
-  globalThis.Hooks = { on: (name, fn) => (hooks[name] ??= []).push(fn) };
   class ItemT20 {
     _allApplicableOnUseEffects() {
       return this._effects;
     }
   }
-  globalThis.CONFIG = { Item: { documentClass: ItemT20 } };
   class AbilityUseDialog {
     constructor(item, element) {
       this.item = item;
@@ -267,14 +265,14 @@ function installSystem() {
       for (const input of effects) {
         const cost = input.closest("div").querySelector("input[type=hidden]");
         if (!cost) continue;
-        if (input.type == "checkbox") {
+        if (input.type === "checkbox") {
           if (!input.checked) continue;
           if (Number(cost.value)) {
             totalCost += Number(cost.value);
             hasCost = true;
           }
         } else {
-          if (input.value == 0) continue;
+          if (Number(input.value) === 0) continue;
           if (Number(cost.value)) {
             totalCost += Number(cost.value) * input.value;
             hasCost = true;
@@ -289,13 +287,14 @@ function installSystem() {
     }
     static async create() {}
   }
-  globalThis.tormenta20 = { applications: { AbilityUseDialog } };
-  const render = (app, html) => (hooks.renderAbilityUseDialog ?? []).forEach((fn) => fn(app, html));
-  return { ItemT20, AbilityUseDialog, render };
+  const platform = createFakePlatform({ classes: { item: ItemT20 }, t20: { applications: { AbilityUseDialog } } });
+  const kernel = createTestKernel({ platform });
+  const render = (app, html) => platform.callHook("renderAbilityUseDialog", app, html);
+  return { ItemT20, AbilityUseDialog, render, platform, install: (feature) => kernel.install(feature) };
 }
 
 function cleanup() {
-  for (const key of ["tormenta20", "Hooks", "HTMLElement", "document", "game", "CONFIG"]) delete globalThis[key];
+  for (const key of ["HTMLElement", "document"]) delete globalThis[key];
 }
 
 /** Spell (base 1 PM) with two Truques A and B and a paid power (+2 PM), all checked when the dialog opens. */
@@ -337,8 +336,8 @@ for (const withDialogCost of [true, false]) {
   test(`integration: Truque locks and restores enhancements ${withDialogCost ? "with" : "without"} ability-dialog-cost`, (t) => {
     t.after(cleanup);
     const system = installSystem();
-    if (withDialogCost) dialogCostPatch.apply();
-    patch.apply();
+    if (withDialogCost) system.install(dialogCostPatch);
+    system.install(patch);
     // Without #7, the system pre-adds the +2 of the paid row to data-initial-cost (T20:6748-6755).
     const d = openTwoCantrips(system, withDialogCost ? 1 : 3);
 
@@ -360,8 +359,8 @@ for (const withDialogCost of [true, false]) {
 
 test("integration: cost 0 rows get an empty hidden cost and quantity rows are locked by a Truque", (t) => {
   t.after(cleanup);
-  const { AbilityUseDialog, render } = installSystem();
-  patch.apply();
+  const { AbilityUseDialog, render, install } = installSystem();
+  install(patch);
 
   const spell = { id: "luz", type: "magia", system: { ativacao: { custo: 1 } } };
   spell.applicableOnUseEffects = ["T", "zero", "dice", "foco"].map((id) => ({ id, parent: { id: id === "foco" ? "poder" : "luz" } }));
@@ -412,8 +411,8 @@ test("integration: cost 0 rows get an empty hidden cost and quantity rows are lo
 
 test("integration: a lone pre-checked Truque shows a total of 0 when the dialog opens", (t) => {
   t.after(cleanup);
-  const { AbilityUseDialog, render } = installSystem();
-  patch.apply();
+  const { AbilityUseDialog, render, install } = installSystem();
+  install(patch);
   const spell = { id: "s", type: "magia", applicableOnUseEffects: [{ id: "T", parent: { id: "s" } }] };
   const d = buildDialog({ rows: [{ id: "T", cost: CANTRIP_COST, checked: true }], initialCost: 1 });
   render(new AbilityUseDialog(spell, [d.root]), [d.root]);
@@ -422,8 +421,8 @@ test("integration: a lone pre-checked Truque shows a total of 0 when the dialog 
 
 test("integration: spells hand -1 to the system as text without touching stored effects", (t) => {
   t.after(cleanup);
-  const { ItemT20 } = installSystem();
-  patch.apply();
+  const { ItemT20, platform, install } = installSystem();
+  install(patch);
   const { stored, actor, ownEffect, spellClone } = fakeWorld();
   const spell = Object.assign(new ItemT20(), { id: spellClone.id, type: "magia", actor, _effects: [ownEffect, stored] });
   const [own, foco] = spell._allApplicableOnUseEffects();
@@ -437,8 +436,7 @@ test("integration: spells hand -1 to the system as text without touching stored 
   assert.equal(stored.system.abilityUse.custo, -1);
 
   const broken = { id: "b", system: { abilityUse: { custo: -1 } }, clone: () => { throw new Error("boom"); } };
-  const warn = t.mock.method(console, "warn", () => {});
   const result = Object.assign(new ItemT20(), { type: "magia", actor, _effects: [broken] })._allApplicableOnUseEffects();
   assert.equal(result[0], broken, "a failed clone keeps the system's behavior");
-  assert.equal(warn.mock.callCount(), 1);
+  assert.equal(platform.logs.filter((l) => l.level === "warn").length, 1);
 });

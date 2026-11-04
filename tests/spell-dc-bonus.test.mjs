@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import patch, {
+import patch from "../scripts/features/spell-dc-bonus/index.mjs";
+import {
   KNOWN_PREPARE_FINAL_ATTRIBUTES,
   arcaneEmpowermentBonus,
   casterProgress,
@@ -11,10 +12,11 @@ import patch, {
   isShippedEmpowermentEffect,
   normalizeSource,
   withoutEmpowermentEffects
-} from "../scripts/patches/spell-dc-bonus.mjs";
+} from "../scripts/features/spell-dc-bonus/domain.mjs";
 import { matchesSource } from "../scripts/lib/spell-source.mjs";
 import { resolvePatchState } from "../scripts/registry.mjs";
 import { markWrapper } from "../scripts/lib/source.mjs";
+import { createFakeContext, createFakePlatform } from "./support/fake-platform.mjs";
 
 const SOURCE_165 = `prepareFinalAttributes() {
 		const item = this.parent;
@@ -188,20 +190,15 @@ function withFoundry(prepareFinalAttributes, fn) {
       return list;
     }
   }
-  globalThis.CONFIG = {
-    Item: { dataModels: { magia: SpellData }, documentClass: Item },
-    Actor: { dataModels: { character: CharacterData } }
-  };
-  globalThis.foundry = fakeFoundry;
-  try {
-    return fn({ ItemData, CharacterData, Item, setList: (l) => (list = l) });
-  } finally {
-    delete globalThis.CONFIG;
-    delete globalThis.foundry;
-  }
+  const platform = createFakePlatform({
+    classes: { item: Item },
+    config: { Item: { dataModels: { magia: SpellData } }, Actor: { dataModels: { character: CharacterData } } }
+  });
+  const ctx = createFakeContext(patch, platform);
+  return fn({ ctx, ItemData, CharacterData, Item, setList: (l) => (list = l) });
 }
 
-const compile = (source) => new Function(`return class { ${source} }`)().prototype.prepareFinalAttributes;
+const compile = (source) => new Function("foundry", `return class { ${source} }`)(fakeFoundry).prototype.prepareFinalAttributes;
 const counting = () => {
   const spy = function () {
     spy.calls++;
@@ -212,10 +209,10 @@ const counting = () => {
 
 test("isNeeded never runs unrecognized code", () => {
   const spy = counting();
-  withFoundry(spy, () => {
-    assert.deepEqual([patch.isNeeded().bug, spy.calls], ["unknown", 0]);
+  withFoundry(spy, ({ ctx }) => {
+    assert.deepEqual([patch.isNeeded(ctx).bug, spy.calls], ["unknown", 0]);
     for (const [mode, systemVersion] of [["off", "1.6.5"], ["auto", "99.0.0"]]) {
-      const state = resolvePatchState({ patch, mode, systemId: "tormenta20", systemVersion, probe: patch.isNeeded });
+      const state = resolvePatchState({ patch, mode, systemId: "tormenta20", systemVersion, probe: () => patch.isNeeded(ctx) });
       assert.equal(state.diagnosis.bug, "unknown");
     }
     assert.equal(spy.calls, 0);
@@ -226,11 +223,11 @@ test("isNeeded never runs unrecognized code", () => {
     calls++;
     return inner.apply(this, args);
   };
-  withFoundry(foreign, () => {
-    assert.equal(patch.isNeeded().bug, "unknown");
+  withFoundry(foreign, ({ ctx }) => {
+    assert.equal(patch.isNeeded(ctx).bug, "unknown");
     assert.equal(calls, 0);
   });
-  withFoundry(undefined, () => assert.equal(patch.isNeeded().bug, "unknown"));
+  withFoundry(undefined, ({ ctx }) => assert.equal(patch.isNeeded(ctx).bug, "unknown"));
 });
 
 test("isNeeded runs the recognized 1.6.5 body, also behind a module wrapper", () => {
@@ -240,12 +237,12 @@ test("isNeeded runs the recognized 1.6.5 body, also behind a module wrapper", ()
     calls++;
     return original.apply(this, args);
   }, original);
-  withFoundry(original, () => {
-    const d = patch.isNeeded();
+  withFoundry(original, ({ ctx }) => {
+    const d = patch.isNeeded(ctx);
     assert.deepEqual([d.bug, d.confidence], ["present", "low"]);
   });
-  withFoundry(known, () => {
-    assert.equal(patch.isNeeded().bug, "present");
+  withFoundry(known, ({ ctx }) => {
+    assert.equal(patch.isNeeded(ctx).bug, "present");
     assert.equal(calls, 0);
   });
 });
@@ -261,9 +258,9 @@ function prepare(CharacterData, actor) {
   return data.attributes.cd;
 }
 
-test("apply(): Fortalecimento Arcano is a single passive bonus and leaves the usage list", () => {
-  withFoundry(compile(SOURCE_165), ({ CharacterData, Item, setList }) => {
-    patch.apply();
+test("install(): Fortalecimento Arcano is a single passive bonus and leaves the usage list", () => {
+  withFoundry(compile(SOURCE_165), ({ ctx, CharacterData, Item, setList }) => {
+    patch.install(ctx);
     const arcanista = cls("Arcanista", 5, ID.arcanista);
     const a = empowerment("a");
     const b = empowerment("b");
@@ -302,9 +299,9 @@ test("apply(): Fortalecimento Arcano is a single passive bonus and leaves the us
   });
 });
 
-test("apply(): save DC of characters and NPCs", () => {
-  withFoundry(compile(SOURCE_165), ({ ItemData }) => {
-    patch.apply();
+test("install(): save DC of characters and NPCs", () => {
+  withFoundry(compile(SOURCE_165), ({ ctx, ItemData }) => {
+    patch.install(ctx);
     const dc = (actor, itemType, resistencia) => {
       const data = Object.assign(new ItemData(), { parent: { type: itemType, isOwned: true, parent: actor }, resistencia: { txt: "Vontade parcial", cd: 0, ...resistencia } });
       data.prepareFinalAttributes();

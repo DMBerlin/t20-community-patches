@@ -58,7 +58,8 @@ const FAIL = [
   ["features/a/ui/x.mjs", "export const x = () => ui.notifications;", "defaultMessage"],
   ["kernel/k.mjs", "export const x = () => CONFIG.Item;", "defaultMessage"],
   ["main.mjs", "export const x = () => game.settings;", "defaultMessage"],
-  ["patches/suppressed-usage-effects.mjs", "export const x = () => CONFIG.Actor;", "defaultMessage"],
+  ["features/patches.mjs", "export const x = () => CONFIG.Actor;", "defaultMessage"],
+  ["features/patches.mjs", 'import "../platform/x.mjs";', "featurePlatform"],
   ["rules/mana-limit.mjs", "export const x = () => Hooks;", "defaultMessage"]
 ];
 
@@ -67,7 +68,8 @@ const PASS = [
   ["features/a/domain.mjs", 'import "./domain/y.mjs"; import "../../lib/x.mjs"; import "../../kernel/k.mjs";'],
   ["features/a/domain.mjs", 'export const f = () => import("./domain/y.mjs");'],
   ["features/a/integration.mjs", 'import "./domain.mjs"; import "../../lib/x.mjs"; import "../../services/s.mjs"; export const x = (ctx) => ctx.platform.user;'],
-  ["patches/legacy.mjs", "export const x = () => game.user;"],
+  ["rules/legacy.mjs", "export const x = () => game.user;"],
+  ["features/patches.mjs", 'import a from "./a/index.mjs"; import b from "./b/index.mjs"; export const P = [a, b];'],
   ["features/a/ui/x.mjs", 'import "../integration.mjs"; import "../domain/y.mjs";'],
   ["lib/x.mjs", 'import "./y.mjs"; import "../kernel/k.mjs"; export const x = () => import("./z.mjs");'],
   ["platform/x.mjs", 'import "../services/s.mjs"; export const x = () => game.user;'],

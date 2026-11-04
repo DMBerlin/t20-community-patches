@@ -11,7 +11,7 @@ import {
   hashText,
   matchesDefect,
   sourceEffectId
-} from "../scripts/patches/enchantment-data.mjs";
+} from "../scripts/features/enchantment-data/domain/index.mjs";
 import { CLOAK_SOURCE, UPGRADE_SOURCES } from "./fixtures/enchantment-data-1.6.5.mjs";
 
 const textKey = (text) => [hashText(text), text.length];

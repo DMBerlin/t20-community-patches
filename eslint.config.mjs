@@ -13,8 +13,6 @@ const NO_GLOBALS = [
   "scripts/lib/**",
   "scripts/features/**",
   "scripts/main.mjs",
-  "scripts/patches/suppressed-usage-effects.mjs",
-  "scripts/patches/linked-usage-effects.mjs",
   "scripts/rules/mana-limit.mjs",
   "scripts/rules/use-dialog-guard.mjs"
 ];
@@ -58,9 +56,9 @@ export default [
     plugins: { t20 },
     rules: { "t20/layer-boundaries": "error" }
   },
-  // Pastas legadas: só avisos até as fases 6 e 7 (#88, #89). A fase 7 leva scripts/apps para LAYERED.
+  // Pastas legadas: só avisos até a fase 7 (#89), que leva scripts/apps para LAYERED.
   {
-    files: ["scripts/patches/**", "scripts/rules/**", "scripts/apps/**", "scripts/*.mjs"],
+    files: ["scripts/rules/**", "scripts/apps/**", "scripts/*.mjs"],
     rules: {
       "max-lines": ["warn", { max: 300 }],
       "max-depth": "warn",

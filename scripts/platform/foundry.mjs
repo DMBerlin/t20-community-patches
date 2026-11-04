@@ -6,6 +6,7 @@
 import { MODULE_ID } from "../lib/module.mjs";
 import { unwrap } from "../lib/source.mjs";
 import { findClassMember, parseMethodLabel } from "../lib/method-label.mjs";
+import { createCanvas, createConfig, createCore, createHandlebars, settingsOf } from "./ports.mjs";
 
 /**
  * @typedef {object} SystemClasses   Document classes registered by the system (CONFIG.<Doc>.documentClass).
@@ -31,10 +32,13 @@ import { findClassMember, parseMethodLabel } from "../lib/method-label.mjs";
  * @property {{on(name: string, fn: Function): number, once(name: string, fn: Function): number,
  *   off(name: string, id: number|Function): void}} hooks
  * @property {{isGM(): boolean, isActiveGM(): boolean, id(): string|undefined, targets(): Iterable<object>}} user
- * @property {{fromUuid(uuid: string): Promise<object|null>, fromUuidSync(uuid: string): object|null,
+ * @property {{fromUuid(uuid: string, options?: object): Promise<object|null>,
+ *   fromUuidSync(uuid: string, options?: object): object|null,
  *   actors(): object, messages(): object, combats(): object, packs(): object, scenes(): object}} documents
  * @property {{getProperty: Function, setProperty: Function, hasProperty: Function, deepClone: Function,
- *   randomID: Function, escapeHTML: Function, expandObject: Function, slugify(text: string): string}} utils
+ *   randomID: Function, escapeHTML: Function, expandObject: Function, slugify(text: string): string,
+ *   getRoute(path: string): string, debounce(fn: Function, ms: number): Function,
+ *   enrichHTML(html: string, options?: object): Promise<string>}} utils
  * @property {{Roll: Function, ChatMessage: Function, DialogV2: object}} dice
  * @property {{data(form: HTMLFormElement): object}} forms  FormDataExtended#object of a form.
  * @property {{info(...a: unknown[]), warn(...a: unknown[]), error(...a: unknown[])}} log  Prefixed with the module id.
@@ -43,6 +47,11 @@ import { findClassMember, parseMethodLabel } from "../lib/method-label.mjs";
  *   (scripts/lib/method-label.mjs), under the module's wrappers; null when not found. The static audit (#90) answers
  *   the same labels from the bundle's text.
  * @property {{setApi(api: object): void, systemCompatibility(): {minimum?: string, verified?: string}|undefined}} module
+ * @property {import("./ports.mjs").ConfigPort} config
+ * @property {import("./ports.mjs").CorePort} core
+ * @property {(namespace: string) => import("./ports.mjs").NamespaceSettings} settingsOf  Another namespace's settings.
+ * @property {{tokenHud(): object|undefined}} canvas
+ * @property {{helpers(): Record<string, Function>|undefined}} handlebars
  */
 
 /**
@@ -164,14 +173,17 @@ function createUtils() {
     randomID: (length) => foundry.utils.randomID(length),
     escapeHTML: (value) => foundry.utils.escapeHTML(value),
     expandObject: (object) => foundry.utils.expandObject(object),
-    slugify: (text) => String(text).slugify()
+    slugify: (text) => String(text).slugify(),
+    getRoute: (path) => foundry.utils.getRoute(path),
+    debounce: (fn, ms) => foundry.utils.debounce(fn, ms),
+    enrichHTML: (html, options) => foundry.applications.ux.TextEditor.implementation.enrichHTML(html, options)
   });
 }
 
 function createDocuments() {
   return Object.freeze({
-    fromUuid: (uuid) => foundry.utils.fromUuid(uuid),
-    fromUuidSync: (uuid) => foundry.utils.fromUuidSync(uuid),
+    fromUuid: (uuid, options) => foundry.utils.fromUuid(uuid, options),
+    fromUuidSync: (uuid, options) => foundry.utils.fromUuidSync(uuid, options),
     actors: () => game.actors,
     messages: () => game.messages,
     combats: () => game.combats,
@@ -261,6 +273,11 @@ export function createPlatform() {
     log: createLog(),
     sourceOf,
     sourceOfMethod,
-    module: createModule()
+    module: createModule(),
+    config: createConfig(),
+    core: createCore(),
+    settingsOf,
+    canvas: createCanvas(),
+    handlebars: createHandlebars()
   });
 }

@@ -25,7 +25,7 @@ import {
   statsFor,
   tooltipHtml
 } from "../scripts/rules/item-effective-stats.mjs";
-import { adjustThreatEffect } from "../scripts/patches/threatening-crit-range.mjs";
+import { adjustThreatEffect } from "../scripts/features/threatening-crit-range/domain.mjs";
 
 /* -------------------------------------------- */
 /*  Fixtures                                    */

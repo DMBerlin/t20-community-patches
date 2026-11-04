@@ -6,7 +6,7 @@ import {
   raceDialogDiagnosis,
   selectionState,
   toggleSelection
-} from "../scripts/patches/racial-attribute-choice.mjs";
+} from "../scripts/features/racial-attribute-choice/domain.mjs";
 
 // Excerpt of ItemT20.prototype._onCreateOwnedRace in tormenta20 1.6.5.
 const SOURCE_165 = `async _onCreateOwnedRace(data, actorData, isNPC) {

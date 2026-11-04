@@ -6,7 +6,7 @@ import {
   selectConditionSources,
   shouldRebuild,
   shouldSubstitute
-} from "../scripts/patches/status-effects-compendium.mjs";
+} from "../scripts/features/status-effects-compendium/domain.mjs";
 
 const condition = (id, folder = CONDITION_FOLDER) => ({ _id: id, name: id, statuses: [id], folder });
 

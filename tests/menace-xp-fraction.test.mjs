@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import patch, {
+import patch from "../scripts/features/menace-xp-fraction/index.mjs";
+import {
   KNOWN_SOURCES,
   applyMenaceXp,
   diagnoseMenaceXp,
@@ -8,13 +9,16 @@ import patch, {
   fractionalCrXp,
   probeMenaceXp,
   recognizeSource
-} from "../scripts/patches/menace-xp-fraction.mjs";
+} from "../scripts/features/menace-xp-fraction/domain.mjs";
 import { resolvePatchState } from "../scripts/registry.mjs";
+import { createFakeContext, createFakePlatform } from "./support/fake-platform.mjs";
+
+const contextFor = (proto) =>
+  createFakeContext(patch, createFakePlatform({ config: { Actor: { dataModels: { npc: { prototype: proto } } } } }));
 
 function parseFraction(fraction) {
-  let [num, denom] = String(fraction).split("/").map(Number);
-  denom = isNaN(denom) || denom === 0 ? 1 : denom;
-  return num / denom;
+  const [num, denom] = String(fraction).split("/").map(Number);
+  return num / (isNaN(denom) || denom === 0 ? 1 : denom);
 }
 
 /** Behaves like MenaceData#prepareBaseData of 1.6.5 (with the bug), counting calls. */
@@ -81,21 +85,18 @@ test("unrecognized code is never executed by the probe", () => {
 
 test("unrecognized code is never executed in any mode or version", () => {
   const fn = buggyDouble();
-  globalThis.CONFIG = { Actor: { dataModels: { npc: { prototype: { prepareBaseData: fn } } } } };
-  try {
-    const cases = [["off", "1.6.5"], ["off", "1.7.0"], ["auto", "1.7.0"], ["force", "1.7.0"]];
-    for (const [mode, systemVersion] of cases) {
-      const result = resolvePatchState({ patch, mode, systemId: "tormenta20", systemVersion, probe: patch.isNeeded });
-      assert.equal(result.diagnosis.bug, "unknown", `${mode} ${systemVersion}`);
-    }
-    assert.equal(
-      resolvePatchState({ patch, mode: "auto", systemId: "tormenta20", systemVersion: "1.7.0", probe: patch.isNeeded }).state,
-      "applied-guarded"
-    );
-    assert.equal(fn.calls, 0);
-  } finally {
-    delete globalThis.CONFIG;
+  const ctx = contextFor({ prepareBaseData: fn });
+  const probe = () => patch.isNeeded(ctx);
+  const cases = [["off", "1.6.5"], ["off", "1.7.0"], ["auto", "1.7.0"], ["force", "1.7.0"]];
+  for (const [mode, systemVersion] of cases) {
+    const result = resolvePatchState({ patch, mode, systemId: "tormenta20", systemVersion, probe });
+    assert.equal(result.diagnosis.bug, "unknown", `${mode} ${systemVersion}`);
   }
+  assert.equal(
+    resolvePatchState({ patch, mode: "auto", systemId: "tormenta20", systemVersion: "1.7.0", probe }).state,
+    "applied-guarded"
+  );
+  assert.equal(fn.calls, 0);
 });
 
 test("recognized buggy code is diagnosed as present with high confidence", () => {
@@ -127,22 +128,23 @@ test("recognized code is fixed only when both NDs are right", () => {
 test("the wrapper corrects ND 1/4 and 1/2 after the original and keeps its result", () => {
   const fn = buggyDouble();
   const proto = { prepareBaseData: fn };
-  globalThis.CONFIG = { Actor: { dataModels: { npc: { prototype: proto } } } };
-  try {
-    patch.apply();
-    const xpFor = (nd) => {
-      const data = Object.assign(Object.create(proto), {
-        attributes: { nd, nivel: { value: 0, xp: { value: 0 } } },
-        prepareBaseAtributos() {}
-      });
-      data.prepareBaseData();
-      return [data.attributes.nivel.value, data.attributes.nivel.xp.value];
-    };
-    assert.deepEqual(xpFor("1/4"), [1, 250]);
-    assert.deepEqual(xpFor("1/2"), [1, 500]);
-    assert.deepEqual(xpFor("5"), [5, 5000]);
-    assert.deepEqual(xpFor("1/3"), [1, 1000]);
-  } finally {
-    delete globalThis.CONFIG;
-  }
+  patch.install(contextFor(proto));
+  const xpFor = (nd) => {
+    const data = Object.assign(Object.create(proto), {
+      attributes: { nd, nivel: { value: 0, xp: { value: 0 } } },
+      prepareBaseAtributos() {}
+    });
+    data.prepareBaseData();
+    return [data.attributes.nivel.value, data.attributes.nivel.xp.value];
+  };
+  assert.deepEqual(xpFor("1/4"), [1, 250]);
+  assert.deepEqual(xpFor("1/2"), [1, 500]);
+  assert.deepEqual(xpFor("5"), [5, 5000]);
+  assert.deepEqual(xpFor("1/3"), [1, 1000]);
+});
+
+test("install without the npc data model only warns and patches nothing", () => {
+  const ctx = contextFor(undefined);
+  assert.doesNotThrow(() => patch.install(ctx));
+  assert.ok(ctx.platform.logs.some((entry) => entry.level === "warn"));
 });

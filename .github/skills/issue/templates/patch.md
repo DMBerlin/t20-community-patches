@@ -35,8 +35,8 @@
 
 ### Arquivos
 
-- Novo: `scripts/patches/<patch-id>.mjs`, no modelo dos patches existentes.
-- `scripts/patches/index.mjs`: importar e adicionar a `PATCHES` (contrato `Feature`, ver "Contrato de uma feature" no `AGENTS.md`).
+- Nova pasta `scripts/features/<patch-id>/`, no modelo dos patches existentes: `index.mjs` (cabeçalho e default export), `domain.mjs` (funções puras) e `integration.mjs` (`install(ctx)` e `isNeeded(ctx)`, sem globais do Foundry).
+- `scripts/features/patches.mjs`: importar e adicionar a `PATCHES` (contrato `Feature`, ver "Contrato de uma feature" no `AGENTS.md`).
 - `group`: `<conditions|sheet-effects|usage-effects|items|settings|actor|combat>`; `issue`: <n>.
 - Configurações próprias, se houver: `settings: [{ key, scope, type, default, … }]`, registradas só quando o patch é aplicado.
 - Faixa: `system: { id: "tormenta20", affected: { minimum: "<v>", maximum: "<v>" } }`.
@@ -52,8 +52,18 @@
 ### Código completo
 
 ```js
-// scripts/patches/<patch-id>.mjs
-<código completo>
+// scripts/features/<patch-id>/index.mjs
+<cabeçalho (bug, correção, T20:<linha>) e export default { id, group, issue, system, sources, isNeeded, install }>
+```
+
+```js
+// scripts/features/<patch-id>/domain.mjs
+<funções puras exportadas>
+```
+
+```js
+// scripts/features/<patch-id>/integration.mjs
+<install(ctx) e isNeeded(ctx), só com ctx>
 ```
 
 ### Funções puras exportadas para teste

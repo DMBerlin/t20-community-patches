@@ -1,12 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import patch, {
+import patch from "../scripts/features/partner-combatant/index.mjs";
+import {
   COMBATANT_ATTACK,
   ENTRIES,
   combatantLevelIsCorrect,
   combatantLevelIsWrong,
   fixCombatant
-} from "../scripts/patches/partner-combatant.mjs";
+} from "../scripts/features/partner-combatant/domain.mjs";
 import {
   classifyEntry,
   embeddedItemFixes,
@@ -44,7 +45,7 @@ test("fixCombatant: the 1.6.5 pack gets +2/+3/+4, as numbers, and the extra atta
   assert.deepEqual(attack(out), { [INICIANTE]: [2], [VETERANO]: [3], [MESTRE]: [4], [EXTRA]: [] });
   for (const id of [INICIANTE, VETERANO, MESTRE]) assert.equal(typeof out.effects[level(id)].system.changes[0].value, "number");
   // Nothing else changes: every effect keeps its _id, and the other fields stay equal.
-  const strip = (src) => src.effects.map((e) => ({ ...e, system: { ...e.system, changes: e.system.changes.map(({ value, ...c }) => c) } }));
+  const strip = (src) => src.effects.map((e) => ({ ...e, system: { ...e.system, changes: e.system.changes.map(({ value: _value, ...c }) => c) } }));
   assert.deepEqual(strip(out), strip(cleanItem(COMBATENTE)));
   assert.equal(fixCombatant(out), null);
 });

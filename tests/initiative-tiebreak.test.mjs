@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import patch, {
+import patch from "../scripts/features/initiative-tiebreak/index.mjs";
+import {
   ABILITY_FLAG,
   FLAG,
   KNOWN_SORT,
@@ -10,10 +11,11 @@ import patch, {
   initiativeAbility,
   initiativeSkill,
   tiebreakValues
-} from "../scripts/patches/initiative-tiebreak.mjs";
+} from "../scripts/features/initiative-tiebreak/domain.mjs";
 import { resolvePatchState } from "../scripts/registry.mjs";
 import { MODULE_ID } from "../scripts/lib/module.mjs";
 import { markWrapper, sourceFingerprint } from "../scripts/lib/source.mjs";
+import { createFakeContext, createFakePlatform } from "./support/fake-platform.mjs";
 
 // Copied verbatim from Foundry v14 client/documents/combat.mjs:569-573 (also public/scripts/foundry.mjs:51676-51680).
 const CORE_SORT_SOURCE = `_sortCombatants(a, b) {
@@ -144,16 +146,11 @@ test("KNOWN_SORT is the fingerprint of the Foundry v14 core sort", () => {
 /*  Foundry integration with fakes              */
 /* -------------------------------------------- */
 
-function setProperty(object, key, value) {
-  const parts = key.split(".");
-  let target = object;
-  for (const part of parts.slice(0, -1)) target = target[part] ??= {};
-  target[parts.at(-1)] = value;
-}
-
-/** Fake globals: a core Combat whose sort has the core source, a system subclass, and a Hooks registry. */
+/**
+ * Fake platform: a core Combat whose sort has the core source, a system subclass, and the CONFIG.Combat it reads.
+ * `config` and `classes` are read live, so a test can change them after this call.
+ */
 function installFakes({ sort } = {}) {
-  const hooks = {};
   // Build a method with the exact core source so Function#toString matches.
   const core = sort ?? new Function(`return ({ ${CORE_SORT_SOURCE} })._sortCombatants;`)();
   class Combat {}
@@ -162,13 +159,17 @@ function installFakes({ sort } = {}) {
   class Combatant {
     _getInitiativeFormula() {}
   }
-  globalThis.Hooks = { on: (name, fn) => (hooks[name] ??= []).push(fn) };
-  globalThis.foundry = { documents: { Combat, Combatant }, utils: { setProperty } };
-  globalThis.CONFIG = {
-    Combat: { documentClass: CombatT20, initiative: { formula: SYSTEM_FORMULA, decimals: 2 } },
-    Combatant: { documentClass: Combatant }
+  const config = { Combat: { initiative: { formula: SYSTEM_FORMULA, decimals: 2 } } };
+  const classes = { combat: CombatT20, combatant: Combatant };
+  const platform = createFakePlatform({ classes, config, core: { Combat, Combatant } });
+  const ctx = createFakeContext(patch, platform);
+  /** Hooks registered by the patch, by name. */
+  const hooks = () => {
+    const byName = {};
+    for (const { name, fn } of platform.hookCalls) (byName[name] ??= []).push(fn);
+    return byName;
   };
-  return { hooks, CombatT20 };
+  return { ctx, platform, config, classes, Combatant, CombatT20, hooks };
 }
 
 test("isNeeded reads the core sort without running it", () => {
@@ -177,15 +178,17 @@ test("isNeeded reads the core sort without running it", () => {
     calls++;
     return 0;
   };
-  installFakes({ sort: fake });
+  const unknown = installFakes({ sort: fake });
   for (const [mode, systemVersion] of [["auto", "1.6.5"], ["off", "1.6.5"], ["auto", "1.7.0"], ["force", "1.7.0"]]) {
-    const { diagnosis } = resolvePatchState({ patch, mode, systemId: "tormenta20", systemVersion, probe: patch.isNeeded });
+    const { diagnosis } = resolvePatchState({
+      patch, mode, systemId: "tormenta20", systemVersion, probe: () => patch.isNeeded(unknown.ctx)
+    });
     assert.equal(diagnosis.bug, "unknown");
     assert.equal(diagnosis.confidence, "low");
   }
-  installFakes();
+  const known = installFakes();
   const { state, diagnosis } = resolvePatchState({
-    patch, mode: "auto", systemId: "tormenta20", systemVersion: "1.6.5", probe: patch.isNeeded
+    patch, mode: "auto", systemId: "tormenta20", systemVersion: "1.6.5", probe: () => patch.isNeeded(known.ctx)
   });
   assert.equal(state, "applied");
   assert.equal(diagnosis.bug, "present");
@@ -194,46 +197,40 @@ test("isNeeded reads the core sort without running it", () => {
 });
 
 test("isNeeded is unknown when the system or another module overrides the sort or the formula", () => {
-  const { CombatT20 } = installFakes();
-  CombatT20.prototype._sortCombatants = function (a, b) {
+  const overridden = installFakes();
+  overridden.CombatT20.prototype._sortCombatants = function (_a, _b) {
     return 0;
   };
-  assert.equal(patch.isNeeded().bug, "unknown");
+  assert.equal(patch.isNeeded(overridden.ctx).bug, "unknown");
 
   const fakes = installFakes();
   const wrapped = fakes.CombatT20.prototype._sortCombatants;
   fakes.CombatT20.prototype._sortCombatants = markWrapper((a, b) => wrapped(a, b), wrapped);
-  assert.equal(patch.isNeeded().bug, "present");
+  assert.equal(patch.isNeeded(fakes.ctx).bug, "present");
 
-  installFakes();
-  CONFIG.Combat.initiative.formula = "2d20kh";
-  assert.equal(patch.isNeeded().bug, "unknown");
+  const formula = installFakes();
+  formula.config.Combat.initiative.formula = "2d20kh";
+  assert.equal(patch.isNeeded(formula.ctx).bug, "unknown");
 
-  installFakes();
-  CONFIG.Combatant.documentClass = class extends foundry.documents.Combatant {
+  const combatant = installFakes();
+  combatant.classes.combatant = class extends combatant.Combatant {
     _getInitiativeFormula() {}
   };
-  assert.equal(patch.isNeeded().bug, "unknown");
+  assert.equal(patch.isNeeded(combatant.ctx).bug, "unknown");
 });
 
-test("apply does nothing on unrecognized code", () => {
-  const { hooks, CombatT20 } = installFakes();
-  CONFIG.Combat.initiative.formula = "2d20kh";
+test("install does nothing on unrecognized code", () => {
+  const { ctx, config, hooks, CombatT20 } = installFakes();
+  config.Combat.initiative.formula = "2d20kh";
   const before = CombatT20.prototype._sortCombatants;
-  const warn = console.warn;
-  console.warn = () => {};
-  try {
-    patch.apply();
-  } finally {
-    console.warn = warn;
-  }
+  patch.install(ctx);
   assert.equal(CombatT20.prototype._sortCombatants, before);
-  assert.deepEqual(hooks, {});
+  assert.deepEqual(hooks(), {});
 });
 
 test("the saved skill keeps the order when the skill changes; a new result saves the new skill", () => {
-  const { hooks, CombatT20 } = installFakes();
-  patch.apply();
+  const { ctx, hooks, CombatT20 } = installFakes();
+  patch.install(ctx);
   const sort = CombatT20.prototype._sortCombatants;
   const make = (id, skill, des = 0) => ({ id, initiative: null, flags: {}, actor: actorWith(skill, { des }) });
   const a = make("a", 2);
@@ -243,7 +240,7 @@ test("the saved skill keeps the order when the skill changes; a new result saves
   const all = [a, b, c, d];
   const write = (combatant, initiative) => {
     const changed = { initiative };
-    for (const hook of hooks.preUpdateCombatant) hook(combatant, changed, {}, "user");
+    for (const hook of hooks().preUpdateCombatant) hook(combatant, changed, {}, "user");
     combatant.initiative = changed.initiative;
     combatant.flags = { [MODULE_ID]: { ...combatant.flags[MODULE_ID], ...changed.flags?.[MODULE_ID] } };
   };
@@ -279,23 +276,23 @@ test("the saved skill keeps the order when the skill changes; a new result saves
   assert.equal(order(), "d,c,y,x,b,a");
 
   const changed = { name: "Renamed" };
-  for (const hook of hooks.preUpdateCombatant) hook(c, changed, {}, "user");
+  for (const hook of hooks().preUpdateCombatant) hook(c, changed, {}, "user");
   assert.deepEqual(changed, { name: "Renamed" });
 });
 
 test("preCreateCombatant saves the skill when the combatant is created with a result", () => {
-  const { hooks } = installFakes();
-  patch.apply();
+  const { ctx, hooks } = installFakes();
+  patch.install(ctx);
   const updates = [];
   const combatant = { actor: actorWith(7, { des: 2 }), updateSource: (u) => updates.push(u) };
-  for (const hook of hooks.preCreateCombatant) hook(combatant, { initiative: 12 }, {}, "user");
-  for (const hook of hooks.preCreateCombatant) hook(combatant, { tokenId: "t" }, {}, "user");
+  for (const hook of hooks().preCreateCombatant) hook(combatant, { initiative: 12 }, {}, "user");
+  for (const hook of hooks().preCreateCombatant) hook(combatant, { tokenId: "t" }, {}, "user");
   assert.deepEqual(updates, [{ [`flags.${MODULE_ID}.${FLAG}`]: 7, [`flags.${MODULE_ID}.${ABILITY_FLAG}`]: 2 }]);
 });
 
 test("the wrapped sort falls back to the original when the tie check throws", () => {
-  const { CombatT20 } = installFakes();
-  patch.apply();
+  const { ctx, CombatT20 } = installFakes();
+  patch.install(ctx);
   const sort = CombatT20.prototype._sortCombatants;
   const hostile = { id: "z", initiative: 15, get flags() { throw new Error("boom"); } };
   assert.ok(sort(hostile, { id: "a", initiative: 15, flags: {} }) > 0);

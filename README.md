@@ -117,11 +117,11 @@ Regras do livro que o sistema não aplica. Cada uma tem um ajuste próprio na ab
 
 As convenções completas estão em [`AGENTS.md`](AGENTS.md).
 
-- Cada correção fica em um arquivo próprio em `scripts/patches/` e precisa ser registrada em `scripts/patches/index.mjs`, com:
+- Cada correção fica numa pasta própria, `scripts/features/<id>/` (`index.mjs`, `domain.mjs` com a lógica pura e `integration.mjs` com a integração), e precisa ser registrada em `scripts/features/patches.mjs`, com:
   - `group`: um dos `GROUPS`;
   - `issue`;
   - `system.affected`: as versões verificadas;
-  - `install(ctx)`: instala a correção com o contexto injetado (`ctx.platform`, `ctx.wrap`, `ctx.setting`); os globais do Foundry só são lidos em `scripts/platform/`. O `apply()` sem contexto é legado;
+  - `install(ctx)`: instala a correção com o contexto injetado (`ctx.platform`, `ctx.wrap`, `ctx.setting`); os globais do Foundry só são lidos em `scripts/platform/`;
   - sempre que possível, `isNeeded(ctx)`: um teste síncrono, seguro no `init`, que devolve um diagnóstico `{ bug, confidence, evidence }` (ou o booleano legado). Um teste que só lê código-fonte nunca devolve "corrigido" com confiança alta;
   - opcionalmente, `guarded` (o `install()` só age quando o bug aparece) e `lateProbe(ctx)` (diagnóstico depois do `ready`).
 - Uma correção não importa outra: o código puro compartilhado fica em `scripts/lib/`, o código com estado vira um serviço em `scripts/services/` (declarado em `services` e lido em `ctx.services`), e o estado ou a configuração de outra correção é lido por `ctx.features`, declarado em `interactsWith`.

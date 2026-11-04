@@ -69,13 +69,13 @@ Se a sessão foi aberta fora de uma worktree do projeto, avise e use a `main`.
 
 Leia **apenas** estes trechos. São os pontos que qualquer tarefa toca:
 
-1. `scripts/features/index.mjs`: a lista `FEATURES` (patches de `scripts/patches/index.mjs`, depois as regras), na ordem de instalação, com `after`.
+1. `scripts/features/index.mjs`: a lista `FEATURES` (patches de `scripts/features/patches.mjs`, cada um em `scripts/features/<id>/`, depois as regras), na ordem de instalação, com `after`.
 2. `scripts/kernel/lifecycle.mjs` (`bootFeatures`): onde o estado é resolvido e o `install()` é chamado; `scripts/main.mjs` só liga o `init` e o `ready`.
 3. `scripts/registry.mjs`: só as assinaturas e os comentários de `resolvePatchState` e `shouldNotify`, mais os estados possíveis.
-4. A lista de arquivos: `ls scripts scripts/patches scripts/apps tests tools .github/skills`.
+4. A lista de arquivos: `ls scripts scripts/features scripts/apps tests tools .github/skills`.
 
 Guarde, em uma linha cada:
-- o ciclo de vida de um patch: setting → `resolvePatchState` (versão + `isNeeded`) → `install()` (o `apply()`) no `init` → aviso no `ready`; regras: `settings` registradas → `install(ctx)`;
+- o ciclo de vida de um patch: setting → `resolvePatchState` (versão + `isNeeded`) → `install(ctx)` no `init` → aviso no `ready`; regras: `settings` registradas → `install(ctx)`;
 - os patches existentes e os grupos deles.
 
 ## 4. Backlog

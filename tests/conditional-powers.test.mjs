@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {
   CONDITIONAL_POWERS, findRule, summarizeLoadout, evaluateCondition, isConditionSuppressed, ownsFanatic,
   diagnose
-} from "../scripts/patches/conditional-powers.mjs";
+} from "../scripts/features/conditional-powers/domain.mjs";
 
 const rule = (item) => CONDITIONAL_POWERS.find((r) => r.item === item);
 const weapon = (system, extra = {}) => ({ type: "arma", name: "Arma", ...extra, system: { proficiencia: "marcial", ...system } });

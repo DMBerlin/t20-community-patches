@@ -8,8 +8,9 @@ import {
   pickProneChange,
   planProneChange
 } from "../scripts/lib/prone.mjs";
-import patch, { diagnoseProneChanges, isBuggyProneChange, toAdditive } from "../scripts/patches/prone-defense.mjs";
-import { createFakePlatform, createTestKernel } from "./support/fake-platform.mjs";
+import patch from "../scripts/features/prone-defense/index.mjs";
+import { diagnoseProneChanges, isBuggyProneChange, toAdditive } from "../scripts/features/prone-defense/domain.mjs";
+import { createFakeContext, createFakePlatform, createTestKernel } from "./support/fake-platform.mjs";
 
 const change = (type, value, phase = "initial", extra = {}) => ({ key: OUTROS_KEY, type, value, phase, priority: 20, ...extra });
 
@@ -163,17 +164,11 @@ test("toAdditive copies the change without touching the original", () => {
 });
 
 test("lateProbe (1.6.6): reads Caído from CONFIG.statusEffects; nothing new while CONFIG.T20.conditions exists", async () => {
-  const previous = globalThis.CONFIG;
   const changes = [{ key: OUTROS_KEY, value: -5, type: "downgrade" }];
   const statusEffects = { caido: { id: "caido", _source: { system: { changes } } } };
-  try {
-    globalThis.CONFIG = { T20: {}, statusEffects };
-    assert.deepEqual(await patch.lateProbe(), diagnoseProneChanges(changes));
-    globalThis.CONFIG = { T20: { conditions: { caido: { system: { changes } } } }, statusEffects };
-    assert.equal(await patch.lateProbe(), undefined);
-  } finally {
-    globalThis.CONFIG = previous;
-  }
+  const probe = (t20Config) => patch.lateProbe(createFakeContext(patch, createFakePlatform({ t20Config, statusEffects })));
+  assert.deepEqual(await probe({}), diagnoseProneChanges(changes));
+  assert.equal(await probe({ conditions: { caido: { system: { changes } } } }), undefined);
 });
 
 test("diagnoses the shipped Caído data", () => {
@@ -212,7 +207,7 @@ class FakeActor {
     copies.sort((a, b) => a.priority - b.priority);
     for (const c of copies) {
       try {
-        CONFIG.ActiveEffect.documentClass.applyChange(this, c, {});
+        FakeEffect.applyChange(this, c, {});
       } catch {
         /* the core would surface the error; the pass continues */
       }
@@ -234,9 +229,9 @@ class FakeEffect {
     return { [c.key]: value };
   }
 }
-globalThis.foundry = { documents: { Actor: FakeActor } };
-globalThis.CONFIG = { Actor: { documentClass: FakeActor }, ActiveEffect: { documentClass: FakeEffect } };
-const kernel = createTestKernel({ platform: createFakePlatform({ classes: { actor: FakeActor, activeEffect: FakeEffect } }) });
+const kernel = createTestKernel({
+  platform: createFakePlatform({ classes: { actor: FakeActor, activeEffect: FakeEffect }, core: { Actor: FakeActor } })
+});
 kernel.install(patch);
 const applied = kernel.service("applied-changes");
 

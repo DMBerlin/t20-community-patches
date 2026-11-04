@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import patch, {
+import patch from "../scripts/features/race-data/index.mjs";
+import {
   ENTRIES,
   fixDwarf,
   fixElf,
@@ -11,7 +12,7 @@ import patch, {
   outdatedItemIds,
   racialUnset,
   senseIsCorrect
-} from "../scripts/patches/race-data.mjs";
+} from "../scripts/features/race-data/domain.mjs";
 import { classify, classifyEntry, effectSignature, embeddedItemFixes, sameSignature, summarize } from "../scripts/lib/compendium-copy/index.mjs";
 import { applyUpdate, cleanItem, withEffect, withExtraEffect } from "./fixtures/clean-source.mjs";
 import {
@@ -23,7 +24,6 @@ import {
 } from "./fixtures/race-data-1.6.5.mjs";
 
 const SENSES = "system.attributes.sentidos.value";
-globalThis.foundry ??= { utils: { randomID: () => "RANDOM0000000000" } };
 const WALK = "system.attributes.movement.walk.base";
 const newId = () => "NEWEFFECT0000000";
 const fixed = {

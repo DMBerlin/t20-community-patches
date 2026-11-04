@@ -9,7 +9,7 @@ import { compareFingerprints, pickBaseline, probePatch, runAudit } from "../tool
 import { findClassMember, parseMethodLabel } from "../scripts/lib/method-label.mjs";
 import { createPlatform } from "../scripts/platform/foundry.mjs";
 import { markWrapper, sourceFingerprint, stripComments } from "../scripts/lib/source.mjs";
-import { PATCHES } from "../scripts/patches/index.mjs";
+import { PATCHES } from "../scripts/features/patches.mjs";
 
 const CODE = readFileSync(new URL("./fixtures/audit-bundle.mjs.txt", import.meta.url), "utf8");
 const BASELINE = JSON.parse(readFileSync(new URL("./fixtures/audit-baseline.json", import.meta.url), "utf8"));

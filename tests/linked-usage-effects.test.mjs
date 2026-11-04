@@ -1,9 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import patch, { OwnChangeList, findLinkedCandidates, linkedValues } from "../scripts/patches/linked-usage-effects.mjs";
+import patch from "../scripts/features/linked-usage-effects/index.mjs";
+import { OwnChangeList, findLinkedCandidates, linkedValues } from "../scripts/features/linked-usage-effects/domain.mjs";
 import { plainText } from "../scripts/lib/text.mjs";
-import { PATCHES } from "../scripts/patches/index.mjs";
-import appendedUsageChanges from "../scripts/patches/appended-usage-changes.mjs";
+import { PATCHES } from "../scripts/features/patches.mjs";
+import appendedUsageChanges from "../scripts/features/appended-usage-changes/index.mjs";
 import { createFakeContext, createFakePlatform } from "./support/fake-platform.mjs";
 
 test("plainText strips tags, decodes common entities and collapses whitespace", () => {
@@ -160,18 +161,16 @@ function systemApplyOnUse(item, applied) {
     const qty = applied[ef.id];
     for (const ch of ef.system.changes) {
       ch.value = ch.value.toString();
-      if (ch.key === "efeito") {
-        let tef = optEffectList.find((e) => e.name === ch.value);
-        if (!tef && ef.origin?.match(/Item.[A-Za-z0-9]+/)) tef = undefined;
-        if (tef) effectList.push(tef);
-      }
+      // The system's fallback for an origin "Item.<id>" reads ef.parent.items, which finds nothing in v14.
+      const tef = ch.key === "efeito" ? optEffectList.find((e) => e.name === ch.value) : undefined;
+      if (tef) effectList.push(tef);
       const addToChange = (t) => {
         if (ch.key.startsWith("@")) {
           t.system.changes.forEach((c) => {
-            if (c.key == ch.key) c.value = Number(c.value) + (Number(ch.value * qty) || ch.value);
+            if (c.key === ch.key) c.value = Number(c.value) + (Number(ch.value * qty) || ch.value);
           });
         } else if (!ch.key.startsWith("+")) {
-          const include = ef.system.abilityUse?.aumenta ? t.system.changes.some((i) => i.key == ch.key) : true;
+          const include = ef.system.abilityUse?.aumenta ? t.system.changes.some((i) => i.key === ch.key) : true;
           if (include) t.system.changes.push({ key: ch.key, value: Number(ch.value * qty) || ch.value, type: ch.type });
         }
       };
@@ -235,19 +234,13 @@ test("with the patch the card carries the isolated linked effects and a clean ma
 
 test("works on the isolated copies made by appended-usage-changes", () => {
   const { Item, rolledClone } = setup();
-  // appended-usage-changes is still a legacy patch (#88) and reads CONFIG.
-  globalThis.CONFIG = { Item: { documentClass: Item } };
-  try {
-    appendedUsageChanges.apply();
-    installPatch(Item);
-    assert.deepEqual(systemApplyOnUse(rolledClone(), ALL).map((e) => e.name), [
-      "Inspiração",
-      "Inspiração (Arte Mágica)",
-      "Inspiração (Esgrima Mágica)"
-    ]);
-  } finally {
-    delete globalThis.CONFIG;
-  }
+  appendedUsageChanges.install(createFakeContext(appendedUsageChanges, createFakePlatform({ classes: { item: Item } })));
+  installPatch(Item);
+  assert.deepEqual(systemApplyOnUse(rolledClone(), ALL).map((e) => e.name), [
+    "Inspiração",
+    "Inspiração (Arte Mágica)",
+    "Inspiração (Esgrima Mágica)"
+  ]);
 });
 
 test("only the selected link is delivered", () => {

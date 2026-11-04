@@ -3,7 +3,7 @@
  * the original in each wrapper chain. `after` never reorders; validateFeatures checks it against this order.
  * Patches come first, then the optional rules (rules only install on Tormenta20).
  */
-import { GROUPS, PATCHES } from "../patches/index.mjs";
+import { GROUPS, PATCHES } from "./patches.mjs";
 import { patchFeature } from "../kernel/feature.mjs";
 import manaQueue from "../rules/mana-queue.mjs";
 import manaLimit from "../rules/mana-limit.mjs";

@@ -1,12 +1,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import patch, { PROBE_EFFECTS, collectModifiedFields, diagnoseFields } from "../scripts/patches/modified-fields-filter.mjs";
+import patch from "../scripts/features/modified-fields-filter/index.mjs";
+import { PROBE_EFFECTS, collectModifiedFields, diagnoseFields } from "../scripts/features/modified-fields-filter/domain.mjs";
+import { createFakeContext, createFakePlatform } from "./support/fake-platform.mjs";
 
 /** Tormenta20 1.6.5 ActorT20#modifiedFields (T20:6952-6962). */
 function modifiedFields165() {
   return this.appliedEffects.reduce((acc, ef) => {
     if (ef.modifiesActor) {
-      for (let ch of ef.changes) {
+      for (const ch of ef.changes) {
         if ([3, 4].includes(ch.value)) continue;
         if (!acc[ch.key]) acc[ch.key] = [];
         acc[ch.key].push({ label: ef.name, value: ch.value, type: ch.type });
@@ -60,19 +62,15 @@ test("diagnoseFields: a partial fix is still present", () => {
   assert.deepEqual(diagnoseFields({ ...fixed, down: [{}] }).evidence, "downgrade listed");
 });
 
-test("apply replaces the getter of the document class and isNeeded reads the original", () => {
+test("install replaces the getter of the document class and isNeeded reads the original", () => {
   class Base {}
   Object.defineProperty(Base.prototype, "modifiedFields", { get: modifiedFields165, configurable: true });
   class Actor extends Base {}
-  globalThis.CONFIG = { Actor: { documentClass: Actor } };
-  try {
-    assert.equal(patch.isNeeded().bug, "present");
-    patch.apply();
-    const actor = Object.assign(new Actor(), { appliedEffects: effects });
-    assert.equal(actor.modifiedFields.def.length, 3);
-    assert.equal(actor.modifiedFields.condi, undefined);
-    assert.equal(patch.isNeeded().bug, "present");
-  } finally {
-    delete globalThis.CONFIG;
-  }
+  const ctx = createFakeContext(patch, createFakePlatform({ classes: { actor: Actor } }));
+  assert.equal(patch.isNeeded(ctx).bug, "present");
+  patch.install(ctx);
+  const actor = Object.assign(new Actor(), { appliedEffects: effects });
+  assert.equal(actor.modifiedFields.def.length, 3);
+  assert.equal(actor.modifiedFields.condi, undefined);
+  assert.equal(patch.isNeeded(ctx).bug, "present");
 });

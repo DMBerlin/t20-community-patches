@@ -27,7 +27,9 @@ const isRestricted = (where) => where?.layer === "features" || where?.layer === 
 export function violation(source, target) {
   if (!source || !target) return null;
   if (source.layer === "features") {
-    if (target.layer === "features" && target.feature && target.feature !== source.feature) return "crossFeature";
+    // Files at the root of scripts/features/ (index.mjs, patches.mjs) are the registries that list the features.
+    const registry = !source.feature;
+    if (!registry && target.layer === "features" && target.feature && target.feature !== source.feature) return "crossFeature";
     if (target.layer === "platform") return "featurePlatform";
   }
   if (source.layer === "lib" && target.layer === "features") return "libFeature";

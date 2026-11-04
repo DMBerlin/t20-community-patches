@@ -12,12 +12,12 @@
  * The bundle is only read as text and parsed; it is never imported or evaluated. Exit code 1 when a fingerprint
  * changed, a source probe failed or a T20 reference is missing.
  */
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
-import { PATCHES } from "../scripts/patches/index.mjs";
+import { PATCHES } from "../scripts/features/patches.mjs";
 import { baselineEntries, runAudit } from "./audit/run.mjs";
 import { formatReport } from "./audit/report.mjs";
 
@@ -33,11 +33,20 @@ function readJson(path, fallback) {
   return existsSync(path) ? JSON.parse(readFileSync(path, "utf8")) : fallback;
 }
 
+/** Every .mjs file under a feature folder, in a stable order. */
+function featureSources(dir) {
+  return readdirSync(dir, { recursive: true })
+    .filter((name) => String(name).endsWith(".mjs"))
+    .sort()
+    .map((name) => readFileSync(join(dir, String(name)), "utf8"));
+}
+
+/** Text of each patch: all files of scripts/features/<id>/. */
 function patchFiles() {
   const files = {};
   for (const patch of PATCHES) {
-    const path = join(ROOT, "scripts/patches", `${patch.id}.mjs`);
-    if (existsSync(path)) files[patch.id] = readFileSync(path, "utf8");
+    const dir = join(ROOT, "scripts/features", patch.id);
+    if (existsSync(dir)) files[patch.id] = featureSources(dir).join("\n");
   }
   return files;
 }

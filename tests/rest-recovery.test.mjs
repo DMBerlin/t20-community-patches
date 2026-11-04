@@ -1,14 +1,16 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import patch, {
+import patch from "../scripts/features/rest-recovery/index.mjs";
+import {
   correctRestArgs,
   diagnoseCareSamples,
   isKnownDescanso,
-  isNeeded,
   measureCareRecovery,
   PROBE_CASES
-} from "../scripts/patches/rest-recovery.mjs";
+} from "../scripts/features/rest-recovery/domain.mjs";
+import { createFakeContext, createFakePlatform } from "./support/fake-platform.mjs";
 
+/* eslint-disable prefer-const, no-unused-vars -- copies of the system method, matched by source */
 // Copy of ActorT20#descanso from tormenta20 1.6.5 (T20:7038-7078), with a comment and different line breaks.
 class Actor165 {
 	// the system's rest method
@@ -43,6 +45,8 @@ class ActorFixed {
 	}
 }
 
+/* eslint-enable prefer-const, no-unused-vars */
+
 function fakeActor(nivel) {
   const calls = [];
   return {
@@ -61,15 +65,7 @@ async function rest(nivel, args) {
   return { pv: actor.calls[0][1], pm: actor.calls[1][1], descricao };
 }
 
-function withConfig(documentClass, fn) {
-  const previous = globalThis.CONFIG;
-  globalThis.CONFIG = { Actor: { documentClass } };
-  try {
-    return fn();
-  } finally {
-    globalThis.CONFIG = previous;
-  }
-}
+const contextFor = (actor) => createFakeContext(patch, createFakePlatform({ classes: { actor } }));
 
 test("correctRestArgs turns prolonged care into one more extra HP per level", () => {
   assert.deepEqual(correctRestArgs([3, 0, 0, true, false, false]), [3, 1, 0, false, false, false]);
@@ -157,30 +153,33 @@ test("isNeeded never runs an unknown descanso", () => {
       await this.modifyTokenAttribute("attributes.pv", 0, true, true);
     }
   }
-  const diagnosis = withConfig(Other, isNeeded);
+  const diagnosis = patch.isNeeded(contextFor(Other));
   assert.equal(runs, 0);
   assert.deepEqual({ bug: diagnosis.bug, confidence: diagnosis.confidence }, { bug: "unknown", confidence: "low" });
-  assert.equal(withConfig(class {}, isNeeded).bug, "unknown");
+  assert.equal(patch.isNeeded(contextFor(class {})).bug, "unknown");
 });
 
 test("isNeeded reports the bug on the 1.6.5 method, also behind this module's wrapper", () => {
   class Actor extends Actor165 {}
-  assert.deepEqual(withConfig(Actor, () => {
-    const { bug, confidence } = isNeeded();
-    return { bug, confidence };
-  }), { bug: "present", confidence: "high" });
-  withConfig(Actor, () => {
-    patch.apply();
-    assert.equal(isNeeded().bug, "present");
-  });
+  const ctx = contextFor(Actor);
+  const { bug, confidence } = patch.isNeeded(ctx);
+  assert.deepEqual({ bug, confidence }, { bug: "present", confidence: "high" });
+  patch.install(ctx);
+  assert.equal(patch.isNeeded(ctx).bug, "present");
 });
 
-test("apply wraps descanso, preserving this and the return value", async () => {
+test("install wraps descanso, preserving this and the return value", async () => {
   class Actor extends Actor165 {}
   Actor.prototype.descanso = Actor165.prototype.descanso;
-  withConfig(Actor, () => patch.apply());
+  patch.install(contextFor(Actor));
   const actor = Object.assign(Object.create(Actor.prototype), fakeActor(4));
   const descricao = await actor.descanso(3, 0, 0, true, false, false);
   assert.equal(descricao, "Guerreiro recuperou 16 PV e 12 PM.");
   assert.deepEqual(actor.calls, [["attributes.pv", 16], ["attributes.pm", 12]]);
+});
+
+test("install without Actor#descanso only warns and patches nothing", () => {
+  const ctx = contextFor(class {});
+  assert.doesNotThrow(() => patch.install(ctx));
+  assert.ok(ctx.platform.logs.some((entry) => entry.level === "warn"));
 });

@@ -1,6 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import patch, { adjustThreatEffect } from "../scripts/patches/threatening-crit-range.mjs";
+import patch from "../scripts/features/threatening-crit-range/index.mjs";
+import { adjustThreatEffect } from "../scripts/features/threatening-crit-range/domain.mjs";
+import { createFakeContext, createFakePlatform } from "./support/fake-platform.mjs";
 import { isThreatMultiply, rewriteThreatChanges, threatRangeIncrease } from "../scripts/lib/threat.mjs";
 
 const keen = () => ({ key: "criticoM", type: "multiply", value: 2, phase: "initial", priority: null });
@@ -126,31 +128,26 @@ test("adjustThreatEffect returns the same effect when there is nothing to do or 
   assert.equal(adjustThreatEffect(noChanges, item), noChanges);
 });
 
-test("apply() rewrites only the rolled weapon's own effects", () => {
+test("install() rewrites only the rolled weapon's own effects", () => {
   let list = [];
   class Item {
     _allApplicableOnUseEffects() {
       return list;
     }
   }
-  globalThis.CONFIG = { Item: { documentClass: Item } };
-  try {
-    patch.apply();
-    const rolled = Object.assign(new Item(), weapon());
-    const other = weapon(19, "p1", "poder");
-    const own = effectOf(rolled, [keen()], "own");
-    const foreign = effectOf(other, [keen()], "foreign");
-    list = [own, foreign];
-    const result = rolled._allApplicableOnUseEffects();
-    assert.equal(result[0].system.changes[0].type, "add");
-    assert.equal(result[0].id, "own");
-    assert.equal(result[1], foreign);
+  patch.install(createFakeContext(patch, createFakePlatform({ classes: { item: Item } })));
+  const rolled = Object.assign(new Item(), weapon());
+  const other = weapon(19, "p1", "poder");
+  const own = effectOf(rolled, [keen()], "own");
+  const foreign = effectOf(other, [keen()], "foreign");
+  list = [own, foreign];
+  const result = rolled._allApplicableOnUseEffects();
+  assert.equal(result[0].system.changes[0].type, "add");
+  assert.equal(result[0].id, "own");
+  assert.equal(result[1], foreign);
 
-    const power = Object.assign(new Item(), weapon(19, "p2", "poder"));
-    const powerOwn = effectOf(power, [keen()]);
-    list = [powerOwn];
-    assert.equal(power._allApplicableOnUseEffects()[0], powerOwn);
-  } finally {
-    delete globalThis.CONFIG;
-  }
+  const power = Object.assign(new Item(), weapon(19, "p2", "poder"));
+  const powerOwn = effectOf(power, [keen()]);
+  list = [powerOwn];
+  assert.equal(power._allApplicableOnUseEffects()[0], powerOwn);
 });

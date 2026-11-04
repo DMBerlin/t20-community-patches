@@ -1,10 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import patch, {
+import patch from "../scripts/features/appended-usage-changes/index.mjs";
+import {
   isolateUsageEffect,
   normalizeAppendedChanges,
   shouldNormalizeAppendedChange
-} from "../scripts/patches/appended-usage-changes.mjs";
+} from "../scripts/features/appended-usage-changes/domain.mjs";
+import { createFakeContext, createFakePlatform } from "./support/fake-platform.mjs";
 
 const plus = { key: "+system.modificadores.dano.geral" };
 
@@ -54,10 +56,10 @@ function systemApplyOnUse(mainEffect, usageEffects, applied) {
       const addToChange = (t) => {
         if (ch.key.startsWith("@")) {
           t.system.changes.forEach((c) => {
-            if (c.key == ch.key) c.value = Number(c.value) + (Number(ch.value * qty) || ch.value);
+            if (c.key === ch.key) c.value = Number(c.value) + (Number(ch.value * qty) || ch.value);
           });
         } else if (ch.key.startsWith("+")) ; else {
-          const include = ef.system.abilityUse?.aumenta ? t.system.changes.some((i) => i.key == ch.key) : true;
+          const include = ef.system.abilityUse?.aumenta ? t.system.changes.some((i) => i.key === ch.key) : true;
           if (include) t.system.changes.push({ key: ch.key, value: Number(ch.value * qty) || ch.value, type: ch.type });
         }
       };
@@ -130,20 +132,15 @@ test("reduced system flow reproduces the doubled and leaked bonus", () => {
 
 test("with the patch the bonus is added once and the live effect is untouched", () => {
   const { marcial, mainEffect, Item } = setup();
-  globalThis.CONFIG = { Item: { documentClass: Item } };
-  try {
-    patch.apply();
-    assert.deepEqual(roll(Item, mainEffect, { marcial: 1, aumento: 2 }), result(3, 3));
-    assert.deepEqual(roll(Item, mainEffect, { marcial: 1 }), result(1, 1));
-    assert.deepEqual(marcial.system.changes, [
-      { key: "+system.modificadores.dano.geral", value: "@modificador", type: "add" }
-    ]);
-    const [copy] = new Item()._allApplicableOnUseEffects();
-    assert.equal(copy.id, marcial.id);
-    assert.equal(copy.parent, marcial.parent);
-  } finally {
-    delete globalThis.CONFIG;
-  }
+  patch.install(createFakeContext(patch, createFakePlatform({ classes: { item: Item } })));
+  assert.deepEqual(roll(Item, mainEffect, { marcial: 1, aumento: 2 }), result(3, 3));
+  assert.deepEqual(roll(Item, mainEffect, { marcial: 1 }), result(1, 1));
+  assert.deepEqual(marcial.system.changes, [
+    { key: "+system.modificadores.dano.geral", value: "@modificador", type: "add" }
+  ]);
+  const [copy] = new Item()._allApplicableOnUseEffects();
+  assert.equal(copy.id, marcial.id);
+  assert.equal(copy.parent, marcial.parent);
 });
 
 test("an effect that cannot be cloned is returned as is", () => {

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import patch, {
+import {
   annotateEntries,
   appendTooltipLine,
   pvMinimumCompensation,
@@ -19,12 +19,13 @@ import patch, {
   removeTooltipLine,
   simulateArray,
   simulateNumericChanges
-} from "../scripts/patches/field-bonuses-breakdown.mjs";
-import tooltipPatch, { hasConditionLines } from "../scripts/patches/field-bonuses-tooltip.mjs";
-import pronePatch from "../scripts/patches/prone-defense.mjs";
+} from "../scripts/features/field-bonuses-breakdown/domain/index.mjs";
+import patch from "../scripts/features/field-bonuses-breakdown/index.mjs";
+import tooltipPatch from "../scripts/features/field-bonuses-tooltip/index.mjs";
+import { hasConditionLines } from "../scripts/features/field-bonuses-tooltip/domain.mjs";
+import pronePatch from "../scripts/features/prone-defense/index.mjs";
 import { fieldBonuses165 } from "./fixtures/field-bonuses-1.6.5.mjs";
-import { createPlatform } from "../scripts/platform/foundry.mjs";
-import { createTestKernel } from "./support/fake-platform.mjs";
+import { createFakePlatform, createTestKernel } from "./support/fake-platform.mjs";
 import { fieldsFromChanges } from "../scripts/lib/applied-breakdown.mjs";
 
 const HELPER_SOURCE = fieldBonuses165.toString();
@@ -339,46 +340,37 @@ function documentClasses() {
   return { PreparedActor, PreparedEffect };
 }
 
+/** The 1.6.5 helper over the system globals of one scenario, passed as parameters instead of globalThis. */
+function systemHelper({ game, fromUuidSync, CONFIG }) {
+  return new Function("game", "fromUuidSync", "CONFIG", "Roll", `return (${HELPER_SOURCE});`)(game, fromUuidSync, CONFIG, FakeRoll);
+}
+
+/** The helper and a fake platform over one actor; `game` is what the system helper reads. */
 function setup(actor) {
   const { PreparedActor, PreparedEffect } = documentClasses();
   Object.setPrototypeOf(actor, PreparedActor.prototype);
-  const helpers = { fieldBonuses: fieldBonuses165 };
-  globalThis.Handlebars = { helpers, registerHelper: (name, fn) => (helpers[name] = fn) };
-  globalThis.game = {
-    actors: { get: (id) => (id === actor._id ? actor : undefined) },
-    i18n: { localize: (key) => key },
-    settings: { get: () => false }
-  };
-  globalThis.fromUuidSync = (uuid) => (uuid === actor.uuid ? actor : null);
-  globalThis.Roll = FakeRoll;
-  globalThis.CONFIG = {
-    T20: { atributos: { for: "Força", des: "Destreza", con: "Constituição" } },
-    Actor: { documentClass: PreparedActor },
-    ActiveEffect: { documentClass: PreparedEffect }
-  };
-  globalThis.foundry = {
-    utils: {
-      fromUuidSync: globalThis.fromUuidSync,
-      getProperty: (obj, path) => path.split(".").reduce((o, k) => o?.[k], obj)
-    },
+  const actors = { get: (id) => (id === actor._id ? actor : undefined) };
+  const fromUuidSync = (uuid) => (uuid === actor.uuid ? actor : null);
+  const t20Config = { atributos: { for: "Força", des: "Destreza", con: "Constituição" } };
+  const game = { actors, i18n: { localize: (key) => key }, settings: { get: () => false } };
+  const helpers = { fieldBonuses: systemHelper({ game, fromUuidSync, CONFIG: { T20: t20Config } }) };
+  const platform = createFakePlatform({
+    classes: { actor: PreparedActor, activeEffect: PreparedEffect },
+    core: { Actor: PreparedActor },
+    documents: { actors: () => actors, fromUuidSync },
     dice: { Roll: FakeRoll },
-    documents: { Actor: PreparedActor }
-  };
-  return helpers;
+    t20Config,
+    helpers,
+    namespaceSettings: { "tormenta20.equipmentSlots": false }
+  });
+  return { helpers, platform, game };
 }
 
-/** Installs patches over the globals of setup() in one kernel; `status` is what ctx.features.isActive reads. */
-function install(patches, status = []) {
-  const kernel = createTestKernel({ platform: createPlatform(), status });
-  for (const p of patches) {
-    if (p.install) kernel.install(p);
-    else p.apply();
-  }
+/** Installs patches on the fake platform in one kernel; `status` is what ctx.features.isActive reads. */
+function install(platform, patches, status = []) {
+  const kernel = createTestKernel({ platform, status });
+  for (const p of patches) kernel.install(p);
   return kernel;
-}
-
-function teardown() {
-  for (const key of ["Handlebars", "game", "fromUuidSync", "Roll", "CONFIG", "foundry"]) delete globalThis[key];
 }
 
 function render(helpers, actor, path) {
@@ -392,22 +384,18 @@ function render(helpers, actor, path) {
 function scenario(options, path, { status = [], patches = [patch], mutate, prepare = false, report } = {}) {
   const actor = makeActor(options);
   mutate?.(actor);
-  const helpers = setup(actor);
-  try {
-    const before = render(helpers, actor, path);
-    const kernel = install(patches, status);
-    if (prepare) {
-      const applied = kernel.service("applied-changes");
-      actor.duringPreparation = (phase) => phase === "initial" && report?.(actor, applied);
-      actor.applyActiveEffects("initial");
-      actor.applyActiveEffects("final");
-    }
-    const after = render(helpers, actor, path);
-    assert.equal(Object.hasOwn(actor, "modifiedFields"), false);
-    return { before, after };
-  } finally {
-    teardown();
+  const { helpers, platform } = setup(actor);
+  const before = render(helpers, actor, path);
+  const kernel = install(platform, patches, status);
+  if (prepare) {
+    const applied = kernel.service("applied-changes");
+    actor.duringPreparation = (phase) => phase === "initial" && report?.(actor, applied);
+    actor.applyActiveEffects("initial");
+    actor.applyActiveEffects("final");
   }
+  const after = render(helpers, actor, path);
+  assert.equal(Object.hasOwn(actor, "modifiedFields"), false);
+  return { before, after };
 }
 
 const PV = "system.attributes.pv";
@@ -551,17 +539,13 @@ test("defenseSources: a persisted condi base gets its own line", () => {
 
 test("the shadow is removed when the helper throws", () => {
   const actor = makeActor();
-  const helpers = setup(actor);
-  try {
-    install([patch]);
-    game.settings.get = () => {
-      throw new Error("boom");
-    };
-    assert.throws(() => render(helpers, actor, DEF), /boom/);
-    assert.equal(Object.hasOwn(actor, "modifiedFields"), false);
-  } finally {
-    teardown();
-  }
+  const { helpers, platform, game } = setup(actor);
+  install(platform, [patch]);
+  game.settings.get = () => {
+    throw new Error("boom");
+  };
+  assert.throws(() => render(helpers, actor, DEF), /boom/);
+  assert.equal(Object.hasOwn(actor, "modifiedFields"), false);
 });
 
 /* -------------------------------------------- */

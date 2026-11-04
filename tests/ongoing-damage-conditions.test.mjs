@@ -8,7 +8,7 @@ import {
   selectOngoingConditions,
   skipDialogEvent,
   testPassed
-} from "../scripts/patches/ongoing-damage-conditions.mjs";
+} from "../scripts/features/ongoing-damage-conditions/domain.mjs";
 
 /** CombatT20#_manageDOTEffects as it appears in tormenta20 1.6.5 (tab-indented class method). */
 const SOURCE_165 = `async _manageDOTEffects(combatant, context) {

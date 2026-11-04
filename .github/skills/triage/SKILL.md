@@ -22,7 +22,7 @@ gh issue list -R DMBerlin/t20-community-patches --state open --limit 200 \
 
 Colete também o contexto que muda a prioridade:
 - a versão instalada do sistema: `node -p "require('$FOUNDRY_DATA/systems/tormenta20/system.json').version"`;
-- os patches já existentes: `scripts/patches/index.mjs` na worktree `main`;
+- os patches já existentes: `PATCHES`, em `scripts/features/patches.mjs`, na worktree `main`;
 - as worktrees em andamento: `git worktree list`; uma issue com worktree aberta está "em andamento";
 - as referências cruzadas no corpo das issues ("Interação com #n", "depende de #n", "Issues relacionadas").
 

@@ -6,7 +6,7 @@ import {
   encumbranceAction,
   shouldCheckAfterItems,
   wrapDescendantCallback
-} from "../scripts/patches/encumbered-status-sync.mjs";
+} from "../scripts/features/encumbered-status-sync/domain.mjs";
 
 const NONE = { create: false, deleteIds: [] };
 

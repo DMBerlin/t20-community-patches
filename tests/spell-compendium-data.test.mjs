@@ -1,6 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import patch, { SPELL_FIXES, applySpellFix, findSpellFix, matchesFingerprint } from "../scripts/patches/spell-compendium-data.mjs";
+import patch from "../scripts/features/spell-compendium-data/index.mjs";
+import { SPELL_FIXES, applySpellFix, findSpellFix, matchesFingerprint } from "../scripts/features/spell-compendium-data/domain.mjs";
+import { createFakeContext, createFakePlatform } from "./support/fake-platform.mjs";
 
 const entryOf = (effect) => SPELL_FIXES.find((e) => e.effect === effect);
 const CURAR = "E5Ynb8D45IFPkqGc";
@@ -137,39 +139,28 @@ test("the wrapper fixes matching spell effects before the original and preserves
       return "result";
     }
   }
-  const original = Model.prototype.prepareBaseData;
-  globalThis.CONFIG = { ActiveEffect: { dataModels: { base: Model } } };
-  try {
-    patch.apply();
-    const make = (effectId, itemType) => {
-      const source = sourceOf(entryOf(effectId));
-      const model = Object.assign(new Model(), preparedOf(source));
-      model.parent = { id: effectId, _source: source, parent: { type: itemType } };
-      return model;
-    };
-    const spell = make(ARMA, "magia");
-    assert.equal(spell.prepareBaseData(1, 2), "result");
-    assert.equal(calls[0].self, spell);
-    assert.deepEqual(calls[0].args, [1, 2]);
-    assert.equal(calls[0].custo, 3);
-    assert.equal(spell.parent._source.system.abilityUse.custo, 5);
+  const platform = createFakePlatform({ config: { ActiveEffect: { dataModels: { base: Model } } } });
+  patch.install(createFakeContext(patch, platform));
+  const make = (effectId, itemType) => {
+    const source = sourceOf(entryOf(effectId));
+    const model = Object.assign(new Model(), preparedOf(source));
+    model.parent = { id: effectId, _source: source, parent: { type: itemType } };
+    return model;
+  };
+  const spell = make(ARMA, "magia");
+  assert.equal(spell.prepareBaseData(1, 2), "result");
+  assert.equal(calls[0].self, spell);
+  assert.deepEqual(calls[0].args, [1, 2]);
+  assert.equal(calls[0].custo, 3);
+  assert.equal(spell.parent._source.system.abilityUse.custo, 5);
 
-    const power = make(ARMA, "poder");
-    power.prepareBaseData();
-    assert.equal(power.abilityUse.custo, 5);
+  const power = make(ARMA, "poder");
+  power.prepareBaseData();
+  assert.equal(power.abilityUse.custo, 5);
 
-    const broken = new Model();
-    broken.abilityUse = { custo: 7 };
-    Object.defineProperty(broken, "parent", { get() { throw new Error("boom"); } });
-    const warn = console.warn;
-    console.warn = () => {};
-    try {
-      assert.equal(broken.prepareBaseData(), "result");
-    } finally {
-      console.warn = warn;
-    }
-  } finally {
-    Model.prototype.prepareBaseData = original;
-    delete globalThis.CONFIG;
-  }
+  const broken = new Model();
+  broken.abilityUse = { custo: 7 };
+  Object.defineProperty(broken, "parent", { get() { throw new Error("boom"); } });
+  assert.equal(broken.prepareBaseData(), "result");
+  assert.equal(platform.logs.length, 1);
 });

@@ -1,7 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { resolvePatchState } from "../scripts/registry.mjs";
-import patch, {
+import patch from "../scripts/features/finesse-agile-weapons/index.mjs";
+import {
   attackPartWithDexterity,
   classifyFinesseSource,
   damagePartsWithDexterity,
@@ -14,7 +15,8 @@ import patch, {
   REFERENCE,
   rollsForCall,
   rollsWithDexterity
-} from "../scripts/patches/finesse-agile-weapons.mjs";
+} from "../scripts/features/finesse-agile-weapons/domain/index.mjs";
+import { createFakeContext, createFakePlatform } from "./support/fake-platform.mjs";
 import { prefersDexterity } from "../scripts/lib/weapons.mjs";
 import { ATTACK_1_6_5 as ATTACK, DAMAGE_1_6_5 as DAMAGE } from "./fixtures/finesse-agile-weapons-1.6.5.mjs";
 import { ATTACK_1_6_6 } from "./fixtures/finesse-agile-weapons-1.6.6.mjs";
@@ -158,9 +160,12 @@ class FakeItem {
     return new Promise((resolve) => setTimeout(() => resolve(parts), this.delay ?? 0));
   }
 }
-globalThis.CONFIG = { Item: { documentClass: FakeItem } };
-globalThis.game = { settings: { get: () => false } };
-patch.apply();
+patch.install(
+  createFakeContext(
+    patch,
+    createFakePlatform({ classes: { item: FakeItem }, namespaceSettings: { "tormenta20.lightFinesseWeapons": false } })
+  )
+);
 
 function makeItem() {
   const roll = (type, name, parts) => ({ type, name, parts });
@@ -262,12 +267,14 @@ test("a rejected evaluation leaves the item intact and the next roll works", asy
 
 /* Behavior probe, run against the system's real methods (1.6.5 and 1.6.6 fixtures). */
 
-globalThis.foundry = {
+// The system's code reads the globals `foundry` and `game`; the fixtures get these fakes through their closure.
+const systemFoundry = {
   utils: {
     isEmpty: (value) => !value || !Object.keys(value).length,
     getProperty: (object, path) => path.split(".").reduce((value, key) => value?.[key], object)
   }
 };
+const systemGame = { settings: { get: () => false } };
 
 let damageRollCalls = 0;
 const damageRollSpy = () => {
@@ -275,17 +282,11 @@ const damageRollSpy = () => {
   return {};
 };
 const systemClass = (attackSource, damageSource) =>
-  new Function("damageRoll", `return class { ${attackSource}\n${damageSource} }`)(damageRollSpy);
+  new Function("damageRoll", "foundry", "game", `return class { ${attackSource}\n${damageSource} }`)(damageRollSpy, systemFoundry, systemGame);
 const VERSIONS = { "1.6.5": [ATTACK, DAMAGE], "1.6.6": [ATTACK_1_6_6, ROLL_DAMAGE_1_6_6] };
 
-function diagnoseWith(ItemClass) {
-  const previous = CONFIG.Item.documentClass;
-  CONFIG.Item.documentClass = ItemClass;
-  try {
-    return patch.isNeeded();
-  } finally {
-    CONFIG.Item.documentClass = previous;
-  }
+function diagnoseWith(ItemClass, platform = createFakePlatform({ classes: { item: ItemClass } })) {
+  return patch.isNeeded(createFakeContext(patch, platform));
 }
 
 test("the behavior probe sees the 1.6.6 fix and the 1.6.5 bug, without rolling anything", async () => {
@@ -319,20 +320,18 @@ test("the behavior probe sees the 1.6.6 fix and the 1.6.5 bug, without rolling a
 
 test("an inconclusive probe falls back to the source diagnosis", () => {
   // Known code that throws while probed (settings not ready yet).
-  const { warn } = console;
-  const { get } = game.settings;
-  const warnings = [];
-  console.warn = (...args) => warnings.push(args);
-  game.settings.get = () => {
+  const { get } = systemGame.settings;
+  const ItemClass = systemClass(...VERSIONS["1.6.6"]);
+  const platform = createFakePlatform({ classes: { item: ItemClass } });
+  systemGame.settings.get = () => {
     throw new Error("settings not ready");
   };
   try {
-    assert.deepEqual(diagnoseWith(systemClass(...VERSIONS["1.6.6"])), diagnoseFinesseSource(ATTACK_1_6_6, ROLL_DAMAGE_1_6_6));
+    assert.deepEqual(diagnoseWith(ItemClass, platform), diagnoseFinesseSource(ATTACK_1_6_6, ROLL_DAMAGE_1_6_6));
   } finally {
-    console.warn = warn;
-    game.settings.get = get;
+    systemGame.settings.get = get;
   }
-  assert.equal(warnings.length, 1);
+  assert.equal(platform.logs.filter((entry) => entry.level === "warn").length, 1);
   assert.equal(diagnoseFinesseBehavior({ attack: "des", damage: "des", lightAttack: "for", lightDamage: "des" }), undefined);
   assert.equal(diagnoseFinesseBehavior({ attack: "des", damage: null, lightAttack: "des", lightDamage: "des" }), undefined);
 });

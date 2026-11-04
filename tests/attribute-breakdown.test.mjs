@@ -1,6 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import patch, { attributeBreakdown, attributeTarget, breakdownHTML, diagnoseTemplate, recordChange } from "../scripts/patches/attribute-breakdown.mjs";
+import patch from "../scripts/features/attribute-breakdown/index.mjs";
+import { attributeBreakdown, attributeTarget, breakdownHTML, diagnoseTemplate, recordChange } from "../scripts/features/attribute-breakdown/domain.mjs";
+import { createFakeContext, createFakePlatform } from "./support/fake-platform.mjs";
 
 const entry = (phase, target, label, delta, type = "add") => ({ phase, target, label, delta, type });
 const rows = ({ lines }) => lines.map((l) => [l.key ?? l.label, l.value]);
@@ -109,11 +111,12 @@ function harness() {
       this.applyActiveEffects("final");
     }
   }
-  globalThis.Hooks = { on: (name, fn) => hooks.push([name, fn]) };
-  globalThis.game = { i18n: { localize: (k) => k.split(".").pop() } };
-  globalThis.CONFIG = { ActiveEffect: { documentClass: Effect }, Actor: { documentClass: Actor } };
-  globalThis.foundry = { utils: { getProperty } };
-  patch.apply();
+  const platform = createFakePlatform({
+    classes: { activeEffect: Effect, actor: Actor },
+    i18n: { localize: (k) => k.split(".").pop(), format: (k) => k, has: () => true }
+  });
+  patch.install(createFakeContext(patch, platform));
+  for (const { name, fn } of platform.hookCalls) hooks.push([name, fn]);
   const actor = (atributos, changes, manual = {}) => {
     const a = new Actor();
     a.uuid = "Actor.x";
@@ -138,62 +141,42 @@ const tip = (el) => [...el.target.dataset.tooltipHtml.matchAll(/<label>(.*?):<\/
 
 test("integration: records what the core applied, per phase, resolved and clamped; skipped changes never show", () => {
   const { hooks, actor, element, render } = harness();
-  try {
-    assert.equal(hooks[0][0], "renderActorSheet");
-    const a = actor({ car: [3], for: [-4], des: [3] }, [
-      { name: "Coroa Majestosa", key: "system.atributos.car.bonus", type: "add", value: 2 },
-      // "@car" resolved by the core with the data of that moment (3), not the final value.
-      { name: "Eco", key: "system.atributos.car.bonus", type: "add", value: (doc) => doc.system.atributos.car.value },
-      { name: "Aura sem alvo próprio", key: "system.atributos.car.bonus", type: "add", value: 9, applies: false },
-      { name: "Penalidade", key: "system.atributos.for.value", type: "add", value: -3 },
-      { name: "Dobro", key: "system.atributos.des.value", type: "multiply", value: 2, phase: "final" }
-    ], { des: 2 });
-    assert.equal(a.system.atributos.car.value, 8);
-    const car = element("car");
-    const str = element("for");
-    const des = element("des");
-    const kept = element("car", { tooltip: "system" });
-    render(a, car, str, des, kept);
-    assert.deepEqual(tip(car), ["Base +3", "Coroa Majestosa +2", "Eco +3", "Total +8"]);
-    assert.deepEqual(tip(str), ["Base -4", "Penalidade -1", "Total -5"]);
-    assert.deepEqual(tip(des), ["Base +3", "Temporary +2", "Dobro (multiply) +5", "Total +10"]);
-    assert.equal(car.target.dataset.tooltipDirection, "LEFT");
-    assert.equal(kept.target.dataset.tooltipHtml, undefined);
+  assert.equal(hooks[0][0], "renderActorSheet");
+  const a = actor({ car: [3], for: [-4], des: [3] }, [
+    { name: "Coroa Majestosa", key: "system.atributos.car.bonus", type: "add", value: 2 },
+    // "@car" resolved by the core with the data of that moment (3), not the final value.
+    { name: "Eco", key: "system.atributos.car.bonus", type: "add", value: (doc) => doc.system.atributos.car.value },
+    { name: "Aura sem alvo próprio", key: "system.atributos.car.bonus", type: "add", value: 9, applies: false },
+    { name: "Penalidade", key: "system.atributos.for.value", type: "add", value: -3 },
+    { name: "Dobro", key: "system.atributos.des.value", type: "multiply", value: 2, phase: "final" }
+  ], { des: 2 });
+  assert.equal(a.system.atributos.car.value, 8);
+  const car = element("car");
+  const str = element("for");
+  const des = element("des");
+  const kept = element("car", { tooltip: "system" });
+  render(a, car, str, des, kept);
+  assert.deepEqual(tip(car), ["Base +3", "Coroa Majestosa +2", "Eco +3", "Total +8"]);
+  assert.deepEqual(tip(str), ["Base -4", "Penalidade -1", "Total -5"]);
+  assert.deepEqual(tip(des), ["Base +3", "Temporary +2", "Dobro (multiply) +5", "Total +10"]);
+  assert.equal(car.target.dataset.tooltipDirection, "LEFT");
+  assert.equal(kept.target.dataset.tooltipHtml, undefined);
 
-    // A new preparation cycle starts a new log.
-    a.changes = [];
-    a.prepare();
-    const again = element("car");
-    render(a, again);
-    assert.deepEqual(tip(again), ["Base +3", "Total +3"]);
-  } finally {
-    delete globalThis.Hooks;
-    delete globalThis.game;
-    delete globalThis.CONFIG;
-    delete globalThis.foundry;
-  }
+  // A new preparation cycle starts a new log.
+  a.changes = [];
+  a.prepare();
+  const again = element("car");
+  render(a, again);
+  assert.deepEqual(tip(again), ["Base +3", "Total +3"]);
 });
 
 test("integration: wrappers keep return values and modifyTarget; errors never break the sheet", () => {
   const { Effect, actor, element, render } = harness();
-  try {
-    const a = actor({ car: [3] }, []);
-    const r = Effect.applyChangeField(a, { key: "system.atributos.car.value", type: "add", value: 1 }, { modifyTarget: false });
-    assert.equal(r, 4);
-    assert.equal(a.system.atributos.car.value, 3);
-    const broken = element("car");
-    const warn = console.warn;
-    console.warn = () => {};
-    try {
-      render({ ...a, system: { atributos: { car: { get value() { throw new Error("x"); } } } } }, broken);
-    } finally {
-      console.warn = warn;
-    }
-    assert.equal(broken.target.dataset.tooltipHtml, undefined);
-  } finally {
-    delete globalThis.Hooks;
-    delete globalThis.game;
-    delete globalThis.CONFIG;
-    delete globalThis.foundry;
-  }
+  const a = actor({ car: [3] }, []);
+  const r = Effect.applyChangeField(a, { key: "system.atributos.car.value", type: "add", value: 1 }, { modifyTarget: false });
+  assert.equal(r, 4);
+  assert.equal(a.system.atributos.car.value, 3);
+  const broken = element("car");
+  render({ ...a, system: { atributos: { car: { get value() { throw new Error("x"); } } } } }, broken);
+  assert.equal(broken.target.dataset.tooltipHtml, undefined);
 });

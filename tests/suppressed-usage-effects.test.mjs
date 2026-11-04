@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import patch, { collectsIgnoringSuppression } from "../scripts/patches/suppressed-usage-effects.mjs";
+import patch from "../scripts/features/suppressed-usage-effects/index.mjs";
+import { collectsIgnoringSuppression } from "../scripts/features/suppressed-usage-effects/domain.mjs";
 import { isSuppressedUsageEffect } from "../scripts/lib/usage-effects.mjs";
 import { createFakeContext, createFakePlatform } from "./support/fake-platform.mjs";
 

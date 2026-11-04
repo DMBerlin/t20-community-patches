@@ -1,19 +1,24 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import patch, {
+import patch from "../scripts/features/engenhoqueiro-armor-penalty/index.mjs";
+import {
   dropEngeArmorPenalty,
   engePdaHolders,
   keepStoredEngePda,
   prepareSkillOwners,
   prepareSkillRecognized,
   wrapPrepareSkill
-} from "../scripts/patches/engenhoqueiro-armor-penalty.mjs";
+} from "../scripts/features/engenhoqueiro-armor-penalty/domain.mjs";
+import { createFakeContext, createFakePlatform } from "./support/fake-platform.mjs";
 import { CreatureData165 } from "./fixtures/non-proficiency-1.6.5.mjs";
 import { markWrapper } from "../scripts/lib/source.mjs";
 
 const ORIGINAL = CreatureData165.prototype.prepareSkill;
 
-/** Runs the verbatim 1.6.5 prepareSkill (wrapped or not) and returns the formula it built. */
+/**
+ * Runs the verbatim 1.6.5 prepareSkill (wrapped or not) and returns the formula it built. The globals are the
+ * system's own environment, which the verbatim copy reads; the patch never reads them.
+ */
 function withSystem(fn) {
   let formula;
   globalThis.foundry = {
@@ -125,38 +130,31 @@ test("prepareSkillRecognized: 1.6.5 code only", () => {
   assert.equal(prepareSkillRecognized(undefined), false);
 });
 
-function withConfig(config, fn) {
-  globalThis.CONFIG = config;
-  try {
-    return fn();
-  } finally {
-    delete globalThis.CONFIG;
-  }
+/** A context whose platform answers CONFIG.T20 and CONFIG.Actor. */
+function contextFor({ T20, Actor } = {}) {
+  return createFakeContext(patch, createFakePlatform({ t20Config: T20, config: { Actor } }));
 }
+
+const diagnose = (config) => patch.isNeeded(contextFor(config));
 
 test("isNeeded: present/high with the 1.6.5 code and armorPenalty on", () => {
   const dataModels = { character: CreatureData165 };
-  const diagnosis = withConfig({ T20: { pericias: { enge: { armorPenalty: true } } }, Actor: { dataModels } }, () =>
-    patch.isNeeded()
-  );
+  const diagnosis = diagnose({ T20: { pericias: { enge: { armorPenalty: true } } }, Actor: { dataModels } });
   assert.deepEqual([diagnosis.bug, diagnosis.confidence], ["present", "high"]);
 });
 
 test("isNeeded: recognizes the original behind another module's marked wrapper", () => {
   class Wrapped {}
   Wrapped.prototype.prepareSkill = markWrapper(function () {}, ORIGINAL);
-  const diagnosis = withConfig(
-    { T20: { pericias: { enge: { armorPenalty: true } } }, Actor: { dataModels: { character: Wrapped } } },
-    () => patch.isNeeded()
-  );
+  const diagnosis = diagnose({ T20: { pericias: { enge: { armorPenalty: true } } }, Actor: { dataModels: { character: Wrapped } } });
   assert.equal(diagnosis.bug, "present");
 });
 
 test("isNeeded: fixed/low when CONFIG no longer sets the penalty", () => {
-  const diagnosis = withConfig(
-    { T20: { pericias: { enge: { armorPenalty: false } } }, Actor: { dataModels: { character: CreatureData165 } } },
-    () => patch.isNeeded()
-  );
+  const diagnosis = diagnose({
+    T20: { pericias: { enge: { armorPenalty: false } } },
+    Actor: { dataModels: { character: CreatureData165 } }
+  });
   assert.deepEqual([diagnosis.bug, diagnosis.confidence], ["fixed", "low"]);
 });
 
@@ -166,13 +164,13 @@ test("isNeeded: unknown without the skill or with unrecognized code", () => {
       return "new code";
     }
   }
-  assert.equal(withConfig({ T20: { pericias: {} } }, () => patch.isNeeded()).bug, "unknown");
-  const changed = withConfig(
-    { T20: { pericias: { enge: { armorPenalty: true } } }, Actor: { dataModels: { character: CreatureData165, x: Changed } } },
-    () => patch.isNeeded()
-  );
+  assert.equal(diagnose({ T20: { pericias: {} } }).bug, "unknown");
+  const changed = diagnose({
+    T20: { pericias: { enge: { armorPenalty: true } } },
+    Actor: { dataModels: { character: CreatureData165, x: Changed } }
+  });
   assert.deepEqual([changed.bug, changed.confidence], ["unknown", "low"]);
-  assert.equal(withConfig({ T20: { pericias: { enge: { armorPenalty: true } } }, Actor: {} }, () => patch.isNeeded()).bug, "unknown");
+  assert.equal(diagnose({ T20: { pericias: { enge: { armorPenalty: true } } }, Actor: {} }).bug, "unknown");
 });
 
 test("keepStoredEngePda: puts the stored pda back in nested, dotted and replacement keys", () => {
@@ -256,28 +254,21 @@ test("custom Ofício creation: prepared skills written back keep the stored pda"
   assert.equal(changes.system.pericias.acro.pda, true);
 });
 
-function withHooks(fn) {
-  const hooks = [];
-  globalThis.Hooks = { on: (name, hook) => hooks.push([name, hook]) };
-  const warn = console.warn;
-  console.warn = () => {};
-  try {
-    fn();
-    return hooks;
-  } finally {
-    console.warn = warn;
-    delete globalThis.Hooks;
-  }
+/** Installs the patch over these actor data models and returns the hooks it registered, as [name, fn]. */
+function install(dataModels) {
+  const platform = createFakePlatform({ config: { Actor: { dataModels } } });
+  patch.install(createFakeContext(patch, platform));
+  return platform.hookCalls.map(({ name, fn }) => [name, fn]);
 }
 
-test("apply: wraps recognized prepareSkill only and guards actor and delta updates", () => {
+test("install: wraps recognized prepareSkill only and guards actor and delta updates", () => {
   class Recognized {}
   Recognized.prototype.prepareSkill = ORIGINAL;
   class Changed {
     prepareSkill() {}
   }
   const changedFn = Changed.prototype.prepareSkill;
-  const hooks = withHooks(() => withConfig({ Actor: { dataModels: { a: Recognized, b: Changed } } }, () => patch.apply()));
+  const hooks = install({ a: Recognized, b: Changed });
   assert.notEqual(Recognized.prototype.prepareSkill, ORIGINAL);
   assert.equal(Changed.prototype.prepareSkill, changedFn);
   assert.deepEqual(hooks.map(([name]) => name), ["preUpdateActor", "preUpdateActorDelta"]);
@@ -292,10 +283,10 @@ test("apply: wraps recognized prepareSkill only and guards actor and delta updat
   assert.equal(deltaChanges["system.pericias.enge.pda"], true);
 });
 
-test("apply: nothing is installed when prepareSkill is not recognized", () => {
+test("install: nothing is installed when prepareSkill is not recognized", () => {
   class Changed {
     prepareSkill() {}
   }
-  const hooks = withHooks(() => withConfig({ Actor: { dataModels: { b: Changed } } }, () => patch.apply()));
+  const hooks = install({ b: Changed });
   assert.deepEqual(hooks, []);
 });

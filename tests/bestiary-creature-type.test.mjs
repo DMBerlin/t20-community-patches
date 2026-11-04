@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import patch, {
+import patch from "../scripts/features/bestiary-creature-type/index.mjs";
+import {
   ENTRIES,
   THREATS,
   classifyToken,
@@ -10,10 +11,11 @@ import patch, {
   classificationTokens,
   parserRecognized,
   typeTokens
-} from "../scripts/patches/bestiary-creature-type.mjs";
+} from "../scripts/features/bestiary-creature-type/domain/index.mjs";
 import { classify, summarize } from "../scripts/lib/compendium-copy/index.mjs";
 import { unwrap } from "../scripts/lib/source.mjs";
 import { LABELS_EN, LABELS_PT, PARSE_DATA_1_6_5 } from "./fixtures/bestiary-parser-1.6.5.mjs";
+import { createFakeContext, createFakePlatform } from "./support/fake-platform.mjs";
 
 // Foundry's String#capitalize (common/primitives/string.mjs).
 if (!String.prototype.capitalize) {
@@ -27,10 +29,12 @@ if (!String.prototype.capitalize) {
   });
 }
 
+/** CONFIG.T20 labels for the system's own code (OriginalParser), which reads the global; the patch never does. */
 const useLabels = (labels) => {
   globalThis.CONFIG = { T20: { creatureTypes: labels.types, creatureRoles: labels.roles, actorSizes: labels.sizes } };
 };
 
+/* eslint-disable prefer-const, no-unused-vars -- faithful copy of the system code */
 /** Faithful copy of the type block of StatblockParser#parseData in Tormenta20 1.6.5 (T20:11457-11500). */
 class OriginalParser {
   parseData(statblock, schema, itemsList, log) {
@@ -84,6 +88,7 @@ class OriginalParser {
     return "result";
   }
 }
+/* eslint-enable prefer-const, no-unused-vars */
 
 const freshSchema = () => ({ detalhes: { tipo: "hum", role: "", raca: "" }, tracos: { tamanho: "med" } });
 
@@ -94,7 +99,7 @@ function parse(statblock, labels, { fix = true } = {}) {
   const log = [];
   const before = { tipo: schema.detalhes.tipo, role: schema.detalhes.role, raca: schema.detalhes.raca, tamanho: schema.tracos.tamanho };
   new OriginalParser().parseData(statblock, schema, [], log);
-  const changed = fix ? fixParsedType(statblock, schema, log, before, labels) : false;
+  const changed = fix ? fixParsedType(statblock, schema, log, { before, labels }) : false;
   return { schema, log, changed, before };
 }
 
@@ -121,7 +126,7 @@ test("patch metadata", () => {
   assert.equal(patch.group, "actor");
   assert.equal(patch.guarded, true);
   assert.deepEqual(patch.system.affected, { minimum: "1.6.5", maximum: "1.6.6" });
-  assert.equal(patch.isNeeded().bug, "unknown");
+  assert.equal(patch.isNeeded(createFakeContext(patch, createFakePlatform())).bug, "unknown");
 });
 
 test("fixThreat: rulebook type, subtype cleared only when it repeats the type", () => {
@@ -274,7 +279,7 @@ test("importer: name words joined to the type line neither block the type nor be
 
   const again = structuredClone(swamp);
   for (let i = 0; i < 3; i++) {
-    fixParsedType(preprocess("Monstro do Pântano ND 2\nmorto-vivo grande\nIniciativa -1"), again.schema, again.log, swamp.before, LABELS_PT);
+    fixParsedType(preprocess("Monstro do Pântano ND 2\nmorto-vivo grande\nIniciativa -1"), again.schema, again.log, { before: swamp.before, labels: LABELS_PT });
   }
   assert.deepEqual(again, swamp);
 });
@@ -294,7 +299,7 @@ test("importer: the log drops entries of fields a name word set and the patch fi
   const orcBlock = preprocess("Monstro Orc ND 2 monstro (orc) grande\nIniciativa -1");
   const orc = parse(orcBlock, LABELS_PT);
   const again = structuredClone(orc);
-  for (let i = 0; i < 3; i++) fixParsedType(orcBlock, again.schema, again.log, orc.before, LABELS_PT);
+  for (let i = 0; i < 3; i++) fixParsedType(orcBlock, again.schema, again.log, { before: orc.before, labels: LABELS_PT });
   assert.deepEqual(again.log, orc.log);
   assert.ok(messages(orc.log).includes("+Subtipo de Criatura: Orc"));
 });
@@ -328,7 +333,7 @@ test("importer: a block the original already reads is left exactly as is", () =>
 test("importer: idempotent, and fields changed after the original are kept", () => {
   const once = parse(ZUMBI, LABELS_EN);
   const again = structuredClone(once);
-  for (let i = 0; i < 3; i++) fixParsedType(ZUMBI, again.schema, again.log, once.before, LABELS_EN);
+  for (let i = 0; i < 3; i++) fixParsedType(ZUMBI, again.schema, again.log, { before: once.before, labels: LABELS_EN });
   assert.deepEqual(again.schema, once.schema);
   assert.deepEqual(again.log, once.log);
 
@@ -338,14 +343,14 @@ test("importer: idempotent, and fields changed after the original are kept", () 
   const before = { tipo: "hum", role: "", raca: "", tamanho: "med" };
   new OriginalParser().parseData(ZUMBI, schema, [], log);
   schema.detalhes.tipo = "esp";
-  fixParsedType(ZUMBI, schema, log, before, LABELS_PT);
+  fixParsedType(ZUMBI, schema, log, { before, labels: LABELS_PT });
   assert.equal(schema.detalhes.tipo, "esp");
 });
 
 test("importer: blocks without a type line are ignored", () => {
   assert.equal(typeTokens("Zumbi ND 1/4\nDefesa 11"), null);
   const schema = freshSchema();
-  assert.equal(fixParsedType("Zumbi ND 1/4\nDefesa 11", schema, [], { tipo: "hum", role: "", raca: "", tamanho: "med" }, LABELS_PT), false);
+  assert.equal(fixParsedType("Zumbi ND 1/4\nDefesa 11", schema, [], { before: { tipo: "hum", role: "", raca: "", tamanho: "med" }, labels: LABELS_PT }), false);
   assert.deepEqual(schema, freshSchema());
 });
 
@@ -380,8 +385,10 @@ test("parserFailures: whole blocks; the size comma fails under any label, Englis
   assert.deepEqual(sorted(parserFailures(book)), sorted(commas));
 });
 
-function withFoundry(parserClass, fn) {
-  const saved = { CONFIG: globalThis.CONFIG, tormenta20: globalThis.tormenta20 };
+const T20_OF = (labels) => ({ creatureTypes: labels.types, creatureRoles: labels.roles, actorSizes: labels.sizes });
+
+/** Installs the patch over this parser and a recording actor class; `platform.logs` holds the patch's warnings. */
+function installWith(parserClass, { labels = LABELS_PT, actor } = {}) {
   const calls = [];
   class Actor {
     async _preCreate(...args) {
@@ -389,15 +396,16 @@ function withFoundry(parserClass, fn) {
       return "original";
     }
   }
-  globalThis.CONFIG = { ...globalThis.CONFIG, Actor: { documentClass: Actor } };
-  globalThis.tormenta20 = { applications: { StatblockParser: parserClass } };
-  try {
-    return fn({ Actor, calls });
-  } finally {
-    globalThis.CONFIG = saved.CONFIG;
-    globalThis.tormenta20 = saved.tormenta20;
-  }
+  const platform = createFakePlatform({
+    classes: { actor: actor ?? Actor },
+    t20: { applications: { StatblockParser: parserClass } },
+    t20Config: T20_OF(labels)
+  });
+  patch.install(createFakeContext(patch, platform));
+  return { Actor, calls, platform };
 }
+
+const warned = (platform, text) => platform.logs.some(({ level, args }) => level === "warn" && args.join(" ").includes(text));
 
 const fakeActor = (Actor, src, extra = {}) =>
   Object.assign(Object.create(Actor.prototype), {
@@ -409,90 +417,69 @@ const fakeActor = (Actor, src, extra = {}) =>
     ...extra
   });
 
-test("apply: wraps the importer and the actor copy, preserving this and the result", async () => {
+test("install: wraps the importer and the actor copy, preserving this and the result", async () => {
   useLabels(LABELS_PT);
   class Parser extends OriginalParser {}
   Parser.prototype.parseData = OriginalParser.prototype.parseData;
-  await withFoundry(Parser, async ({ Actor, calls }) => {
-    useLabels(LABELS_PT);
-    globalThis.CONFIG.Actor = { documentClass: Actor };
-    patch.apply();
-    assert.notEqual(Parser.prototype.parseData, OriginalParser.prototype.parseData);
-    assert.equal(unwrap(Parser.prototype.parseData), OriginalParser.prototype.parseData);
-    const schema = freshSchema();
-    const log = [];
-    assert.equal(new Parser().parseData(ZUMBI, schema, [], log), "result");
-    assert.equal(schema.detalhes.tipo, "mor");
-    assert.equal(schema.detalhes.raca, "");
+  const { Actor, calls } = installWith(Parser);
+  assert.notEqual(Parser.prototype.parseData, OriginalParser.prototype.parseData);
+  assert.equal(unwrap(Parser.prototype.parseData), OriginalParser.prototype.parseData);
+  const schema = freshSchema();
+  const log = [];
+  assert.equal(new Parser().parseData(ZUMBI, schema, [], log), "result");
+  assert.equal(schema.detalhes.tipo, "mor");
+  assert.equal(schema.detalhes.raca, "");
 
-    const zumbi = pack("aDJoJf7PgQ33UvNA");
-    const actor = fakeActor(Actor, zumbi);
-    assert.equal(await actor._preCreate({}, {}, "u"), "original");
-    assert.deepEqual(actor.updates, [{ system: { detalhes: { tipo: "mor", raca: "" } } }]);
-    assert.equal(calls.at(-1).self, actor);
+  const zumbi = pack("aDJoJf7PgQ33UvNA");
+  const actor = fakeActor(Actor, zumbi);
+  assert.equal(await actor._preCreate({}, {}, "u"), "original");
+  assert.deepEqual(actor.updates, [{ system: { detalhes: { tipo: "mor", raca: "" } } }]);
+  assert.equal(calls.at(-1).self, actor);
 
-    for (const [extra, options] of [[{}, { pack: "world.monstros" }], [{ pack: "world.monstros" }, {}], [{ parent: { pack: "world.x" } }, {}]]) {
-      const inPack = fakeActor(Actor, zumbi, extra);
-      await inPack._preCreate({}, options, "u");
-      assert.deepEqual(inPack.updates, []);
-    }
-    const foreign = fakeActor(Actor, { ...zumbi, _stats: { compendiumSource: "Compendium.world.monstros.Actor.aDJoJf7PgQ33UvNA" } });
-    await foreign._preCreate({}, {}, "u");
-    assert.deepEqual(foreign.updates, []);
-    const keepId = fakeActor(Actor, { ...zumbi, _stats: {} });
-    await keepId._preCreate({}, {}, "u");
-    assert.equal(keepId.updates.length, 1);
-  });
+  for (const [extra, options] of [[{}, { pack: "world.monstros" }], [{ pack: "world.monstros" }, {}], [{ parent: { pack: "world.x" } }, {}]]) {
+    const inPack = fakeActor(Actor, zumbi, extra);
+    await inPack._preCreate({}, options, "u");
+    assert.deepEqual(inPack.updates, []);
+  }
+  const foreign = fakeActor(Actor, { ...zumbi, _stats: { compendiumSource: "Compendium.world.monstros.Actor.aDJoJf7PgQ33UvNA" } });
+  await foreign._preCreate({}, {}, "u");
+  assert.deepEqual(foreign.updates, []);
+  const keepId = fakeActor(Actor, { ...zumbi, _stats: {} });
+  await keepId._preCreate({}, {}, "u");
+  assert.equal(keepId.updates.length, 1);
 });
 
-test("apply: an unrecognized importer is left untouched", () => {
+test("install: an unrecognized importer is left untouched", () => {
   class Parser {
     parseData(statblock, schema) {
       schema.detalhes.tipo = "hum";
     }
   }
   const original = Parser.prototype.parseData;
-  const warn = console.warn;
-  const warnings = [];
-  console.warn = (...args) => warnings.push(args.join(" "));
-  try {
-    withFoundry(Parser, () => patch.apply());
-  } finally {
-    console.warn = warn;
-  }
+  const { platform } = installWith(Parser);
   assert.equal(Parser.prototype.parseData, original);
-  assert.ok(warnings.some((w) => w.includes("not recognized")));
+  assert.ok(warned(platform, "not recognized"));
 });
 
 test("wrapper: a failing correction keeps the official result", () => {
   class Parser extends OriginalParser {}
   Parser.prototype.parseData = OriginalParser.prototype.parseData;
-  withFoundry(Parser, () => {
-    useLabels(LABELS_PT);
-    globalThis.CONFIG.Actor = { documentClass: class {} };
-    patch.apply();
-    const schema = freshSchema();
-    const tracos = schema.tracos;
-    let reads = 0;
-    // 1st read: the wrapper's snapshot; 2nd: the original (size); 3rd: the correction, which fails.
-    Object.defineProperty(schema, "tracos", {
-      get() {
-        if (++reads > 2) throw new Error("boom");
-        return tracos;
-      }
-    });
-    const warn = console.warn;
-    const warnings = [];
-    console.warn = (...args) => warnings.push(args.join(" "));
-    try {
-      const log = [];
-      assert.equal(new Parser().parseData(ZUMBI, schema, [], log), "result");
-      assert.equal(schema.detalhes.tipo, "hum");
-      assert.equal(schema.detalhes.raca, "Morto-vivo");
-      assert.equal(reads, 3);
-      assert.ok(warnings.some((w) => w.includes("parser correction skipped")));
-    } finally {
-      console.warn = warn;
+  useLabels(LABELS_PT);
+  const { platform } = installWith(Parser, { actor: class {} });
+  const schema = freshSchema();
+  const tracos = schema.tracos;
+  let reads = 0;
+  // 1st read: the wrapper's snapshot; 2nd: the original (size); 3rd: the correction, which fails.
+  Object.defineProperty(schema, "tracos", {
+    get() {
+      if (++reads > 2) throw new Error("boom");
+      return tracos;
     }
   });
+  const log = [];
+  assert.equal(new Parser().parseData(ZUMBI, schema, [], log), "result");
+  assert.equal(schema.detalhes.tipo, "hum");
+  assert.equal(schema.detalhes.raca, "Morto-vivo");
+  assert.equal(reads, 3);
+  assert.ok(warned(platform, "parser correction skipped"));
 });

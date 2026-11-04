@@ -1,12 +1,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import patch, {
+import patch from "../scripts/features/sheet-initiative-token/index.mjs";
+import {
   diagnoseSource,
   fromToInitiative,
   initiativeTargets,
   rollTotal,
   suppressesSetInitiative
-} from "../scripts/patches/sheet-initiative-token.mjs";
+} from "../scripts/features/sheet-initiative-token/domain.mjs";
+import { createFakeContext, createFakePlatform } from "./support/fake-platform.mjs";
 
 const combatant = (id, actorId, tokenId, extra = {}) => ({
   id, actorId, tokenId, sceneId: "s1", linked: false, initiative: null, isOwner: true, ...extra
@@ -101,7 +103,7 @@ test("diagnoseSource reads the 1.6.5 source and never proves a fix", () => {
   assert.equal(diagnoseSource(undefined).bug, "unknown");
 });
 
-test("apply writes the card total to the rolling token and suppresses the system's write", async () => {
+test("install writes the card total to the rolling token and suppresses the system's write", async () => {
   const updates = [];
   const sets = [];
   class Combat {
@@ -132,47 +134,40 @@ test("apply writes the card total to the rolling token and suppresses the system
     }
     async displayCard({ options }) { return { rolls: [{ total: options.itemData.rolled.total }] }; }
   }
-  globalThis.CONFIG = { Actor: { documentClass: Actor } };
-  globalThis.foundry = { documents: { Combat } };
-  globalThis.game = { combats: { active: combat, *[Symbol.iterator]() { yield combat; } } };
-  try {
-    patch.apply();
-    const message = await new Actor({ id: "tB", parent: { id: "s1" } }).rollPericia("inic", {});
-    assert.deepEqual(message, { rolls: [{ total: 14 }] });
-    assert.deepEqual(sets, []);
-    assert.deepEqual(updates, [["Combatant", [{ _id: "B", initiative: 14 }]]]);
+  const combats = { active: combat, *[Symbol.iterator]() { yield combat; } };
+  const platform = createFakePlatform({ classes: { actor: Actor }, core: { Combat }, documents: { combats: () => combats } });
+  patch.install(createFakeContext(patch, platform));
+  const message = await new Actor({ id: "tB", parent: { id: "s1" } }).rollPericia("inic", {});
+  assert.deepEqual(message, { rolls: [{ total: 14 }] });
+  assert.deepEqual(sets, []);
+  assert.deepEqual(updates, [["Combatant", [{ _id: "B", initiative: 14 }]]]);
 
-    await new Actor({ id: "tB", parent: { id: "s1" } }).rollPericia("perc", {});
-    await new Actor({ id: "tB", parent: { id: "s1" } }).rollPericia("custom", {});
-    assert.equal(updates.length, 1);
-    assert.deepEqual(sets, []);
+  await new Actor({ id: "tB", parent: { id: "s1" } }).rollPericia("perc", {});
+  await new Actor({ id: "tB", parent: { id: "s1" } }).rollPericia("custom", {});
+  assert.equal(updates.length, 1);
+  assert.deepEqual(sets, []);
 
-    await combat.setInitiative("A", 9);
-    assert.deepEqual(sets, [["A", 9]]);
+  await combat.setInitiative("A", 9);
+  assert.deepEqual(sets, [["A", 9]]);
 
-    // A macro call while a roll dialog of the same actor is open goes through.
-    sets.length = 0;
-    let close;
-    const rolling = new Actor({ id: "tB", parent: { id: "s1" } }).rollPericia("perc", { dialog: new Promise((r) => (close = r)) });
-    await combat.setInitiative("A", 14);
-    assert.deepEqual(sets, [["A", 14]]);
-    close();
-    await rolling;
-    assert.deepEqual(sets, [["A", 14]]);
-    assert.equal(Object.hasOwn(combat, "setInitiative"), false);
+  // A macro call while a roll dialog of the same actor is open goes through.
+  sets.length = 0;
+  let close;
+  const rolling = new Actor({ id: "tB", parent: { id: "s1" } }).rollPericia("perc", { dialog: new Promise((r) => (close = r)) });
+  await combat.setInitiative("A", 14);
+  assert.deepEqual(sets, [["A", 14]]);
+  close();
+  await rolling;
+  assert.deepEqual(sets, [["A", 14]]);
+  assert.equal(Object.hasOwn(combat, "setInitiative"), false);
 
-    // Another module wrapping Combat#setInitiative asynchronously does not let the system write through.
-    const wrapped = Combat.prototype.setInitiative;
-    Combat.prototype.setInitiative = async function (...args) { await null; return wrapped.apply(this, args); };
-    sets.length = 0;
-    updates.length = 0;
-    await new Actor({ id: "tB", parent: { id: "s1" } }).rollPericia("inic", {});
-    await new Promise((r) => setTimeout(r));
-    assert.deepEqual(sets, []);
-    assert.deepEqual(updates, [["Combatant", [{ _id: "B", initiative: 14 }]]]);
-  } finally {
-    delete globalThis.CONFIG;
-    delete globalThis.foundry;
-    delete globalThis.game;
-  }
+  // Another module wrapping Combat#setInitiative asynchronously does not let the system write through.
+  const wrapped = Combat.prototype.setInitiative;
+  Combat.prototype.setInitiative = async function (...args) { await null; return wrapped.apply(this, args); };
+  sets.length = 0;
+  updates.length = 0;
+  await new Actor({ id: "tB", parent: { id: "s1" } }).rollPericia("inic", {});
+  await new Promise((r) => setTimeout(r));
+  assert.deepEqual(sets, []);
+  assert.deepEqual(updates, [["Combatant", [{ _id: "B", initiative: 14 }]]]);
 });

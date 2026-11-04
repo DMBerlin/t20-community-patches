@@ -14,7 +14,7 @@ import {
   skillAttributeKey,
   templateLabels,
   weaponBinding
-} from "../scripts/patches/usage-buff-templates.mjs";
+} from "../scripts/features/usage-buff-templates/domain.mjs";
 
 const template = (over = {}) => ({ onuse: true, temporary: true, disabled: true, name: "Arma Mágica", description: "", names: [], ...over });
 

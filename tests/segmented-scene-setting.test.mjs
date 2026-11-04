@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { DEFAULT_LIMIT, exceedsLimit, needsFix, normalizeSegmentedScene, resolveLimit } from "../scripts/patches/segmented-scene-setting.mjs";
+import { DEFAULT_LIMIT, exceedsLimit, needsFix, normalizeSegmentedScene, resolveLimit } from "../scripts/features/segmented-scene-setting/domain.mjs";
 
 test("keeps valid segments and clamps the current segment to [0, max]", () => {
   assert.deepEqual(normalizeSegmentedScene({ max: 3, value: 1 }), { value: 1, max: 3 });

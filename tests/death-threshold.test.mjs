@@ -1,7 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { allowsBelowThreshold, deathThreshold } from "../scripts/lib/death-threshold.mjs";
-import patch, { applyDeathThreshold, diagnoseNpcSource, diagnoseSamples } from "../scripts/patches/death-threshold.mjs";
+import patch from "../scripts/features/death-threshold/index.mjs";
+import { applyDeathThreshold, diagnoseNpcSource, diagnoseSamples } from "../scripts/features/death-threshold/domain.mjs";
 import { wrapDamageFloor } from "../scripts/lib/death-threshold.mjs";
 import { isSystemVersionAffected } from "../scripts/lib/version.mjs";
 import { withNonlethalCall } from "../scripts/rules/nonlethal-damage.mjs";

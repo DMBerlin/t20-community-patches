@@ -54,7 +54,7 @@ export async function waitReady(page) {
   await page.waitForFunction(() => window.game?.ready === true, null, { timeout: 120000 });
 }
 
-/** Reloads the page: needed after changing a patch mode, because apply() only runs on "init". */
+/** Reloads the page: needed after changing a patch mode, because install() only runs on "init". */
 export async function reload(page) {
   await page.reload();
   await waitReady(page);

@@ -8,7 +8,7 @@ import {
   sustainCostIsPerMarker,
   unifySustainedOrigins,
   wrapSustainedPreCreate
-} from "../scripts/patches/sustained-spell-cost.mjs";
+} from "../scripts/features/sustained-spell-cost/domain.mjs";
 
 const FLAG = "t20-community-patches";
 const sustained = (name, origin, extra = {}) => ({ name, origin, duration: { expiry: "sustainEnd" }, ...extra });
@@ -120,7 +120,6 @@ function simulateSystem({ wrap }) {
   const markers = new Map();
   const state = { queues: new Map(), labels: new Map() };
   const caster = { uuid: "Actor.c" };
-  let preCreate;
   async function original(data) {
     if (data.duration?.expiry === "sustainEnd" && data.origin) {
       if (markers.has(data.origin)) return;
@@ -153,7 +152,7 @@ function simulateSystem({ wrap }) {
     if (markers.has(origin)) throw new Error(`duplicate id ${data._id}`);
     markers.set(origin, data);
   }
-  preCreate = wrap ? wrapSustainedPreCreate(original, state) : original;
+  const preCreate = wrap ? wrapSustainedPreCreate(original, state) : original;
   return { markers, state, preCreate };
 }
 

@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import patch, {
+import patch from "../scripts/features/alchemical-damage-bonus/index.mjs";
+import {
   createPartLedger,
   diagnoseAlchemicalBonus,
   hasBonus,
@@ -8,7 +9,8 @@ import patch, {
   isPlainDamageRoll,
   rollsMissingAlchemicalBonus,
   runProbe
-} from "../scripts/patches/alchemical-damage-bonus.mjs";
+} from "../scripts/features/alchemical-damage-bonus/domain.mjs";
+import { createFakeContext, createFakePlatform } from "./support/fake-platform.mjs";
 
 const getProperty = (obj, path) => path.split(".").reduce((o, k) => o?.[k], obj);
 
@@ -40,15 +42,14 @@ function makeRollDamage({ fixed = false, damageRoll }) {
     }
     return "done";
   })`;
-  return new Function("damageRoll", body)(damageRoll);
+  return new Function("damageRoll", "foundry", body)(damageRoll, { utils: { getProperty } });
 }
 
+/** A fake system item class and a feature context whose platform exposes it. */
 function installFakeFoundry(rollDamage) {
   class ItemT20 {}
   ItemT20.prototype.rollDamage = rollDamage;
-  globalThis.CONFIG = { Item: { documentClass: ItemT20 } };
-  globalThis.foundry = { utils: { getProperty } };
-  return ItemT20;
+  return { Cls: ItemT20, ctx: createFakeContext(patch, createFakePlatform({ classes: { item: ItemT20 } })) };
 }
 
 function makeItem(Cls, { dano = {}, rolls, type = "consumivel", tipo = "alchemy" } = {}) {
@@ -128,15 +129,13 @@ test("isNeeded on the 1.6.5 code: present/high; on the fixed code: fixed/high; u
   try {
     let rolled = 0;
     const damageRoll = async () => rolled++;
-    installFakeFoundry(makeRollDamage({ damageRoll }));
-    assert.deepEqual(pick(patch.isNeeded()), ["present", "high"]);
-    installFakeFoundry(makeRollDamage({ fixed: true, damageRoll }));
-    assert.deepEqual(pick(patch.isNeeded()), ["fixed", "high"]);
+    assert.deepEqual(pick(patch.isNeeded(installFakeFoundry(makeRollDamage({ damageRoll })).ctx)), ["present", "high"]);
+    assert.deepEqual(pick(patch.isNeeded(installFakeFoundry(makeRollDamage({ fixed: true, damageRoll })).ctx)), ["fixed", "high"]);
     let ran = false;
-    installFakeFoundry(async function rollDamage() {
+    const unknown = installFakeFoundry(async function rollDamage() {
       ran = true;
     });
-    assert.deepEqual(pick(patch.isNeeded()), ["unknown", "low"]);
+    assert.deepEqual(pick(patch.isNeeded(unknown.ctx)), ["unknown", "low"]);
     assert.equal(ran, false);
     assert.equal(rolled, 0);
     await new Promise((resolve) => setTimeout(resolve, 10));
@@ -150,8 +149,8 @@ const pick = (d) => [d.bug, d.confidence];
 
 test("apply adds @danoALQ once, restores the parts and returns the original value", async () => {
   const calls = [];
-  const Cls = installFakeFoundry(makeRollDamage({ damageRoll: async (o) => calls.push(o) }));
-  patch.apply();
+  const { Cls, ctx } = installFakeFoundry(makeRollDamage({ damageRoll: async (o) => calls.push(o) }));
+  patch.install(ctx);
 
   const alqOnly = makeItem(Cls, { dano: { alq: ["5"] } });
   assert.equal(await alqOnly.rollDamage(), "done");
@@ -173,7 +172,7 @@ test("apply removes the part when the original rejects, and overlapping rolls ad
   const gate = new Promise((resolve) => (release = resolve));
   const calls = [];
   let fail = false;
-  const Cls = installFakeFoundry(
+  const { Cls, ctx } = installFakeFoundry(
     makeRollDamage({
       damageRoll: async (o) => {
         calls.push(o);
@@ -182,7 +181,7 @@ test("apply removes the part when the original rejects, and overlapping rolls ad
       }
     })
   );
-  patch.apply();
+  patch.install(ctx);
 
   const item = makeItem(Cls, { dano: { alq: ["5"] } });
   const first = item.rollDamage();
@@ -198,6 +197,7 @@ test("apply removes the part when the original rejects, and overlapping rolls ad
 });
 
 test("runProbe reaches the parts of the 1.6.6 rollDamage, which reads actor flags through getFlag", () => {
+  const game = { settings: { get: () => false } };
   /** Reduced copy of the start of ItemT20#rollDamage 1.6.6 (T20:7936-8001). */
   async function rollDamage166() {
     const itemData = this.system;
@@ -213,15 +213,9 @@ test("runProbe reaches the parts of the 1.6.6 rollDamage, which reads actor flag
       void [hasFinesse, hasShootingStyle, parts];
     }
   }
-  const previous = globalThis.game;
-  globalThis.game = { settings: { get: () => false } };
-  try {
-    const diagnosis = diagnoseAlchemicalBonus({
-      alqOnly: runProbe(rollDamage166, { alq: ["2"], mag: [] }),
-      both: runProbe(rollDamage166, { alq: ["2"], mag: ["1"] })
-    });
-    assert.deepEqual([diagnosis.bug, diagnosis.confidence], ["present", "high"]);
-  } finally {
-    globalThis.game = previous;
-  }
+  const diagnosis = diagnoseAlchemicalBonus({
+    alqOnly: runProbe(rollDamage166, { alq: ["2"], mag: [] }),
+    both: runProbe(rollDamage166, { alq: ["2"], mag: ["1"] })
+  });
+  assert.deepEqual([diagnosis.bug, diagnosis.confidence], ["present", "high"]);
 });

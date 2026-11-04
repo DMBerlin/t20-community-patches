@@ -1,14 +1,16 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import patch, {
+import patch from "../scripts/features/condition-skill-lists/index.mjs";
+import {
   conditionAbilities,
   diagnoseConditionLists,
   planConditionChanges,
   skillRepresentation
-} from "../scripts/patches/condition-skill-lists.mjs";
+} from "../scripts/features/condition-skill-lists/domain.mjs";
 import { keyAbility } from "../scripts/lib/skills.mjs";
 import { isSystemVersionAffected } from "../scripts/lib/version.mjs";
 import { statusEffectSources } from "../scripts/lib/status-effects.mjs";
+import { createFakeContext, createFakePlatform } from "./support/fake-platform.mjs";
 
 // Key attribute of each skill in Tormenta20 1.6.5 (CONFIG.T20.pericias[key].abl, T20:3411-3447).
 const ABL = {
@@ -231,20 +233,14 @@ test("statusEffectSources waits for every requested condition and ignores entrie
 });
 
 test("lateProbe (1.6.6): reads the conditions from CONFIG.statusEffects[id]._source; nothing new while CONFIG.T20.conditions exists", async () => {
-  const previous = globalThis.CONFIG;
   const statusEffects = Object.fromEntries(
     Object.entries(CONDITIONS).map(([id, changes]) => [id, { id, _source: { system: { changes } } }])
   );
-  try {
-    globalThis.CONFIG = { T20: { pericias: SKILL_CONFIG }, statusEffects };
-    const late = await patch.lateProbe();
-    assert.deepEqual([late.bug, late.confidence], ["present", "high"]);
-    assert.match(late.evidence, /cego \(ladi\)/);
-    globalThis.CONFIG = { T20: { pericias: SKILL_CONFIG, conditions: {} }, statusEffects };
-    assert.equal(await patch.lateProbe(), undefined);
-  } finally {
-    globalThis.CONFIG = previous;
-  }
+  const probe = (t20Config) => patch.lateProbe(createFakeContext(patch, createFakePlatform({ t20Config, statusEffects })));
+  const late = await probe({ pericias: SKILL_CONFIG });
+  assert.deepEqual([late.bug, late.confidence], ["present", "high"]);
+  assert.match(late.evidence, /cego \(ladi\)/);
+  assert.equal(await probe({ pericias: SKILL_CONFIG, conditions: {} }), undefined);
 });
 
 test("system version range check", () => {
@@ -279,23 +275,17 @@ test("installed wrapper: copies seen by the core, original array restored, same-
       return `done-${phase}`;
     }
   }
-  const previous = globalThis.CONFIG;
-  globalThis.CONFIG = { Actor: { documentClass: Actor }, T20: { pericias: SKILL_CONFIG } };
-  try {
-    patch.apply();
-    const changes = CONDITIONS.cego;
-    const ef = { active: true, statuses: new Set(["cego"]), system: { changes }, getReplacementData: () => ({}), shouldApplyChange: (c, { phase }) => c.phase === phase };
-    const actor = new Actor([ef]);
-    let inner;
-    reenter = (a) => { reenter = null; inner = a.applyActiveEffects("initial"); };
-    assert.equal(actor.applyActiveEffects("initial"), "done-initial");
-    assert.equal(inner, undefined);
-    assert.ok(seen.includes("system.pericias.ladi.condi"));
-    assert.equal(ef.system.changes, changes);
-    assert.equal(actor.applyActiveEffects("initial"), "refused");
-    assert.throws(() => actor.applyActiveEffects("final"), /core failure/);
-    assert.equal(ef.system.changes, changes);
-  } finally {
-    globalThis.CONFIG = previous;
-  }
+  patch.install(createFakeContext(patch, createFakePlatform({ classes: { actor: Actor }, t20Config: { pericias: SKILL_CONFIG } })));
+  const changes = CONDITIONS.cego;
+  const ef = { active: true, statuses: new Set(["cego"]), system: { changes }, getReplacementData: () => ({}), shouldApplyChange: (c, { phase }) => c.phase === phase };
+  const actor = new Actor([ef]);
+  let inner;
+  reenter = (a) => { reenter = null; inner = a.applyActiveEffects("initial"); };
+  assert.equal(actor.applyActiveEffects("initial"), "done-initial");
+  assert.equal(inner, undefined);
+  assert.ok(seen.includes("system.pericias.ladi.condi"));
+  assert.equal(ef.system.changes, changes);
+  assert.equal(actor.applyActiveEffects("initial"), "refused");
+  assert.throws(() => actor.applyActiveEffects("final"), /core failure/);
+  assert.equal(ef.system.changes, changes);
 });

@@ -4,7 +4,7 @@ import {
   buildRowQueue,
   diagnoseItemEffectsSheet,
   isItemHeldEffect
-} from "../scripts/patches/item-effects-on-actor-sheet.mjs";
+} from "../scripts/features/item-effects-on-actor-sheet/domain.mjs";
 
 test("queues effects by id in render order and keeps repeated ids in sequence", () => {
   const a = { id: "A" };

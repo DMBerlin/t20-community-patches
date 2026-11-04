@@ -52,6 +52,12 @@ let ids = 0;
  * @param {Record<string, string|(() => Function)>} [overrides.sources]  Each method label read by
  *   platform.sourceOfMethod: its source, or a getter of the live method (read under the module's wrappers, as in Foundry).
  * @param {() => Iterable<object>} [overrides.targets]   Value of platform.user.targets().
+ * @param {Record<string, object>} [overrides.config]     CONFIG by document name, read by platform.config.document().
+ * @param {object} [overrides.core]                       Value of platform.core (core classes, fields, operators).
+ * @param {Record<string, unknown>} [overrides.namespaceSettings]  "<namespace>.<key>" → value, for platform.settingsOf().
+ * @param {Record<string, Function>} [overrides.helpers]  Handlebars helpers.
+ * @param {object} [overrides.tokenHud]
+ * @param {string} [overrides.userId]
  */
 export function createFakePlatform(overrides = {}) {
   const store = new Map(Object.entries(overrides.settings ?? {}));
@@ -60,6 +66,10 @@ export function createFakePlatform(overrides = {}) {
   const logs = [];
   const hooks = [];
   let api;
+  const configWrites = {};
+  let statusEffects = overrides.statusEffects;
+  const foreign = new Map(Object.entries(overrides.namespaceSettings ?? {}));
+  const foreignEntries = new Map();
   const user = { isGM: overrides.isGM ?? true, isActiveGM: overrides.isActiveGM ?? overrides.isGM ?? true };
   const notifier = (level) => (message, options) => notes.push({ level, message, options });
   const logger = (level) => (...args) => logs.push({ level, args });
@@ -78,14 +88,14 @@ export function createFakePlatform(overrides = {}) {
     user: {
       isGM: () => user.isGM,
       isActiveGM: () => user.isActiveGM,
-      id: () => "user",
+      id: () => overrides.userId ?? "user",
       targets: overrides.targets ?? (() => [])
     },
     system: overrides.system ?? { id: "tormenta20", version: "1.6.6", title: "Tormenta20" },
     classes: overrides.classes ?? {},
     t20: () => overrides.t20,
     t20Config: () => overrides.t20Config,
-    statusEffects: () => overrides.statusEffects,
+    statusEffects: () => statusEffects,
     settings: {
       register: (key, spec) => {
         registered.set(key, spec);
@@ -121,7 +131,10 @@ export function createFakePlatform(overrides = {}) {
       randomID: () => `fake${String(++ids).padStart(12, "0")}`,
       escapeHTML: (text) => String(text).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`),
       expandObject,
-      slugify
+      slugify,
+      getRoute: (path) => path,
+      debounce: (fn) => fn,
+      enrichHTML: async (html) => html
     },
     dice: overrides.dice ?? {},
     forms: overrides.forms ?? { data: () => ({}) },
@@ -132,6 +145,31 @@ export function createFakePlatform(overrides = {}) {
       return typeof entry === "function" ? sourceOf(entry()) : (entry ?? null);
     },
     module: { setApi: (value) => (api = value), api: () => api, systemCompatibility: () => undefined },
+    config: {
+      document: (name) => overrides.config?.[name],
+      setControlIcon: (name, value) => (configWrites[`controlIcons.${name}`] = value),
+      setSpecialStatus: (name, id) => (configWrites[`specialStatusEffects.${name}`] = id),
+      setStatusEffects: (entries) => {
+        configWrites.statusEffects = entries;
+        statusEffects = entries;
+      }
+    },
+    /** What platform.config wrote ("controlIcons.<name>", "specialStatusEffects.<name>", "statusEffects"). */
+    configWrites,
+    core: overrides.core ?? {},
+    settingsOf: (namespace) => ({
+      get: (key) => foreign.get(`${namespace}.${key}`),
+      set: async (key, value) => {
+        foreign.set(`${namespace}.${key}`, value);
+        return value;
+      },
+      entry: (key) => foreignEntries.get(`${namespace}.${key}`),
+      registerMenu: (key, spec) => registered.set(`menu:${namespace}.${key}`, spec)
+    }),
+    /** Registered SettingConfig of other namespaces, read by settingsOf(ns).entry(key). */
+    foreignEntries,
+    canvas: { tokenHud: () => overrides.tokenHud },
+    handlebars: { helpers: () => overrides.helpers },
     /** Runs the handlers registered for a hook, as Hooks.callAll. */
     callHook: (name, ...args) => {
       for (const hook of hooks.filter((h) => h.name === name)) hook.fn(...args);

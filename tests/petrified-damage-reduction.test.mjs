@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import petrified, {
+import petrified from "../scripts/features/petrified-damage-reduction/index.mjs";
+import {
   RD_BONUS_KEY,
   RD_VALUE_KEY,
   createReductionTracker,
@@ -10,7 +11,7 @@ import petrified, {
   normalizePetrifiedChange,
   petrifiedLookup,
   planPetrifiedReduction
-} from "../scripts/patches/petrified-damage-reduction.mjs";
+} from "../scripts/features/petrified-damage-reduction/domain.mjs";
 import { findWithRetry } from "../scripts/lib/async.mjs";
 import sourceStacking from "../scripts/rules/source-stacking.mjs";
 import { patchFeature } from "../scripts/kernel/feature.mjs";

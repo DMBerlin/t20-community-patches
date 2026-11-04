@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import patch, {
+import patch from "../scripts/features/default-damage-attribute/index.mjs";
+import {
   REFERENCE,
   diagnoseDamageSource,
   legacyDefaultAttribute,
@@ -8,10 +9,10 @@ import patch, {
   rollsForCall,
   rollsWithDefaultAttribute,
   systemResolvesDefault
-} from "../scripts/patches/default-damage-attribute.mjs";
+} from "../scripts/features/default-damage-attribute/domain.mjs";
 import { markWrapper, sourceFingerprint } from "../scripts/lib/source.mjs";
 import { ROLL_DAMAGE_1_6_6 } from "./fixtures/roll-damage-1.6.6.mjs";
-import { createProbeContext } from "./support/fake-platform.mjs";
+import { createFakeContext, createFakePlatform, createProbeContext } from "./support/fake-platform.mjs";
 
 const weapon = (system = {}) => ({ type: "arma", system: { empunhadura: "uma", proposito: "corpo-a-corpo", propriedades: {}, ...system } });
 const NO_DEX = { finesse: false, shootingStyle: false };
@@ -148,8 +149,10 @@ class FakeItem extends SystemItem {
 }
 
 const PristineRollDamage = SystemItem.prototype.rollDamage;
-globalThis.CONFIG = { Item: { documentClass: FakeItem } };
-globalThis.game = { settings: { get: (_scope, key) => settings[key] } };
+const platform = createFakePlatform({
+  classes: { item: FakeItem },
+  namespaceSettings: { "tormenta20.lightFinesseWeapons": settings.lightFinesseWeapons }
+});
 const probeCtx = createProbeContext(patch, { "ItemT20#rollDamage": () => FakeItem.prototype.rollDamage });
 
 test("without the patch the 1.6.6 code fails on Padrão (reproduces the bug)", async () => {
@@ -162,7 +165,7 @@ test("isNeeded reports the bug on the 1.6.6 code", () => {
 });
 
 test("with the patch every case of the issue rolls and the stored data never changes", async () => {
-  patch.apply();
+  patch.install(createFakeContext(patch, platform));
   const roll = async (opts) => {
     const item = new FakeItem(opts);
     const rolls = item.system.rolls;

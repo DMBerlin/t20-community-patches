@@ -87,8 +87,8 @@ Se a solução mudar durante a implementação ou o review, por exemplo por um a
 ## 5. Implementar
 
 Siga o contrato e as regras de patch do `AGENTS.md`:
-- `scripts/patches/<id>.mjs`, com a lógica pura exportada;
-- registro em `scripts/patches/index.mjs` (`group`, `issue`, `system.affected`, `isNeeded`, `apply`);
+- a pasta `scripts/features/<id>/`: `index.mjs` (cabeçalho e default export), `domain.mjs` (lógica pura exportada) e `integration.mjs` (`install(ctx)`, `isNeeded(ctx)`), ver "Contrato de uma feature" no `AGENTS.md`;
+- registro em `PATCHES`, em `scripts/features/patches.mjs` (`group`, `issue`, `system.affected`, `sources`, `isNeeded`, `install`);
 - `lang/pt-BR.json` e `lang/en.json`, com as mesmas chaves;
 - a linha da tabela de correções no `README.md`;
 - `tests/<id>.test.mjs`: casos que **falhariam sem a correção**, mais os casos-limite da issue. Não teste constantes nem frameworks.
@@ -116,7 +116,7 @@ Quando a integração for difícil de testar só com funções puras, faça um s
 Faça os commits na branch seguindo a skill `commit`: atômicos, com uma linha e sem trailers. Exemplo:
 
 ```bash
-git add scripts/patches/<id>.mjs scripts/patches/index.mjs tests/<id>.test.mjs lang README.md
+git add scripts/features/<id> scripts/features/patches.mjs tests/<id>.test.mjs lang README.md
 git commit -m "fix(<id>): <o que corrige> (#<n>)"
 ```
 

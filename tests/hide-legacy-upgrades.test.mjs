@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { findLegacyFieldsets, isLegacyFieldset, onRenderItemSheet } from "../scripts/patches/hide-legacy-upgrades.mjs";
+import { findLegacyFieldsets, isLegacyFieldset } from "../scripts/features/hide-legacy-upgrades/domain.mjs";
+import { onRenderItemSheet } from "../scripts/features/hide-legacy-upgrades/ui.mjs";
 
 /** Fake fieldset: `matches` lists the selectors (as passed by the patch) that find something inside it. */
 function fieldset({ legend, matches = [] } = {}) {

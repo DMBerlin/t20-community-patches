@@ -26,10 +26,9 @@
  * @property {string[]} [services]              Services used through ctx.services[id] (scripts/services/).
  * @property {string[]} [interactsWith]         Features whose state or settings this one reads at run time.
  * @property {boolean} [guarded]
- * @property {"source"|"behavior"} [probeKind]   See Patch in scripts/patches/index.mjs (used by `make audit`).
+ * @property {"source"|"behavior"} [probeKind]   See Patch in scripts/features/patches.mjs (used by `make audit`).
  * @property {string[]} [sources]               Method labels the feature depends on (fingerprinted by `make audit`).
  * @property {(ctx: FeatureContext) => import("../registry.mjs").Diagnosis|boolean|undefined} [isNeeded]
- *                                                 Legacy patches ignore ctx and read globals until #88.
  * @property {(ctx: FeatureContext) => Promise<import("../registry.mjs").Diagnosis|boolean|undefined>} [lateProbe]
  * @property {(ctx: FeatureContext) => void} install
  *
@@ -116,11 +115,10 @@ export function validateFeatures(features, groups, serviceIds) {
 }
 
 /**
- * A patch module (`{id, group, system, apply | install, …}`) as a Feature. A legacy `apply()` becomes `install()`.
+ * A patch module (`{id, group, system, install, …}`, scripts/features/<id>/index.mjs) as a Feature.
  * @param {object} patch
  * @returns {Feature}
  */
 export function patchFeature(patch) {
-  const install = patch.install ?? (typeof patch.apply === "function" ? () => patch.apply() : undefined);
-  return { ...patch, kind: "patch", install };
+  return { ...patch, kind: "patch" };
 }

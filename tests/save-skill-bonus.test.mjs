@@ -1,6 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import patch, { buggySaves, diagnoseProbe, numericSemataque, skipsSemataque } from "../scripts/patches/save-skill-bonus.mjs";
+import patch from "../scripts/features/save-skill-bonus/index.mjs";
+import { buggySaves, diagnoseProbe, numericSemataque, skipsSemataque } from "../scripts/features/save-skill-bonus/domain.mjs";
+import { createFakeContext, createFakePlatform } from "./support/fake-platform.mjs";
 
 const SAVES = ["fort", "refl", "vont"];
 const BOTH = { resistencia: ["1"], semataque: ["2"] };
@@ -38,11 +40,14 @@ test("diagnoseProbe: every save must be fixed for fixed; control must match", ()
   assert.equal(probe(7, 3, 3).bug, "unknown");
 });
 
+const RESISTENCIAS = { fort: {}, refl: {}, vont: {} };
+const getProperty = (obj, path) => path.split(".").reduce((o, k) => o?.[k], obj);
+
 /** The 1.6.5 formula (T20:19846-19871): own bonus terms, then the actor-wide bonus; sum, then parseInt. */
 function prepareSkill165(skillId, { skillData, rollData } = {}) {
   const parts = [`@${skillData.atributo}`, ...(skillData.bonus ?? [])];
-  const bonuses = foundry.utils.getProperty(this, "modificadores.pericias") || {};
-  if (Object.keys(CONFIG.T20.resistencias).includes(skillId) && bonuses.resistencia?.filter(Boolean).length) parts.push("@resistencia");
+  const bonuses = getProperty(this, "modificadores.pericias") || {};
+  if (Object.keys(RESISTENCIAS).includes(skillId) && bonuses.resistencia?.filter(Boolean).length) parts.push("@resistencia");
   else if (!["luta", "pont"].includes(skillId) && bonuses.semataque?.filter(Boolean).length) parts.push("@semataque");
   else if (["luta", "pont"].includes(skillId) && bonuses.ataque?.filter(Boolean).length) parts.push("@ataque");
   const term = (p) => Number(p.startsWith("@") ? rollData[p.slice(1)] ?? 0 : p);
@@ -61,89 +66,66 @@ function setup(prepareSkill = prepareSkill165) {
   class Creature {}
   Creature.prototype.prepareSkill = prepareSkill;
   class Character extends Creature {}
-  globalThis.CONFIG = { Actor: { dataModels: { character: Character } }, T20: { resistencias: { fort: {}, refl: {}, vont: {} } } };
-  globalThis.foundry = {
-    utils: {
-      deepClone: (v) => structuredClone(v),
-      getProperty: (obj, path) => path.split(".").reduce((o, k) => o?.[k], obj)
-    }
-  };
-  return Character;
-}
-
-function teardown() {
-  delete globalThis.CONFIG;
-  delete globalThis.foundry;
+  const platform = createFakePlatform({
+    config: { Actor: { dataModels: { character: Character } } },
+    t20Config: { resistencias: RESISTENCIAS }
+  });
+  return { Character, ctx: createFakeContext(patch, platform) };
 }
 
 test("isNeeded runs the original on synthetic data: 1.6.5 logic is present/high, a fixed one is fixed/high", () => {
-  try {
-    setup();
-    assert.deepEqual([patch.isNeeded().bug, patch.isNeeded().confidence], ["present", "high"]);
-    setup(function (skillId, args) {
-      const data = prepareSkill165.call(this, skillId, args);
-      if (skillId in { fort: 1, refl: 1, vont: 1 }) data.value += args.rollData.semataque;
-      return data;
-    });
-    assert.deepEqual([patch.isNeeded().bug, patch.isNeeded().confidence], ["fixed", "high"]);
-    setup(fortOnlyFixed);
-    assert.deepEqual([patch.isNeeded().bug, patch.isNeeded().confidence], ["present", "high"]);
-    setup(() => {
+  const diagnose = (prepareSkill) => patch.isNeeded(setup(prepareSkill).ctx);
+  assert.deepEqual([diagnose().bug, diagnose().confidence], ["present", "high"]);
+  const fixed = diagnose(function (skillId, args) {
+    const data = prepareSkill165.call(this, skillId, args);
+    if (skillId in { fort: 1, refl: 1, vont: 1 }) data.value += args.rollData.semataque;
+    return data;
+  });
+  assert.deepEqual([fixed.bug, fixed.confidence], ["fixed", "high"]);
+  assert.deepEqual([diagnose(fortOnlyFixed).bug, diagnose(fortOnlyFixed).confidence], ["present", "high"]);
+  assert.equal(
+    diagnose(() => {
       throw new Error("boom");
-    });
-    assert.equal(patch.isNeeded().bug, "unknown");
-  } finally {
-    teardown();
-  }
+    }).bug,
+    "unknown"
+  );
 });
 
 function character(Character) {
   return Object.assign(new Character(), { modificadores: { pericias: { resistencia: ["1"], semataque: ["2"], ataque: ["4"] } } });
 }
 
-test("apply: saves get semataque with resistencia bonuses; other skills and roll data stay the same", () => {
-  try {
-    const Character = setup();
-    patch.apply();
-    const actor = character(Character);
-    const rollData = { con: 1, for: 1, resistencia: 1, semataque: 2, ataque: 4 };
-    const prep = (id, atributo, bonus = []) => actor.prepareSkill(id, { skillData: { atributo, bonus }, rollData }).value;
-    assert.equal(prep("fort", "con"), 4);
-    assert.equal(prep("atle", "for"), 3);
-    assert.equal(prep("luta", "for"), 5);
-    assert.deepEqual(rollData, { con: 1, for: 1, resistencia: 1, semataque: 2, ataque: 4 });
-    actor.modificadores.pericias.resistencia = [];
-    assert.equal(prep("fort", "con"), 3);
-  } finally {
-    teardown();
-  }
+test("install: saves get semataque with resistencia bonuses; other skills and roll data stay the same", () => {
+  const { Character, ctx } = setup();
+  patch.install(ctx);
+  const actor = character(Character);
+  const rollData = { con: 1, for: 1, resistencia: 1, semataque: 2, ataque: 4 };
+  const prep = (id, atributo, bonus = []) => actor.prepareSkill(id, { skillData: { atributo, bonus }, rollData }).value;
+  assert.equal(prep("fort", "con"), 4);
+  assert.equal(prep("atle", "for"), 3);
+  assert.equal(prep("luta", "for"), 5);
+  assert.deepEqual(rollData, { con: 1, for: 1, resistencia: 1, semataque: 2, ataque: 4 });
+  actor.modificadores.pericias.resistencia = [];
+  assert.equal(prep("fort", "con"), 3);
 });
 
-test("apply: the term joins before the integer conversion; own bonuses keep their meaning and are restored", () => {
-  try {
-    const Character = setup();
-    patch.apply();
-    const actor = character(Character);
-    const skillData = { atributo: "con", bonus: ["@resistencia"] };
-    const rollData = { con: 0, resistencia: 1, semataque: 2 };
-    assert.equal(actor.prepareSkill("vont", { skillData, rollData }).value, 4);
-    assert.deepEqual(skillData.bonus, ["@resistencia"]);
-    assert.deepEqual(rollData, { con: 0, resistencia: 1, semataque: 2 });
-    assert.equal(actor.prepareSkill("refl", { skillData: { atributo: "con", bonus: [] }, rollData: { con: 0, resistencia: 1, semataque: "2.5" } }).value, 3);
-    assert.equal(actor.prepareSkill("refl", { skillData: { atributo: "con", bonus: [] }, rollData: { con: 0, resistencia: 1, semataque: "1d4" } }).value, 1);
-  } finally {
-    teardown();
-  }
+test("install: the term joins before the integer conversion; own bonuses keep their meaning and are restored", () => {
+  const { Character, ctx } = setup();
+  patch.install(ctx);
+  const actor = character(Character);
+  const skillData = { atributo: "con", bonus: ["@resistencia"] };
+  const rollData = { con: 0, resistencia: 1, semataque: 2 };
+  assert.equal(actor.prepareSkill("vont", { skillData, rollData }).value, 4);
+  assert.deepEqual(skillData.bonus, ["@resistencia"]);
+  assert.deepEqual(rollData, { con: 0, resistencia: 1, semataque: 2 });
+  assert.equal(actor.prepareSkill("refl", { skillData: { atributo: "con", bonus: [] }, rollData: { con: 0, resistencia: 1, semataque: "2.5" } }).value, 3);
+  assert.equal(actor.prepareSkill("refl", { skillData: { atributo: "con", bonus: [] }, rollData: { con: 0, resistencia: 1, semataque: "1d4" } }).value, 1);
 });
 
-test("apply after a partial upstream fix touches only the saves still buggy", () => {
-  try {
-    const Character = setup(fortOnlyFixed);
-    patch.apply();
-    const actor = character(Character);
-    const prep = (id) => actor.prepareSkill(id, { skillData: { atributo: "con", bonus: [] }, rollData: { con: 0, resistencia: 1, semataque: 2 } }).value;
-    assert.deepEqual([prep("fort"), prep("refl"), prep("vont")], [3, 3, 3]);
-  } finally {
-    teardown();
-  }
+test("install after a partial upstream fix touches only the saves still buggy", () => {
+  const { Character, ctx } = setup(fortOnlyFixed);
+  patch.install(ctx);
+  const actor = character(Character);
+  const prep = (id) => actor.prepareSkill(id, { skillData: { atributo: "con", bonus: [] }, rollData: { con: 0, resistencia: 1, semataque: 2 } }).value;
+  assert.deepEqual([prep("fort"), prep("refl"), prep("vont")], [3, 3, 3]);
 });

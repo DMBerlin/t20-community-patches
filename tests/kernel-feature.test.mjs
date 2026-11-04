@@ -34,16 +34,15 @@ test("validateFeatures rejects each broken rule of the contract", () => {
   invalid([rule("a", { after: ["*"] }), rule("b")], /Feature a: after "\*" but not the last feature/);
 });
 
-test("patchFeature turns apply() into install() and keeps the patch fields", () => {
-  let applied = 0;
-  const feature = patchFeature({ id: "p", group: "combat", issue: 3, apply: () => applied++ });
+test("patchFeature marks the patch kind and keeps its fields", () => {
+  const install = () => {};
+  const feature = patchFeature({ id: "p", group: "combat", issue: 3, install });
   assert.equal(feature.kind, "patch");
   assert.equal(feature.issue, 3);
-  feature.install({ id: "p" });
-  assert.equal(applied, 1);
+  assert.equal(feature.install, install);
 });
 
-test("patchFeature without apply() leaves install missing, so validation rejects it", () => {
+test("patchFeature without install() fails validation, so validation rejects it", () => {
   const feature = patchFeature({ id: "p", group: "combat", system: { id: "tormenta20", affected: {} } });
   assert.equal(feature.install, undefined);
   assert.throws(() => validateFeatures([feature], ["combat"]), /Feature p: install missing/);

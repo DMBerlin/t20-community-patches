@@ -1,13 +1,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import patch, {
+import patch from "../scripts/features/field-bonuses-tooltip/index.mjs";
+import {
   diagnoseHelperSource,
   helperBugs,
   missingDefenseCondition,
   rootForHelper
-} from "../scripts/patches/field-bonuses-tooltip.mjs";
+} from "../scripts/features/field-bonuses-tooltip/domain.mjs";
 import { fieldTerms } from "../scripts/lib/tooltip.mjs";
-import { createProbeContext } from "./support/fake-platform.mjs";
+import { createFakeContext, createFakePlatform, createProbeContext } from "./support/fake-platform.mjs";
 
 const tooltip = (lines) => {
   const total = lines.reduce((sum, [, v]) => sum + v, 0);
@@ -66,7 +67,10 @@ test("diagnoseHelperSource: 1.6.5 is present/high; a comment mentioning condi do
   assert.deepEqual(helperBugs(HELPER_165.replace("defesa.outros ? {", "defesa.condi, defesa.outros ? {")), { lookup: true, noCondition: false });
 });
 
-const fromUuidSync = (uuid) => foundry.utils.fromUuidSync(uuid);
+/* Stand-ins for the globals the system's helper reads (game.actors, fromUuidSync), set by setup(). */
+let game;
+let byUuid = {};
+const fromUuidSync = (uuid) => byUuid[uuid] ?? null;
 
 /* Helpers in the 1.6.5 shape, as real code so the patch can read their source. */
 const HELPERS = {
@@ -118,45 +122,31 @@ const HELPERS = {
 function setup(variant = "v165") {
   const base = { _id: "a1", isToken: false, uuid: "Actor.a1", system: { attributes: { defesa: { base: 10, condi: 0 } } } };
   const synthetic = { _id: "a1", isToken: true, uuid: "Scene.s.Token.t.Actor.a1", system: { attributes: { defesa: { base: 12, condi: -5 } } } };
-  const byUuid = { "Actor.a1": base, [synthetic.uuid]: synthetic };
-  globalThis.game = { actors: { get: (id) => (id === "a1" ? base : undefined) }, i18n: { localize: (key) => key } };
-  globalThis.foundry = { utils: { fromUuidSync: (uuid) => byUuid[uuid] ?? null } };
+  byUuid = { "Actor.a1": base, [synthetic.uuid]: synthetic };
+  game = { actors: { get: (id) => (id === "a1" ? base : undefined) } };
   const helpers = { fieldBonuses: HELPERS[variant] };
-  globalThis.Handlebars = { helpers, registerHelper: (name, fn) => (helpers[name] = fn) };
-  return { base, synthetic, helpers };
-}
-
-function teardown() {
-  delete globalThis.game;
-  delete globalThis.foundry;
-  delete globalThis.Handlebars;
+  const platform = createFakePlatform({ helpers, documents: { fromUuidSync, actors: () => game.actors } });
+  const install = () => patch.install(createFakeContext(patch, platform));
+  return { base, synthetic, helpers, install };
 }
 
 const PATH = "system.attributes.defesa.bonus";
 const render = (helpers, actor, path = PATH) => lines(helpers.fieldBonuses.call({}, path, { data: { root: { actor, uuid: actor.uuid } } }));
 
-test("apply on 1.6.5: token sheets use the token actor and the Defesa lists the condition", () => {
-  const { base, synthetic, helpers } = setup();
-  try {
-    assert.equal(patch.isNeeded(createProbeContext(patch, { "#helper:fieldBonuses": () => helpers.fieldBonuses })).bug, "present");
-    patch.apply();
-    assert.deepEqual(render(helpers, base), ["Base +10", "Total +10"]);
-    assert.deepEqual(render(helpers, synthetic), ["Base +12", "T20CP.FieldBonuses.Condition -5", "Total +7"]);
-    assert.deepEqual(render(helpers, synthetic, "system.attributes.defesa.pda"), ["Base +12", "Total +12"]);
-  } finally {
-    teardown();
-  }
+test("install on 1.6.5: token sheets use the token actor and the Defesa lists the condition", () => {
+  const { base, synthetic, helpers, install } = setup();
+  assert.equal(patch.isNeeded(createProbeContext(patch, { "#helper:fieldBonuses": () => helpers.fieldBonuses })).bug, "present");
+  install();
+  assert.deepEqual(render(helpers, base), ["Base +10", "Total +10"]);
+  assert.deepEqual(render(helpers, synthetic), ["Base +12", "T20CP.FieldBonuses.Condition -5", "Total +7"]);
+  assert.deepEqual(render(helpers, synthetic, "system.attributes.defesa.pda"), ["Base +12", "Total +12"]);
 });
 
-test("apply after a partial upstream fix leaves the fixed part alone", () => {
-  try {
-    let { synthetic, helpers } = setup("conditionFixed");
-    patch.apply();
-    assert.deepEqual(render(helpers, synthetic), ["Base +12", "Cond -5", "Total +7"]);
-    ({ synthetic, helpers } = setup("lookupFixed"));
-    patch.apply();
-    assert.deepEqual(render(helpers, synthetic), ["Base +12", "T20CP.FieldBonuses.Condition -5", "Total +7"]);
-  } finally {
-    teardown();
-  }
+test("install after a partial upstream fix leaves the fixed part alone", () => {
+  let { synthetic, helpers, install } = setup("conditionFixed");
+  install();
+  assert.deepEqual(render(helpers, synthetic), ["Base +12", "Cond -5", "Total +7"]);
+  ({ synthetic, helpers, install } = setup("lookupFixed"));
+  install();
+  assert.deepEqual(render(helpers, synthetic), ["Base +12", "T20CP.FieldBonuses.Condition -5", "Total +7"]);
 });

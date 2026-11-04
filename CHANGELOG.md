@@ -21,6 +21,7 @@ Não edite as seções de versão à mão.
 - Patches e regras opcionais passam a usar um contrato único (Feature) e um ciclo de vida central (#85).
 - Camada de plataforma e injeção de dependências: globais do Foundry ficam isolados num único módulo (#86).
 - Código compartilhado separado em lib e serviços, com dependências entre correções declaradas (#87).
+- Correções reorganizadas em pastas por feature (`scripts/features/<id>/`), com domínio, integração e interface separados e sem globais do Foundry fora da plataforma (#88).
 
 ### Fixed
 

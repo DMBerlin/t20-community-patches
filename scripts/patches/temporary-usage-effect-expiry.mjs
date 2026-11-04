@@ -9,6 +9,8 @@
  * `active` is not changed (usage effects are applied at roll time, not by core change application).
  */
 
+import { markWrapper } from "../lib/source.mjs";
+
 const KEY = "isExpiryTrackable";
 
 /**
@@ -82,14 +84,14 @@ function apply() {
   Object.defineProperty(EffectClass.prototype, KEY, {
     configurable: true,
     enumerable: original.enumerable ?? false,
-    get() {
+    get: markWrapper(function () {
       if (original.get.call(this)) return true;
       try {
         return isTrackableUsageEffect(this);
       } catch {
         return false;
       }
-    }
+    }, original.get)
   });
 }
 
@@ -103,6 +105,8 @@ export default {
   group: "usage-effects",
   issue: 6,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  probeKind: "behavior",
+  sources: ["ActiveEffectT20#active", "ActiveEffectT20#isUsage", "ActiveEffectT20#isExpiryTrackable"],
   isNeeded,
   apply
 };

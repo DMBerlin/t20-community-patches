@@ -10,7 +10,7 @@
  * Fix: those passive effects are suppressed while the actor's equipment proves the condition is not met, using the
  * system's own notion of equipped items. An actor that owns Fanático gets "ignora-armadura" in its movement tags.
  */
-import { markWrapper, stripComments, unwrap } from "../lib/source.mjs";
+import { markWrapper, stripComments } from "../lib/source.mjs";
 import { wraps } from "../kernel/wrap.mjs";
 
 const POWERS = "Compendium.tormenta20.poderes.Item.";
@@ -80,7 +80,7 @@ export function findRule(info, rules = CONDITIONAL_POWERS) {
   return keys.every((key) => rule.keys.includes(key)) ? rule : null;
 }
 
-/** Same test as the system (T20:19887-19889 and T20:8090-8095). */
+/** Same test as the system (prepareDefense's `equipado2.slot` filter, T20:18728-18730, and `areEffectsSuppressed`, T20:6914-6920). */
 export function isEquipped(item, slots) {
   return Boolean(slots ? Number(item?.system?.equipado2?.slot) : item?.system?.equipado);
 }
@@ -103,7 +103,7 @@ export function isLightWeapon(weapon) {
   return weapon?.system?.empunhadura === "leve" || Boolean(weapon?.system?.propriedades?.leve);
 }
 
-/** A two-handed weapon always uses both hands; otherwise it is the "Equipar em Duas Mãos" state (T20:8556). */
+/** A two-handed weapon always uses both hands; otherwise it is the "Equipar em Duas Mãos" state (`equipado2.slot`, T20:7384). */
 export function usesTwoHands(weapon, slots) {
   if (weapon?.system?.empunhadura === "duas") return true;
   return slots ? Math.floor(Number(weapon?.system?.equipado2?.slot)) === 12 : weapon?.system?.equipado === 2;
@@ -265,7 +265,7 @@ function apply() {
     }, original.get)
   });
 
-  // prepareMovement (T20:19920) runs in the TypeDataModel's prepareDerivedData, after the "initial" phase.
+  // prepareMovement (T20:18761) runs in the TypeDataModel's prepareDerivedData, after the "initial" phase.
   wraps.wrap(actorProto, "applyActiveEffects", "conditional-powers", function (applyEffects, phase, ...args) {
     const result = applyEffects.call(this, phase, ...args);
     if (phase === "initial") {
@@ -280,17 +280,11 @@ function apply() {
   });
 }
 
-function getterSource(proto) {
-  const get = unwrap(findDescriptor(proto, "isSuppressed")?.get);
-  return typeof get === "function" ? Function.prototype.toString.call(get) : undefined;
-}
+const SOURCES = ["ActiveEffectT20#isSuppressed", "BaseEffect#isSuppressed"];
 
 /** Only reads source code: nothing of the system is executed. */
-function isNeeded() {
-  return diagnose(
-    getterSource(CONFIG.ActiveEffect?.documentClass?.prototype),
-    getterSource(CONFIG.ActiveEffect?.dataModels?.base?.prototype)
-  );
+function isNeeded(ctx) {
+  return diagnose(...SOURCES.map((label) => ctx.platform.sourceOfMethod(label) ?? undefined));
 }
 
 export default {
@@ -298,6 +292,7 @@ export default {
   group: "sheet-effects",
   issue: 33,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  sources: [...SOURCES, "BaseEffect#isSuppressedByEquipment", "ItemT20#areEffectsSuppressed", "AttributesFields.prepareDefense", "AttributesFields.prepareMovement"],
   guarded: true,
   isNeeded,
   apply

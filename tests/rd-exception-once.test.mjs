@@ -11,6 +11,7 @@ import patch, {
 import { resolvePatchState } from "../scripts/registry.mjs";
 import { sourceFingerprint } from "../scripts/lib/source.mjs";
 import { APPLY_DAMAGE_V2 } from "./fixtures/apply-damage-v2-1.6.5.mjs";
+import { createProbeContext } from "./support/fake-platform.mjs";
 
 /* -------------------------------------------- */
 /*  Helpers                                     */
@@ -281,8 +282,9 @@ test("isNeeded never runs applyDamageV2 and only recognizes the 1.6.5 code", () 
     }
   }
   globalThis.CONFIG = { Actor: { documentClass: Unknown } };
+  const probeCtx = createProbeContext(patch, { "ActorT20#applyDamageV2": () => globalThis.CONFIG.Actor.documentClass.prototype.applyDamageV2 });
   const unknownStates = MODES.map(([mode, systemVersion]) => {
-    const { state, diagnosis } = resolvePatchState({ patch, mode, systemId: "tormenta20", systemVersion, probe: patch.isNeeded });
+    const { state, diagnosis } = resolvePatchState({ patch, mode, systemId: "tormenta20", systemVersion, probe: () => patch.isNeeded(probeCtx) });
     assert.equal(diagnosis.bug, "unknown");
     assert.equal(diagnosis.confidence, "low");
     return state;
@@ -292,7 +294,7 @@ test("isNeeded never runs applyDamageV2 and only recognizes the 1.6.5 code", () 
   // Running the real method on the prototype would throw (no this.system), and the probe would answer unknown.
   globalThis.CONFIG = { Actor: { documentClass: realClass() } };
   const knownStates = MODES.map(([mode, systemVersion]) => {
-    const { state, diagnosis } = resolvePatchState({ patch, mode, systemId: "tormenta20", systemVersion, probe: patch.isNeeded });
+    const { state, diagnosis } = resolvePatchState({ patch, mode, systemId: "tormenta20", systemVersion, probe: () => patch.isNeeded(probeCtx) });
     assert.equal(diagnosis.bug, "present");
     assert.equal(diagnosis.confidence, "high");
     return state;

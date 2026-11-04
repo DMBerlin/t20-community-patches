@@ -14,7 +14,7 @@
  * the "Zero HP states" rule below pv.min, which then marks them Dead. Installed by the death-threshold-floor rule,
  * from lib/death-threshold.mjs, so the patch never imports the rule.
  */
-import { stripComments, unwrap } from "../lib/source.mjs";
+import { stripComments } from "../lib/source.mjs";
 import { wraps } from "../kernel/wrap.mjs";
 import { deathThreshold } from "../lib/death-threshold.mjs";
 
@@ -118,10 +118,10 @@ function apply() {
   }
 }
 
-function isNeeded() {
-  const fn = CONFIG.Actor.dataModels?.npc?.prototype?.prepareDerivedData;
-  const source = typeof fn === "function" ? Function.prototype.toString.call(unwrap(fn)) : undefined;
-  return diagnoseNpcSource(source);
+const NPC_DERIVED = "MenaceData#prepareDerivedData";
+
+function isNeeded(ctx) {
+  return diagnoseNpcSource(ctx.platform.sourceOfMethod(NPC_DERIVED) ?? undefined);
 }
 
 const classItem = (niveis, pvPorNivel) => ({ name: "Probe", type: "classe", system: { niveis, pvPorNivel, inicial: true } });
@@ -173,6 +173,13 @@ export default {
   group: "conditions",
   issue: 29,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  sources: [
+    NPC_DERIVED,
+    "AttributesFields.preparePVPM",
+    "CharacterData#prepareDerivedData",
+    "SimpleData#prepareDerivedData",
+    "CreatureData.schemaResources"
+  ],
   isNeeded,
   lateProbe,
   apply

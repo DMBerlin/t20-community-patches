@@ -62,7 +62,7 @@ export const TYPE_WORDS = {
   "humanóide": "hum",
   monstro: "mon",
   "morto-vivo": "mor",
-  // "Morto-\nvivo": _parseStatblock removes a hyphen at a line break (T20:11307).
+  // "Morto-\nvivo": _parseStatblock removes a hyphen at a line break of `statblock.value` (T20:10143).
   mortovivo: "mor"
 };
 export const SIZE_WORDS = {
@@ -81,7 +81,7 @@ const capitalize = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
 const TYPE_LINE = /.*\s(especial|solo|lacaio|Iniciativa)/i;
 
-/** The tokens StatblockParser#parseData reads for type, size, role and subtype (T20:11463-11469). */
+/** The tokens StatblockParser#parseData reads for type, size, role and subtype (`types`, T20:10298-10304). */
 export function typeTokens(statblock) {
   if (typeof statblock !== "string") return null;
   const line = capitalize(statblock).match(TYPE_LINE)?.[0];
@@ -99,8 +99,8 @@ const afterNd = (tokens) => {
  *  - own: the classification words;
  *  - prefix: the tokens the original read before them (name words);
  *  - read: the tokens of own the original read (its result on them is what it "read" from the classification).
- * The original reads the first line as the name (T20:11442), and _parseStatblock joins a line starting in lower case
- * to the previous one (T20:11308). When the text the original reads starts on the name line, only the tokens after
+ * The original reads the first line as the `name` (T20:10277), and _parseStatblock joins a line starting in lower case
+ * to the previous one (T20:10144). When the text the original reads starts on the name line, only the tokens after
  * "ND <value>" are the classification. When a blank line separates the classification from "Iniciativa", the original
  * reads only the empty line; the classification is then the last line with text before it. With no ND on the name
  * line (a name with "Especial…"), null keeps the official behavior.
@@ -122,7 +122,7 @@ export function classificationTokens(statblock) {
   return own && { own, prefix: tokens.slice(0, tokens.length - own.length), read: own };
 }
 
-/** What the original loop does with the tokens: exact match against the localized labels (T20:11469-11495). */
+/** What the original loop does with the tokens: exact match against the localized labels (T20:10304-10331). */
 export function simulateOriginal(tokens, { types = {}, roles = {}, sizes = {} } = {}) {
   const invert = (labels) => Object.fromEntries(Object.entries(labels).map(([key, value]) => [value, key]));
   const cType = invert(types);
@@ -370,6 +370,8 @@ export default {
   issue: 47,
   guarded: true,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  probeKind: "behavior",
+  sources: ["StatblockParser#parseData", "StatblockParser#_parseStatblock"],
   isNeeded,
   lateProbe,
   apply

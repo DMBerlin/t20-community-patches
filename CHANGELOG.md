@@ -10,6 +10,10 @@ Não edite as seções de versão à mão.
 
 ## Unreleased
 
+### Added
+
+- Ferramenta de auditoria (`make audit`) que verifica os patches contra uma nova versão do Tormenta20 sem abrir o Foundry (#90).
+
 ### Changed
 
 - Lint de fronteiras entre camadas e CI em push e PR (#83).

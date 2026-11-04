@@ -10,7 +10,6 @@
  * Fix: data-initial-cost holds only the base activation cost, and the total is computed from the checked boxes.
  */
 import { MODULE_ID } from "../lib/module.mjs";
-import { unwrap } from "../lib/source.mjs";
 import { wraps } from "../kernel/wrap.mjs";
 
 /**
@@ -98,13 +97,12 @@ function getDialogClass() {
   return globalThis.tormenta20?.applications?.AbilityUseDialog;
 }
 
-function isNeeded() {
-  const Dialog = getDialogClass();
-  const onInputChange = unwrap(Dialog?.prototype?._onInputChange);
-  const create = unwrap(Dialog?.create);
-  if (typeof onInputChange !== "function" || typeof create !== "function") return undefined;
-  const source = (fn) => Function.prototype.toString.call(fn);
-  return dialogCostIsBroken(source(onInputChange), source(create));
+const SOURCES = ["AbilityUseDialog#_onInputChange", "AbilityUseDialog.create"];
+
+function isNeeded(ctx) {
+  const [onInputChange, create] = SOURCES.map((label) => ctx.platform.sourceOfMethod(label));
+  if (onInputChange == null || create == null) return undefined;
+  return dialogCostIsBroken(onInputChange, create);
 }
 
 function apply() {
@@ -143,6 +141,7 @@ export default {
   group: "usage-effects",
   issue: 7,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  sources: SOURCES,
   isNeeded,
   apply
 };

@@ -449,6 +449,7 @@ export default {
   group: "items",
   issue: 43,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  probeKind: "behavior",
   guarded: true,
   isNeeded,
   // The armor penalty of an enchantment follows armor-penalty-reduction when that patch is applied.

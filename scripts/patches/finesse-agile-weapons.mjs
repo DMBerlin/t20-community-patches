@@ -12,9 +12,9 @@
  * Dexterity, exactly as the system already does for light weapons. Explicit attributes, ranged weapons, light
  * weapons and stored data are untouched.
  *
- * Probe: tormenta20 1.6.6 fixed the bug (T20:6999 and T20:7968). isNeeded() calls the system's original methods
- * with a fake agile weapon and a light control, and reads the attribute they pick. It only runs code it recognizes
- * (1.6.5 or 1.6.6); otherwise, or when the probe is inconclusive, the source diagnosis is the fallback.
+ * Probe: tormenta20 1.6.6 fixed the bug (`isFinesse`, T20:6999 and T20:7968). isNeeded() calls the system's
+ * original methods with a fake agile weapon and a light control, and reads the attribute they pick. It only runs code
+ * it recognizes (1.6.5 or 1.6.6); otherwise, or when the probe is inconclusive, the source diagnosis is the fallback.
  */
 
 import { stripComments, unwrap } from "../lib/source.mjs";
@@ -32,7 +32,10 @@ export const REFERENCE = {
   damage: { length: 2493, hash: "953f8861" }
 };
 
-/** The same fingerprints for tormenta20 1.6.6 (T20:6972-7060 and T20:7936-8019), which fixed the bug. */
+/**
+ * The same fingerprints for tormenta20 1.6.6 (getAttackToHit, T20:6972-7060, and rollDamage, T20:7936-8019), which
+ * fixed the bug.
+ */
 export const REFERENCE_1_6_6 = {
   attack: { length: 2027, hash: "3f52e31e" },
   damage: { length: 2698, hash: "c5c5ff4f" }
@@ -379,7 +382,7 @@ function apply() {
   });
 
   // ItemT20#rollDamage is async, but it reads `this.system.rolls` (the `for…of` iterator and the attack skill)
-  // before its first `await` (damageRoll → Roll#evaluate, T20:9170-9182). So each call installs its own `rolls`
+  // before its first `await` (Roll#evaluate inside `damageRoll`, T20:8004-8016). So each call installs its own `rolls`
   // array only for its synchronous start and restores the previous value before returning the promise; the loop
   // keeps iterating that call's array. The synchronous start can still reach a nested call on the same item
   // (Roll#evaluate starts before the `await`; a hook may roll again): `frames` keeps the item's real rolls while a
@@ -416,6 +419,8 @@ export default {
   group: "items",
   issue: 44,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.5" } },
+  probeKind: "behavior",
+  sources: ["ItemT20#getAttackToHit", "ItemT20#rollDamage"],
   isNeeded,
   apply
 };

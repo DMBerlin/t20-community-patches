@@ -62,6 +62,12 @@ export const GROUPS = ["conditions", "sheet-effects", "usage-effects", "items", 
  *                                               Returns a Diagnosis, or a legacy boolean: true = present/high,
  *                                               false = fixed/low, undefined = unknown. A probe that only reads
  *                                               source code never returns fixed/high.
+ * @property {"source"|"behavior"} [probeKind]  "source" (default): isNeeded only reads system code through
+ *                                               ctx.platform.sourceOfMethod, so `make audit` runs it on the bundle.
+ *                                               "behavior": it executes code or reads CONFIG, data or settings.
+ * @property {string[]} [sources]                Method labels the patch depends on (`Class#member`, `Class.member`,
+ *                                               `#helper:name`, `#local:name`); `make audit` fingerprints them.
+ *                                               Every label the probe reads must be listed.
  * @property {import("../kernel/feature.mjs").SettingSpec[]} [settings]
  *                                               Settings registered only when the patch is applied, before apply().
  * @property {boolean} [guarded]                 apply() only acts when the bug shows up, so it is safe to apply on

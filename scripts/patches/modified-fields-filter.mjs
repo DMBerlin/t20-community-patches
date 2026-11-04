@@ -1,7 +1,7 @@
 /**
  * Effect lines of the sheet breakdowns (tormenta20 1.6.5).
  *
- * Bug: ActorT20#modifiedFields (T20:6952-6962), the list of effect changes the sheet breakdowns (`fieldBonuses`) show
+ * Bug: ActorT20#modifiedFields (T20:5776-5787), the list of effect changes the sheet breakdowns (`fieldBonuses`) show
  * per field, skips changes whose *value* is 3 or 4. The test was meant for the old Downgrade (3) and Upgrade (4)
  * modes; in Foundry 14 the mode is the change `type` ("downgrade", "upgrade"). So an effect that adds the number 3
  * or 4 (for example Defesa +3) disappears from the breakdown, whose total no longer matches the sheet, while
@@ -103,6 +103,8 @@ export default {
   group: "sheet-effects",
   issue: 39,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  probeKind: "behavior",
+  sources: ["ActorT20#modifiedFields"],
   isNeeded,
   apply
 };

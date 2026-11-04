@@ -1,0 +1,69 @@
+// Synthetic Tormenta20 bundle for tests/audit.test.mjs. Read as text by the audit; the test also evaluates it to
+// compare the indexed text with Function.prototype.toString.
+class Base {
+	get isSuppressed() {
+		return false;
+	}
+}
+
+class ItemT20 extends Base {
+	rollDamage(options = {}) {
+		// collects "@danoALQ"
+		return ["@danoALQ", options];
+	}
+	static create(data) {
+		return new ItemT20(data);
+	}
+	static get label() {
+		return "item";
+	}
+	set value(v) {}
+}
+
+let Legacy$1 = class Legacy {
+	manage() {
+		return "legacy";
+	}
+};
+
+class Legacy {
+	manage() {
+		return "current";
+	}
+}
+
+class Twice {
+	run() {
+		return 1;
+	}
+}
+
+{
+	class Twice {
+		run() {
+			return 2;
+		}
+	}
+}
+
+const Holder = {};
+Holder.prototype = {};
+Holder.prototype.assigned = function (a) {
+	return a + 1;
+};
+Holder.staticAssigned = (b) => b * 2;
+
+function applyEffectChanges(ch) {
+	return ch;
+}
+
+const applyItemChanges = (ch, qty) => ch * qty;
+
+Handlebars.registerHelper("fieldBonuses", function (path, options) {
+	return path;
+});
+Handlebars.registerHelper({
+	other: (x) => x
+});
+
+export { Base, ItemT20, Legacy$1, Legacy, Holder, applyEffectChanges, applyItemChanges };

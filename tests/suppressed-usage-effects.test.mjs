@@ -65,7 +65,12 @@ function setup() {
       return Object.values(effects); // filters system.onuse
     }
   }
-  const ctx = createFakeContext(patch, createFakePlatform({ classes: { actor: Actor, item: Item } }));
+  const sources = {
+    "ItemT20#_allApplicableOnUseEffects": () => Item.prototype._allApplicableOnUseEffects,
+    "ActorT20#rollPericia": () => Actor.prototype.rollPericia,
+    "ActorT20#rollAtributo": () => Actor.prototype.rollAtributo
+  };
+  const ctx = createFakeContext(patch, createFakePlatform({ classes: { actor: Actor, item: Item }, sources }));
   assert.equal(patch.isNeeded(ctx), true);
   patch.install(ctx);
   return { Actor, Item, effects, ctx };

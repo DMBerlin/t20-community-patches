@@ -183,9 +183,10 @@ export function diagnoseConditionData(code, changesByStatus) {
 
 const runForActor = createKeyedQueue();
 
-function originalSource() {
-  const fn = unwrap(CONFIG.Combat?.documentClass?.prototype?._manageDOTEffects);
-  return typeof fn === "function" ? Function.prototype.toString.call(fn) : "";
+const MANAGE_DOT = "CombatT20#_manageDOTEffects";
+
+function originalSource(ctx) {
+  return ctx.platform.sourceOfMethod(MANAGE_DOT) ?? "";
 }
 
 function describeEffect(effect, actor) {
@@ -268,7 +269,7 @@ function apply() {
   const CombatClass = CONFIG.Combat?.documentClass;
   const original = CombatClass?.prototype?._manageDOTEffects;
   if (typeof original !== "function") throw new Error("Tormenta20 ongoing damage API not found");
-  const recognized = diagnoseDotSource(originalSource()).bug === "present";
+  const recognized = diagnoseDotSource(Function.prototype.toString.call(unwrap(original))).bug === "present";
   if (!recognized) console.warn(`${LOG} _manageDOTEffects not recognized; the conditions are left to the system`);
 
   wraps.wrap(CombatClass.prototype, "_manageDOTEffects", "ongoing-damage-conditions", async function (original, ...args) {
@@ -285,12 +286,12 @@ function apply() {
   });
 }
 
-function isNeeded() {
-  return diagnoseDotSource(originalSource());
+function isNeeded(ctx) {
+  return diagnoseDotSource(originalSource(ctx));
 }
 
-async function lateProbe() {
-  const code = diagnoseDotSource(originalSource());
+async function lateProbe(ctx) {
+  const code = diagnoseDotSource(originalSource(ctx));
   if (code.bug !== "present") return undefined;
   const pack = game.packs.get(STATUS_PACK);
   if (!pack?.index?.size) return undefined;
@@ -309,6 +310,7 @@ export default {
   issue: 45,
   guarded: true,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  sources: [MANAGE_DOT, "ActiveEffectT20#isOngoingDamage"],
   isNeeded,
   lateProbe,
   apply

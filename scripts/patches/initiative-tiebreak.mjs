@@ -174,6 +174,8 @@ export default {
   group: "combat",
   issue: 53,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  probeKind: "behavior",
+  sources: ["CombatT20#_sortCombatants"],
   isNeeded,
   apply
 };

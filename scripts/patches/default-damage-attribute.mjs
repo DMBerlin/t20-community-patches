@@ -11,7 +11,7 @@
  * melee and other items: For). Parts the system resolves itself, explicit attributes and stored data are untouched.
  */
 
-import { sourceFingerprint, unwrap } from "../lib/source.mjs";
+import { sourceFingerprint } from "../lib/source.mjs";
 import { prefersDexterity } from "../lib/weapons.mjs";
 import { wraps } from "../kernel/wrap.mjs";
 
@@ -21,7 +21,7 @@ export const REFERENCE = "b6191939:3049";
 const SKIPPED_TYPES = new Set(["curatpv", "curapm", "curatpm", "perda"]);
 
 /**
- * Whether tormenta20 1.6.6 resolves `padrao` at this part itself (T20:7963-7965).
+ * Whether tormenta20 1.6.6 resolves `padrao` at this part itself (T20:7966-7969).
  * @param {{type?: string, system?: object}} item
  * @param {number} index
  * @returns {boolean}
@@ -141,10 +141,12 @@ function getItemClass() {
   return typeof ItemClass?.prototype?.rollDamage === "function" ? ItemClass : null;
 }
 
-function isNeeded() {
-  const ItemClass = getItemClass();
-  if (!ItemClass) return undefined;
-  return diagnoseDamageSource(Function.prototype.toString.call(unwrap(ItemClass.prototype.rollDamage)));
+const ROLL_DAMAGE = "ItemT20#rollDamage";
+
+function isNeeded(ctx) {
+  const source = ctx.platform.sourceOfMethod(ROLL_DAMAGE);
+  if (source == null) return undefined;
+  return diagnoseDamageSource(source);
 }
 
 function apply() {
@@ -187,6 +189,7 @@ export default {
   group: "items",
   issue: 77,
   system: { id: "tormenta20", affected: { minimum: "1.6.6", maximum: "1.6.6" } },
+  sources: [ROLL_DAMAGE],
   isNeeded,
   apply
 };

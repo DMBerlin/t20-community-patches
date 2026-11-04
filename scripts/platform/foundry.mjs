@@ -5,6 +5,7 @@
  */
 import { MODULE_ID } from "../lib/module.mjs";
 import { unwrap } from "../lib/source.mjs";
+import { findClassMember, parseMethodLabel } from "../lib/method-label.mjs";
 
 /**
  * @typedef {object} SystemClasses   Document classes registered by the system (CONFIG.<Doc>.documentClass).
@@ -38,6 +39,9 @@ import { unwrap } from "../lib/source.mjs";
  * @property {{data(form: HTMLFormElement): object}} forms  FormDataExtended#object of a form.
  * @property {{info(...a: unknown[]), warn(...a: unknown[]), error(...a: unknown[])}} log  Prefixed with the module id.
  * @property {(fn: Function) => string|null} sourceOf   Source of the innermost function under the module's wrappers.
+ * @property {(label: string) => string|null} sourceOfMethod  "ItemT20#rollDamage" → source of the system's function
+ *   (scripts/lib/method-label.mjs), under the module's wrappers; null when not found. The static audit (#90) answers
+ *   the same labels from the bundle's text.
  * @property {{setApi(api: object): void, systemCompatibility(): {minimum?: string, verified?: string}|undefined}} module
  */
 
@@ -81,6 +85,64 @@ function createClasses() {
       return sheetEffectClass();
     }
   });
+}
+
+const LABEL_DOCUMENTS = ["Actor", "Item", "ActiveEffect", "ChatMessage", "Combat", "Combatant", "Token", "Region"];
+const LABEL_NAMESPACES = ["entities", "documents", "applications"];
+
+/**
+ * Classes a method label is searched in. The system calls static helpers through its namespace
+ * (`tormenta20.entities.ActiveEffectT20.onManageActiveEffect` up to 1.6.5, `tormenta20.documents` after) and instance
+ * methods on the document classes, so each kind looks first where the system calls it: the bundle has two different
+ * classes named ActiveEffectT20, and the order follows `sheetEffectClass()`.
+ * @param {"instance"|"static"} kind
+ * @returns {Function[]}
+ */
+function labelRoots(kind) {
+  const { documents, dataModels, namespaces } = labelClasses();
+  const configured = [...documents, ...dataModels];
+  return kind === "static" ? [...namespaces, ...configured] : [...configured, ...namespaces];
+}
+
+function labelClasses() {
+  const config = (name) => globalThis.CONFIG?.[name];
+  const isClass = (value) => typeof value === "function";
+  const t20 = globalThis.tormenta20;
+  return {
+    documents: LABEL_DOCUMENTS.map((name) => config(name)?.documentClass).filter(isClass),
+    dataModels: LABEL_DOCUMENTS.flatMap((name) => Object.values(config(name)?.dataModels ?? {})).filter(isClass),
+    namespaces: LABEL_NAMESPACES.flatMap((name) => Object.values(t20?.[name] ?? {})).filter(isClass)
+  };
+}
+
+/** Namespaces of `globalThis.tormenta20` with the system's own classes (never CONFIG, which other modules change). */
+const SYSTEM_NAMESPACES = [["entities"], ["documents"], ["applications"], ["models"], ["data", "models"], ["data", "fields"]];
+
+/** Whether a class belongs to the system: one of its namespace classes, or an ancestor of one. */
+function systemClassTest() {
+  const t20 = globalThis.tormenta20;
+  const system = new Set();
+  for (const path of SYSTEM_NAMESPACES) {
+    const namespace = path.reduce((holder, key) => holder?.[key], t20);
+    for (const root of Object.values(namespace ?? {})) addLineage(system, root);
+  }
+  return (cls) => system.has(cls);
+}
+
+function addLineage(set, root) {
+  for (let c = root; typeof c === "function" && c !== Function.prototype && !set.has(c); c = Object.getPrototypeOf(c)) set.add(c);
+}
+
+function sourceOf(fn) {
+  const inner = unwrap(fn);
+  return typeof inner === "function" ? Function.prototype.toString.call(inner) : null;
+}
+
+function sourceOfMethod(label) {
+  const parsed = parseMethodLabel(label);
+  if (!parsed || parsed.kind === "local") return null;
+  if (parsed.kind === "helper") return sourceOf(globalThis.Handlebars?.helpers?.[parsed.name]);
+  return sourceOf(findClassMember(parsed, labelRoots(parsed.kind), systemClassTest(), unwrap));
 }
 
 const PREFIX = `${MODULE_ID} |`;
@@ -197,10 +259,8 @@ export function createPlatform() {
     dice: createDice(),
     forms: Object.freeze({ data: (form) => new foundry.applications.ux.FormDataExtended(form).object }),
     log: createLog(),
-    sourceOf: (fn) => {
-      const inner = unwrap(fn);
-      return typeof inner === "function" ? Function.prototype.toString.call(inner) : null;
-    },
+    sourceOf,
+    sourceOfMethod,
     module: createModule()
   });
 }

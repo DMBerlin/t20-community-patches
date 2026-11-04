@@ -287,6 +287,7 @@ export default {
   group: "usage-effects",
   issue: 34,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  sources: ["ItemT20#_allApplicableOnUseEffects", "ItemT20#roll", "AbilityUseDialog#_onInputChange", "#local:applyOnUseEffects"],
   isNeeded,
   apply
 };

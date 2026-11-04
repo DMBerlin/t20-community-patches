@@ -142,6 +142,7 @@ export default {
   group: "conditions",
   issue: 40,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  probeKind: "behavior",
   guarded: true,
   isNeeded,
   lateProbe,

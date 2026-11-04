@@ -54,6 +54,7 @@ t20-community-patches/
 | `make active` | Faz o Foundry carregar **esta** worktree (link simbólico em `Data/modules`) |
 | `make active-status` | Mostra qual worktree o Foundry está carregando |
 | `make worktree ISSUE=n` | Cria ou reutiliza a worktree da issue |
+| `make audit [BUNDLE=…]` | Auditoria estática dos patches contra o bundle do Tormenta20 instalado, sem abrir o Foundry (ver "Auditoria estática") |
 | `make package` | Gera `dist/module.zip` e `dist/module.json` |
 | `node tools/changelog.mjs …` | `add`, `next`, `release`, `notes` (ver o cabeçalho do arquivo) |
 
@@ -64,7 +65,7 @@ O `eslint.config.mjs` garante as fronteiras da arquitetura em camadas (épico #8
 - Camadas: `scripts/kernel`, `scripts/platform`, `scripts/services`, `scripts/lib` e `scripts/features/<feature>`.
 - **Globais do Foundry só em `scripts/platform/`.** `game`, `CONFIG`, `ui`, `foundry`, `canvas`, `Hooks`, `CONST`, `Roll`, `ChatMessage`, `Actor`, `Item` e `Handlebars` são proibidos em `kernel`, `services`, `lib`, em todas as features (domínio, integração e UI), no `main.mjs` e nos arquivos legados já migrados (lista `NO_GLOBALS` do `eslint.config.mjs`). Isso vale também para `globalThis.<global>`, `window.<global>` e `self.<global>`, para cadeias como `globalThis.window.game` e para desestruturação (`const { game } = window`), via a regra local `t20/no-foundry-globals`.
 - A regra local `t20/layer-boundaries` (`tools/eslint/layer-boundaries.mjs`) resolve cada importação relativa a partir do arquivo, em qualquer profundidade de pasta. Importações dentro da mesma feature são livres, salvo as do domínio abaixo. Ela também verifica `export … from` e `import()`; nas features e em `scripts/lib`, `import()` só aceita caminho literal. Nas camadas, só caminhos relativos (`./`, `../`): caminho absoluto, URL ou pacote é erro.
-- Plataforma (`scripts/platform/foundry.mjs`): `createPlatform()` devolve um objeto congelado com as portas `system`, `classes` (classes de documento do sistema), `t20()`, `t20Config()`, `statusEffects()`, `settings` (chaves deste módulo), `i18n`, `notify`, `hooks`, `user`, `documents`, `utils`, `dice`, `forms`, `log`, `sourceOf(fn)` (código-fonte da função original, sob os wrappers do módulo) e `module`. Tudo é lido sob demanda, porque `CONFIG`, `game.user` e as traduções mudam entre o `init` e o `ready`. Uma porta nova entra aqui, nunca como global lido numa feature.
+- Plataforma (`scripts/platform/foundry.mjs`): `createPlatform()` devolve um objeto congelado com as portas `system`, `classes` (classes de documento do sistema), `t20()`, `t20Config()`, `statusEffects()`, `settings` (chaves deste módulo), `i18n`, `notify`, `hooks`, `user`, `documents`, `utils`, `dice`, `forms`, `log`, `sourceOf(fn)` (código-fonte da função original, sob os wrappers do módulo), `sourceOfMethod(rótulo)` (o mesmo, a partir de um rótulo como `ItemT20#rollDamage`; ver "Auditoria estática") e `module`. Tudo é lido sob demanda, porque `CONFIG`, `game.user` e as traduções mudam entre o `init` e o `ready`. Uma porta nova entra aqui, nunca como global lido numa feature.
 - Contexto (`scripts/kernel/context.mjs`): cada feature recebe um `ctx` congelado em `isNeeded(ctx)`, `install(ctx)` e `lateProbe(ctx)`, com `id`, `platform`, `log` (prefixado com o id), `hooks`, `wrap(alvo, método, wrapper)` (o dono é o id da feature) `setting(chave)`, que só lê chaves declaradas em `settings` da própria feature e lança nas outras, `services` e `features` (abaixo).
 - Bibliotecas (`scripts/lib/`): helpers puros e sem estado compartilhados entre features (constantes, cálculos, leitura de dados). Recebem por parâmetro o que precisariam ler de globais (por exemplo `getProperty`, `fromUuidSync`, um leitor de configuração).
 - Serviços (`scripts/services/`, registrados em `SERVICES`, de `scripts/services/index.mjs`): contratos **com estado** compartilhados entre features (`stacking-exclusions`, `use-dialog-guard`, `mana-queue`, `use-targets`, `attack-outcome`). Cada serviço exporta `{ id, install(ctx) }`; o `install` devolve a API, guarda o estado no próprio fechamento e é chamado **uma vez**, pelo kernel (`scripts/kernel/services.mjs`), logo antes da primeira feature que declara o serviço em `services`. O `ctx` do serviço tem `id`, `platform`, `log`, `hooks` e `wrap` (o dono dos wrappers é o id do serviço). Uma feature lê a API em `ctx.services[id]`; um id não declarado lança. Se o serviço falha ao instalar, as features que o declaram viram `error`.
@@ -106,6 +107,8 @@ export default {
   settings: [/* opcional: SettingSpec, registradas só quando o patch é aplicado */],
   interactsWith: ["<id>"],          // opcional: features lidas por ctx.features (estado ou configuração)
   services: ["<id>"],               // opcional: serviços lidos em ctx.services, instalados antes do install()
+  sources: ["ItemT20#rollDamage"],  // rótulos das funções do sistema de que o patch depende (make audit)
+  probeKind: "behavior",            // opcional: o isNeeded executa código ou lê CONFIG, dados ou configurações
   isNeeded(ctx) { /* síncrono, seguro no init, roda antes do install(): devolve um Diagnosis */ },
   async lateProbe(ctx) { /* opcional: diagnóstico depois do ready; só atualiza selo e aviso */ },
   install(ctx) { /* instala os wrappers com ctx.wrap; chamado uma vez no init */ }
@@ -135,10 +138,19 @@ export default {
 
 Diagnóstico (`Diagnosis`, em `scripts/registry.mjs`): `{ bug: "present" | "fixed" | "unknown", confidence: "high" | "low", evidence?: string }`.
 - `confidence: "high"` só quando a evidência cobre **tudo** o que o patch corrige. Em Automático, só `fixed`/high deixa de aplicar a correção; `fixed`/low vira `suspected-fixed` e a correção continua aplicada.
-- Um teste que **só lê código-fonte** nunca devolve `fixed`/high: ignore comentários (`stripComments`), leia a função original (`ctx.platform.sourceOf(fn)`, que segue o `unwrap`) e responda `unknown` para código não reconhecido (por exemplo, o wrapper de outro módulo). Uma correção parcial do sistema não é `fixed`.
+- Um teste que **só lê código-fonte** nunca devolve `fixed`/high: ignore comentários (`stripComments`), leia a função original por rótulo (`ctx.platform.sourceOfMethod("Classe#método")`, que segue o `unwrap`) e responda `unknown` para código não reconhecido (por exemplo, o wrapper de outro módulo). Uma correção parcial do sistema não é `fixed`.
 - Booleanos legados continuam aceitos: `true` → present/high, `false` → fixed/low, `undefined` → unknown.
 - `guarded: true` permite aplicar a correção numa versão não verificada sem confirmar o bug (`applied-guarded`).
 - `lateProbe()` só roda quando o patch foi aplicado, não pode medir o efeito do próprio patch e devolve `undefined` quando não aprendeu nada.
+
+### Auditoria estática (`make audit`)
+
+`tools/audit.mjs` (#90) confere os patches contra um bundle do Tormenta20 sem abrir o Foundry: o bundle é só lido e analisado com acorn, nunca importado nem executado.
+- Rótulos (`scripts/lib/method-label.mjs`): `Classe#membro` (método ou getter do protótipo), `Classe.membro` (estático), `#helper:nome` (helper do Handlebars) e `#local:nome` (função de topo do bundle, que só existe na auditoria; no Foundry é `null`).
+- Um `isNeeded` de código-fonte lê o sistema **só** por `ctx.platform.sourceOfMethod(rótulo)`, e todo rótulo lido está em `sources`. A auditoria roda esse `isNeeded` contra o bundle; qualquer outra porta lança `RequiresFoundry` e vira erro. Um teste que executa código ou lê `CONFIG`, dados ou configurações declara `probeKind: "behavior"` e não roda na auditoria. Em todo patch, `sources` inclui também as funções do sistema que o cabeçalho aponta como causa do bug, mesmo que o teste não as leia: são elas que a auditoria vigia (`CHANGED`). Patches só de dados de compêndio podem ficar sem `sources`.
+- As impressões digitais (`sourceFingerprint`) de todos os rótulos ficam em `tests/fixtures/audit-baseline.json`, por versão. A comparação usa a versão `verified` do `module.json` (ou a mais nova registrada). Depois de verificar uma versão nova do sistema, grave a dela com `node tools/audit.mjs --write-baseline`.
+- As referências `T20:<linha>` dos arquivos de patch são conferidas pelo nome de código mais próximo: `ok`, `shifted` (o código andou), `missing`, `pinned` (a linha cita outra versão, como `1.6.5`) e `no-anchor`.
+- Código de saída 1 quando uma impressão digital muda (`CHANGED`), um teste lança, um rótulo lido falta em `sources` ou uma referência some (`missing`).
 
 Regras (patches e regras opcionais):
 - Lógica de decisão em **funções puras exportadas**, testadas em `tests/<id>.test.mjs`. A integração com o Foundry fica fina.

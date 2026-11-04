@@ -2,8 +2,8 @@
  * Damage reduction with exception, applied once per attack (tormenta20 1.6.5).
  *
  * Bug: ActorT20#applyDamageV2 adds the exception RD (`resistencias.<tipo>.excecao`, "RD 10/luz") to every
- * non-excepted damage type of the roll (T20:7422-7424), so an attack with several damage types is reduced several
- * times, and penetration (`roll.options.rd`, e.g. Penetrante) never reduces it.
+ * non-excepted damage type of the roll (`rdsEx`, T20:6246-6248), so an attack with several damage types is reduced
+ * several times, and penetration (`roll.options.rd`, e.g. Penetrante) never reduces it.
  *
  * Fix: when the target has an exception RD, the reductions are resolved here and handed to the system through its
  * prepared data, only during the synchronous part of applyDamageV2: the exception RD that is actually absorbed
@@ -21,11 +21,11 @@ const LOG = `${MODULE_ID} | rd-exception-once:`;
 /** sourceFingerprint of ActorT20#applyDamageV2 in tormenta20 1.6.5 (T20:7360-7451). */
 export const KNOWN_APPLY_DAMAGE_V2 = "f28e58e0:2657";
 
-/** Roll flavors that applyDamageV2 never treats as damage (T20:7392-7403). */
+/** Roll flavors that applyDamageV2 never treats as damage (`damage.perda` and the healing `map`, T20:6216-6227). */
 export const NON_DAMAGE_TYPES = new Set(["perda", "curapv", "curatpv", "curapm", "curatpm"]);
 
 /**
- * Groups the damage terms of a roll by type, as applyDamageV2 does (T20:7377-7390).
+ * Groups the damage terms of a roll by type, as applyDamageV2 does (`roll.terms`, T20:6201-6214).
  * @param {object[]} terms              roll.terms
  * @param {string} [fallback="dano"]    The `type` argument of applyDamageV2
  * @returns {Map<string, {value: number, porDado: number}>}  In term order; healing and `perda` are left out.
@@ -52,8 +52,8 @@ export function groupDamage(terms, fallback = "dano") {
 }
 
 /**
- * The exception RD, read as applyDamageV2 reads it (T20:7363-7366, 7422-7423): the first `excecao` found, and every
- * type with an `excecao` is excepted.
+ * The exception RD, read as applyDamageV2 reads it (`rdsEx`, T20:6187-6190, 6246-6247): the first `excecao` found, and
+ * every type with an `excecao` is excepted.
  * @param {Record<string, {excecao?: number}>} resistances
  * @returns {{amount: number, except: Set<string>}|null}
  */
@@ -180,10 +180,12 @@ function originalSource(fn) {
   }
 }
 
-function isNeeded() {
-  const original = unwrap(CONFIG.Actor?.documentClass?.prototype?.applyDamageV2);
-  if (typeof original !== "function") return { bug: "unknown", confidence: "low", evidence: "applyDamageV2 not found" };
-  return diagnoseFingerprint(sourceFingerprint(originalSource(original)));
+const APPLY_DAMAGE = "ActorT20#applyDamageV2";
+
+function isNeeded(ctx) {
+  const source = ctx.platform.sourceOfMethod(APPLY_DAMAGE);
+  if (source == null) return { bug: "unknown", confidence: "low", evidence: "applyDamageV2 not found" };
+  return diagnoseFingerprint(sourceFingerprint(source));
 }
 
 function apply() {
@@ -193,7 +195,7 @@ function apply() {
   const known = sourceFingerprint(originalSource(unwrap(original))) === KNOWN_APPLY_DAMAGE_V2;
   if (!known) console.warn(`${LOG} unrecognized applyDamageV2, not changing it`);
 
-  // applyDamageV2 reads the resistances synchronously, before its first await (this.update, T20:7449), so the
+  // applyDamageV2 reads the resistances synchronously, before its first await (this.update, T20:6273), so the
   // prepared data can be restored as soon as the original returns its promise.
   wraps.wrap(prototype, "applyDamageV2", "rd-exception-once", function (original, roll, multiplier = 1, type = "dano", ...rest) {
     let restore = null;
@@ -220,6 +222,7 @@ export default {
   group: "combat",
   issue: 64,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  sources: [APPLY_DAMAGE],
   isNeeded,
   apply
 };

@@ -7,6 +7,7 @@ import patch, {
   rootForHelper
 } from "../scripts/patches/field-bonuses-tooltip.mjs";
 import { fieldTerms } from "../scripts/lib/tooltip.mjs";
+import { createProbeContext } from "./support/fake-platform.mjs";
 
 const tooltip = (lines) => {
   const total = lines.reduce((sum, [, v]) => sum + v, 0);
@@ -137,7 +138,7 @@ const render = (helpers, actor, path = PATH) => lines(helpers.fieldBonuses.call(
 test("apply on 1.6.5: token sheets use the token actor and the Defesa lists the condition", () => {
   const { base, synthetic, helpers } = setup();
   try {
-    assert.equal(patch.isNeeded().bug, "present");
+    assert.equal(patch.isNeeded(createProbeContext(patch, { "#helper:fieldBonuses": () => helpers.fieldBonuses })).bug, "present");
     patch.apply();
     assert.deepEqual(render(helpers, base), ["Base +10", "Total +10"]);
     assert.deepEqual(render(helpers, synthetic), ["Base +12", "T20CP.FieldBonuses.Condition -5", "Total +7"]);

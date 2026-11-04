@@ -10,7 +10,7 @@
  * cast has a single marker, named after the spell. The system's own cost and deletion logic then work per cast.
  */
 import { MODULE_ID } from "../lib/module.mjs";
-import { stripComments, unwrap } from "../lib/source.mjs";
+import { stripComments } from "../lib/source.mjs";
 import { fromFactory, wraps } from "../kernel/wrap.mjs";
 
 export const SUSTAIN_EXPIRY = "sustainEnd";
@@ -18,7 +18,7 @@ export const SUSTAIN_STATUS = "sustentando";
 export const SUSTAIN_LABEL_FLAG = "sustainLabel";
 
 /**
- * Splits a sustained origin (`<caster uuid>.ActiveEffect.<marker id>`, T20:6634-6636).
+ * Splits a sustained origin (`<caster uuid>.ActiveEffect.<marker id>`, T20:5459-5461).
  * @param {unknown} origin
  * @returns {{casterUuid: string, markerId: string}|null}
  */
@@ -68,7 +68,7 @@ export function unifySustainedOrigins(entries, label) {
 }
 
 /**
- * New name for a "Sustentando" marker: the system appends ` (<applied effect name>)` (T20:17903); this swaps that
+ * New name for a "Sustentando" marker: the system appends ` (<applied effect name>)` (T20:16744); this swaps that
  * suffix for the spell name.
  * @param {unknown} name         Marker name built by the system.
  * @param {unknown} appliedName  Name of the applied effect that created the marker.
@@ -118,7 +118,7 @@ export function queueByKey(queues, key, task) {
 
 /**
  * Wraps ActiveEffect#_preCreate. Sustained effects with a marker origin run one at a time per origin: the system
- * checks `fromUuidSync(origin)` before awaiting the marker creation (T20:17898-17907), so two overlapping
+ * checks `fromUuidSync(origin)` before awaiting the marker creation (T20:16739-16748), so two overlapping
  * applications of one cast would both try to create the same marker id. While a call runs, `labels` maps its origin
  * to the applied effect name and the spell name, for the nested marker creation (see relabelPendingMarker).
  * @param {Function} preCreate  The original _preCreate.
@@ -144,7 +144,7 @@ export function wrapSustainedPreCreate(preCreate, { queues, labels }) {
 
 /**
  * preCreateActiveEffect: renames a "Sustentando" marker created inside a wrapped _preCreate. The marker id is the
- * last part of the origin and its parent is the caster (T20:17899-17906), so `<parent uuid>.ActiveEffect.<id>` is
+ * last part of the origin and its parent is the caster (T20:16740-16747), so `<parent uuid>.ActiveEffect.<id>` is
  * that origin.
  * @param {{statuses?: Set<string>, parent?: {uuid?: string}, id?: string, name?: string, updateSource: Function}} effect
  * @param {{_id?: string, name?: string}} data
@@ -204,12 +204,14 @@ function apply() {
   });
 }
 
-function isNeeded() {
-  const handler = unwrap(CONFIG.ChatMessage?.documentClass?._onSustainEffect);
-  if (typeof handler !== "function") {
+const ON_SUSTAIN = "ChatMessageT20._onSustainEffect";
+
+function isNeeded(ctx) {
+  const handler = ctx.platform.sourceOfMethod(ON_SUSTAIN);
+  if (handler == null) {
     return { bug: "unknown", confidence: "low", evidence: "ChatMessage._onSustainEffect not found" };
   }
-  if (sustainCostIsPerMarker(Function.prototype.toString.call(handler))) {
+  if (sustainCostIsPerMarker(handler)) {
     return {
       bug: "present",
       confidence: "low",
@@ -224,6 +226,7 @@ export default {
   group: "usage-effects",
   issue: 61,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  sources: [ON_SUSTAIN, "BaseEffect#_preCreate", "#local:applyOnUseEffects"],
   guarded: true,
   isNeeded,
   apply

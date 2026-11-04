@@ -6,6 +6,7 @@ import patch, {
   dialogCostIsBroken
 } from "../scripts/patches/ability-dialog-cost.mjs";
 import { unwrap } from "../scripts/lib/source.mjs";
+import { createProbeContext } from "./support/fake-platform.mjs";
 
 test("base activation cost is the positive numeric ativacao.custo", () => {
   assert.equal(baseActivationCost({ ativacao: { custo: 3 } }), 3);
@@ -140,7 +141,11 @@ test("integration: initial total uses only base cost plus pre-checked rows, clic
     delete globalThis.HTMLElement;
   });
   const { AbilityUseDialog, render } = installSystem();
-  assert.equal(patch.isNeeded(), true);
+  const ctx = createProbeContext(patch, {
+    "AbilityUseDialog#_onInputChange": () => AbilityUseDialog.prototype._onInputChange,
+    "AbilityUseDialog.create": () => AbilityUseDialog.create
+  });
+  assert.equal(patch.isNeeded(ctx), true);
 
   // Case A before the patch: the system pre-added a disabled=false +2 enhancement (initialCost 3); checking it shows 5.
   const before = buildDialog({ rows: [{ cost: 2, checked: true }], initialCost: 3 });
@@ -148,7 +153,7 @@ test("integration: initial total uses only base cost plus pre-checked rows, clic
   assert.equal(before.total.value, 5);
 
   patch.apply();
-  assert.equal(patch.isNeeded(), true, "probe inspects the system code below the wrapper");
+  assert.equal(patch.isNeeded(ctx), true, "probe inspects the system code below the wrapper");
   assert.equal(typeof unwrap(AbilityUseDialog.prototype._onInputChange), "function");
 
   // Case A: render resets the initial cost to the activation cost.

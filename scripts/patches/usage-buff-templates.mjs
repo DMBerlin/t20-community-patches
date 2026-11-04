@@ -89,9 +89,9 @@ export function skillAttributeKey(key) {
 }
 
 /**
- * The card sums changes with the same key as numbers (T20:6592), so a dice bonus appended to a template by an
- * enhancement (Arma Mágica +1d6, then +2d6) becomes NaN. Merges an "add" change into an existing "add" of the same
- * key as one formula when either value is not a number.
+ * The card sums changes with the same key as numbers (`Number(ch.value)`, T20:5413-5418), so a dice bonus appended
+ * to a template by an enhancement (Arma Mágica +1d6, then +2d6) becomes NaN. Merges an "add" change into an existing
+ * "add" of the same key as one formula when either value is not a number.
  * @param {{key?: string, type?: string, value?: unknown}[]} changes
  * @param {{key?: string, type?: string, value?: unknown}} change
  * @returns {boolean} Whether the change was merged
@@ -199,8 +199,9 @@ const isNumber = (value) => String(value ?? "").trim() !== "" && Number.isFinite
 
 /**
  * An enhancement that increases a buff (abilityUse.aumenta) only reaches the template when the template already has
- * its key (T20:6475), but Duelo's enhancement writes `efeito.ataque` to raise the template's `ataque`, which the card
- * sums back into `ataque` (T20:6560). Returns the "+0" `efeito.<key>` markers the template needs for that comparison.
+ * its key (`i.key == ch.key`, T20:5300), but Duelo's enhancement writes `efeito.ataque` to raise the template's
+ * `ataque`, which the card sums back into `ataque` by stripping the `efeito.` prefix (T20:5388). Returns the "+0"
+ * `efeito.<key>` markers the template needs for that comparison.
  * @param {{key?: string, type?: string, value?: unknown}[]} templateChanges
  * @param {{key?: string, type?: string, value?: unknown}[]} increaseChanges  Changes of the item's aumenta effects
  * @returns {{key: string, type: "add", value: 0, priority: 0}[]}
@@ -410,6 +411,14 @@ export default {
   group: "usage-effects",
   issue: 66,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  probeKind: "behavior",
+  sources: [
+    "#local:applyOnUseEffects",
+    "ActorT20#_onCreateDescendantDocuments",
+    "ItemT20#_allApplicableOnUseEffects",
+    "ActiveEffectT20#active",
+    "ActiveEffectT20#isUsage"
+  ],
   isNeeded,
   lateProbe,
   apply

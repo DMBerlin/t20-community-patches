@@ -141,8 +141,8 @@ const asArray = (value) => (value instanceof Set ? [...value] : Array.isArray(va
 
 /**
  * Whether an effect is the usage effect shipped with Fortalecimento Arcano: one "CD"/"cd" add 1 change,
- * repeatable, no cost, spells only, not temporary (the system never offers temporary item effects, T20:8070).
- * "Aplicar Sempre" (automatic) may be on or off.
+ * repeatable, no cost, spells only, not temporary (the system never offers temporary item effects,
+ * `isTemporary`, T20:6895). "Aplicar Sempre" (automatic) may be on or off.
  * @param {object} effect
  * @returns {boolean}
  */
@@ -299,6 +299,8 @@ export default {
   group: "items",
   issue: 35,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  probeKind: "behavior",
+  sources: ["Tormenta20ItemData#prepareFinalAttributes", "CharacterData#prepareBaseData"],
   isNeeded,
   apply
 };

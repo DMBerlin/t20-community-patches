@@ -10,7 +10,7 @@
  * confirmation) and drag act on the effect inside the item.
  */
 import { MODULE_ID } from "../lib/module.mjs";
-import { stripComments, unwrap } from "../lib/source.mjs";
+import { stripComments } from "../lib/source.mjs";
 import { resolveEffectFromRow } from "../lib/effect-rows.mjs";
 import { sheetEffectClass } from "../platform/foundry.mjs";
 import { wraps } from "../kernel/wrap.mjs";
@@ -121,12 +121,10 @@ async function confirmItemEffectDeletion(effect) {
   });
 }
 
-function isNeeded() {
-  const source = (fn) => (typeof fn === "function" ? Function.prototype.toString.call(unwrap(fn)) : undefined);
-  return diagnoseItemEffectsSheet(
-    source(findActorSheetBase()?.prototype?.getData),
-    source(sheetEffectClass()?.onManageActiveEffect)
-  );
+const SOURCES = ["ActorSheetT20#getData", "ActiveEffectT20.onManageActiveEffect"];
+
+function isNeeded(ctx) {
+  return diagnoseItemEffectsSheet(...SOURCES.map((label) => ctx.platform.sourceOfMethod(label) ?? undefined));
 }
 
 function apply() {
@@ -197,6 +195,7 @@ export default {
   group: "sheet-effects",
   issue: 2,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  sources: [...SOURCES, "ActorSheetT20#_onDragStart"],
   isNeeded,
   apply
 };

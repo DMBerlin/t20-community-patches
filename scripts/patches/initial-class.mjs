@@ -35,7 +35,7 @@ export function sourceFingerprint(src) {
 /** Fingerprints of ItemT20#_onUpdate (T20:8301-8329) and #_onDelete (T20:8334-8358) in tormenta20 1.6.5. */
 export const KNOWN_FINGERPRINTS = { _onUpdate: "c6ebd948", _onDelete: "0facae77" };
 
-/** ItemT20#_preCreate does nothing for classes (T20:8273-8275). */
+/** ItemT20#_preCreate does nothing for classes (`case "classe"`, T20:7101-7104). */
 const PRECREATE_CLASS_NOOP = /switch\s*\(\s*data\.type\s*\)\s*\{\s*case\s*"classe"\s*:\s*break\s*;/;
 
 /**
@@ -94,7 +94,7 @@ export function initialUpdatesOnChange(classes, selfId, marked) {
 
 /**
  * Values of system.inicial for the classes of one creation operation, in order: only the first class is initial,
- * and only when the actor had no class (the system's own rule for the first drop, T20:14352).
+ * and only when the actor had no class (the system's own rule for the first drop, `system.inicial`, T20:13191).
  * @param {boolean} actorHasClass  Whether the actor already has a class.
  * @param {number} count           Number of classes accepted in the operation.
  * @returns {boolean[]}
@@ -120,7 +120,15 @@ function methodOf(name) {
   return typeof fn === "function" ? { owner, fn } : null;
 }
 
-function readSources() {
+const SOURCES = { onUpdate: "ItemT20#_onUpdate", onDelete: "ItemT20#_onDelete", preCreate: "ItemT20#_preCreate" };
+
+function readSources(ctx) {
+  const source = (label) => ctx.platform.sourceOfMethod(label) ?? "";
+  return Object.fromEntries(Object.entries(SOURCES).map(([part, label]) => [part, source(label)]));
+}
+
+/** The methods the wrappers replace, read where apply() installs them (the owner may be core). */
+function installedSources() {
   const source = (name) => {
     const method = methodOf(name);
     return method ? Function.prototype.toString.call(unwrap(method.fn)) : "";
@@ -141,7 +149,7 @@ function send(actor, updates) {
   );
 }
 
-/** Same as ItemT20#_onUpdate (T20:8301-8329) for a class whose "inicial" changed, with the mark rule fixed. */
+/** Same as ItemT20#_onUpdate (T20:7129-7157) for a class whose "inicial" changed, with the mark rule fixed. */
 function wrapOnUpdate(original, parentOnUpdate) {
   return markWrapper(function (changed, options, userId) {
     const isInitialChange =
@@ -161,7 +169,7 @@ function wrapOnUpdate(original, parentOnUpdate) {
   }, original);
 }
 
-/** Same as ItemT20#_onDelete (T20:8334-8347) for a class, with the mark rule fixed. */
+/** Same as ItemT20#_onDelete (T20:7162-7175) for a class, with the mark rule fixed. */
 function wrapOnDelete(original, parentOnDelete) {
   return markWrapper(function (options, userId) {
     if (this.type !== "classe" || !this.parent) return original.call(this, options, userId);
@@ -209,7 +217,7 @@ function wrapPreCreateOperation(original) {
 }
 
 function apply() {
-  const parts = recognizeParts(readSources());
+  const parts = recognizeParts(installedSources());
   const skipped = [];
   for (const [name, factory] of [
     ["_onUpdate", wrapOnUpdate],
@@ -236,8 +244,8 @@ function apply() {
   if (skipped.length) console.warn(`${LOG} system code not recognized, left untouched: ${skipped.join(", ")}`);
 }
 
-function isNeeded() {
-  return diagnoseInitialClass(recognizeParts(readSources()));
+function isNeeded(ctx) {
+  return diagnoseInitialClass(recognizeParts(readSources(ctx)));
 }
 
 export default {
@@ -245,6 +253,7 @@ export default {
   group: "actor",
   issue: 54,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  sources: [...Object.values(SOURCES), "AttributesFields.preparePVPM"],
   isNeeded,
   apply
 };

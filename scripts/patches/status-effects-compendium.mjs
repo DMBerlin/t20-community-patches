@@ -197,6 +197,8 @@ export default {
   issue: 1,
   guarded: true,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.5" } },
+  probeKind: "behavior",
+  sources: ["#local:hooks"],
   isNeeded,
   lateProbe,
   apply

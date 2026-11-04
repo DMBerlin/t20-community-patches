@@ -28,6 +28,8 @@ Colete também o contexto que muda a prioridade:
 
 Se a versão instalada do sistema for **maior** que o `affected.maximum` de uma issue, ela precisa ser verificada de novo antes de ser implementada: o bug pode já ter sido corrigido.
 
+Se a versão instalada for **maior** que a `verified` do `module.json`, rode `make audit` na worktree `main` e leve o resultado para os alertas: os patches com `CHANGED` (o código de que dependem mudou), os testes cujo diagnóstico deixou de ser `present` e as referências `MISSING`.
+
 ## 2. Separar
 
 - **Implementáveis:** issues abertas **sem** `upstream-only`.
@@ -84,6 +86,7 @@ Responda em português, curto e escaneável:
 
 ### Alertas
 - issues para verificar de novo (sistema mais novo que `affected.maximum`), referências desatualizadas, duplicatas aparentes
+- com o sistema mais novo que `verified`: o resumo do `make audit` (patches `CHANGED`, diagnósticos que mudaram, referências `MISSING`)
 ```
 
 Termine sugerindo **uma** issue para começar: a primeira da tabela que não esteja bloqueada. Use o comando `implement #<n>`.

@@ -1,7 +1,7 @@
 /**
  * Save bonuses of "skills except attacks" (tormenta20 1.6.5).
  *
- * Bug: CreatureData#prepareSkill (T20:19835-19872) chooses the actor-wide skill bonus with an else-if chain: a save
+ * Bug: CreatureData#prepareSkill (T20:18676-18713) chooses the actor-wide skill bonus with an else-if chain: a save
  * (Fortitude, Reflexos, Vontade) that has "Testes de Perícias de Resistências" bonuses never receives the "Testes de
  * Perícias, exceto de Ataque" (semataque) bonuses. Without a save bonus, it does. The sheet breakdown lists both, and
  * the roll uses the prepared value, so the sheet, the breakdown and the roll disagree.
@@ -161,6 +161,8 @@ export default {
   group: "actor",
   issue: 39,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  probeKind: "behavior",
+  sources: ["CreatureData#prepareSkill", "ActorT20#getRollData"],
   isNeeded,
   apply
 };

@@ -49,6 +49,8 @@ let ids = 0;
  * @param {object} [overrides.forms]
  * @param {object} [overrides.i18n]
  * @param {Function} [overrides.sourceOf]
+ * @param {Record<string, string|(() => Function)>} [overrides.sources]  Each method label read by
+ *   platform.sourceOfMethod: its source, or a getter of the live method (read under the module's wrappers, as in Foundry).
  * @param {() => Iterable<object>} [overrides.targets]   Value of platform.user.targets().
  */
 export function createFakePlatform(overrides = {}) {
@@ -61,6 +63,12 @@ export function createFakePlatform(overrides = {}) {
   const user = { isGM: overrides.isGM ?? true, isActiveGM: overrides.isActiveGM ?? overrides.isGM ?? true };
   const notifier = (level) => (message, options) => notes.push({ level, message, options });
   const logger = (level) => (...args) => logs.push({ level, args });
+  const sourceOf =
+    overrides.sourceOf ??
+    ((fn) => {
+      const inner = unwrap(fn);
+      return typeof inner === "function" ? inner.toString() : null;
+    });
 
   return {
     notes,
@@ -118,12 +126,11 @@ export function createFakePlatform(overrides = {}) {
     dice: overrides.dice ?? {},
     forms: overrides.forms ?? { data: () => ({}) },
     log: { info: logger("info"), warn: logger("warn"), error: logger("error") },
-    sourceOf:
-      overrides.sourceOf ??
-      ((fn) => {
-        const inner = unwrap(fn);
-        return typeof inner === "function" ? inner.toString() : null;
-      }),
+    sourceOf,
+    sourceOfMethod: (label) => {
+      const entry = overrides.sources?.[label];
+      return typeof entry === "function" ? sourceOf(entry()) : (entry ?? null);
+    },
     module: { setApi: (value) => (api = value), api: () => api, systemCompatibility: () => undefined },
     /** Runs the handlers registered for a hook, as Hooks.callAll. */
     callHook: (name, ...args) => {
@@ -139,6 +146,15 @@ export function createFakePlatform(overrides = {}) {
  */
 export function createFakeContext(feature, platform = createFakePlatform(), wraps = createWrapRegistry(), kernel = {}) {
   return createFeatureContext(platform, feature, { wraps, ...kernel });
+}
+
+/**
+ * Context for a source probe: `sources` maps each method label to its source or to a getter of the live method.
+ * @param {Record<string, string|(() => Function)>} sources
+ * @returns {import("../../scripts/kernel/feature.mjs").FeatureContext}
+ */
+export function createProbeContext(feature, sources) {
+  return createFakeContext(feature, createFakePlatform({ sources }));
 }
 
 /**

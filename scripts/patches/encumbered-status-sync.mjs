@@ -8,7 +8,7 @@
  * Fix: the check runs after items are created or deleted on the actor, and is serialized per actor, awaiting the
  * creation/removal. Every copy is removed when the character is no longer encumbered.
  */
-import { stripComments, unwrap } from "../lib/source.mjs";
+import { stripComments } from "../lib/source.mjs";
 import { fromFactory, wraps } from "../kernel/wrap.mjs";
 
 export const ENCUMBERED = "sobrecarregado";
@@ -165,15 +165,17 @@ function apply() {
   }
 }
 
-function isNeeded() {
-  const ActorClass = CONFIG.Actor?.documentClass;
-  const ItemClass = CONFIG.Item?.documentClass;
-  if (typeof ActorClass?.prototype?._checkEncumbered !== "function") return undefined;
-  const source = (fn) => (typeof fn === "function" ? Function.prototype.toString.call(unwrap(fn)) : "");
-  return diagnoseEncumbranceHooks({
-    create: [source(ActorClass.prototype._onCreateDescendantDocuments), source(ItemClass?.prototype?._onCreate)],
-    delete: [source(ActorClass.prototype._onDeleteDescendantDocuments), source(ItemClass?.prototype?._onDelete)]
-  });
+// A hook the system does not override is inherited from core, which never calls _checkEncumbered: it is left out.
+const SOURCES = {
+  check: "ActorT20#_checkEncumbered",
+  create: ["ActorT20#_onCreateDescendantDocuments", "ItemT20#_onCreate"],
+  delete: ["ActorT20#_onDeleteDescendantDocuments", "ItemT20#_onDelete"]
+};
+
+function isNeeded(ctx) {
+  const read = (labels) => labels.map((label) => ctx.platform.sourceOfMethod(label)).filter((source) => source != null);
+  if (ctx.platform.sourceOfMethod(SOURCES.check) == null) return undefined;
+  return diagnoseEncumbranceHooks({ create: read(SOURCES.create), delete: read(SOURCES.delete) });
 }
 
 export default {
@@ -181,6 +183,7 @@ export default {
   group: "conditions",
   issue: 21,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  sources: [SOURCES.check, ...SOURCES.create, ...SOURCES.delete],
   isNeeded,
   apply
 };

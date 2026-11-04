@@ -258,6 +258,8 @@ export default {
   group: "conditions",
   issue: 63,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  probeKind: "behavior",
+  sources: ["AttributesFields.prepareDamageResistances", "effectMigration.migrateResistancesPath"],
   services: ["stacking-exclusions"],
   isNeeded,
   lateProbe,

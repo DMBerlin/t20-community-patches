@@ -1,10 +1,10 @@
 /**
  * Global skill modifiers with attribute formulas (tormenta20 1.6.5).
  *
- * Bug: every CreatureData type's prepareDerivedData (T20:20096-20103, 20248-20252, 20292-20296) calls
- * actor.getRollData() before prepareAtributos. getRollData (T20:7148-7175) already reduces each list of
+ * Bug: every CreatureData type's prepareDerivedData (T20:18937-18944, 19089-19093, 19133-19137) calls
+ * actor.getRollData() before prepareAtributos. getRollData (T20:5909-6003) already reduces each list of
  * system.modificadores to a number (@pericia, @semataque, @ataque, @resistencia, @dano…) with the attributes as they
- * are then, without the temporary bonuses (system.atributos.*.bonus). prepareAtributos (T20:19821-19827) adds the
+ * are then, without the temporary bonuses (system.atributos.*.bonus). prepareAtributos (T20:18662-18668) adds the
  * bonus and updates rollData[attr], but not the reduced modifiers, so prepareSkill uses the stale numbers: a skill
  * modifier "@car" with Carisma 3 + 2 adds 3, on the sheet and on the roll, while the sheet breakdown shows 5.
  *
@@ -23,7 +23,7 @@ import { wraps } from "../kernel/wrap.mjs";
 
 const LOG = "t20-community-patches | skill-modifier-attributes:";
 
-/** rollData key, modificadores group and list, in getRollData's order (T20:7153-7175). */
+/** rollData key, modificadores group and list, in getRollData's order (`simplifyRollFormula`, T20:5977-5999). */
 export const MODIFIER_KEYS = [
   ["pericia", "pericias", "geral"],
   ["semataque", "pericias", "semataque"],
@@ -122,15 +122,16 @@ export function modifierFormula(system, group, field) {
 
 /**
  * Reduces again, in place, the values getRollData computed before the attributes were final: atributoChave first
- * (T20:7131-7132, before the modifiers), then the modifier lists in getRollData's order. Only lists whose formula has
- * a data reference are touched; the others do not depend on attributes. A formula that fails keeps the value it had.
+ * (`data.atributoChave`, T20:5956-5957, before the modifiers), then the modifier lists in getRollData's order. Only
+ * lists whose formula has a data reference are touched; the others do not depend on attributes. A formula that fails
+ * keeps the value it had.
  * @param {object} system                      The actor's system data, attributes already final.
  * @param {object} rollData                    The rollData shared by prepareDerivedData.
  * @param {(formula: string, data: object) => string} simplify  The system's simplifyRollFormula.
  * @returns {string[]}                         The keys whose value changed.
  */
 export function refreshModifiers(system, rollData, simplify) {
-  // getRollData only defines these keys for actors with skills (T20:7148).
+  // getRollData only defines these keys for actors with skills (`this.system.pericias`, T20:5969).
   if (!rollData || typeof rollData !== "object" || !("pericia" in rollData)) return [];
   const changed = [];
   const chave = system?.attributes?.conjuracao;
@@ -305,6 +306,14 @@ export default {
   group: "actor",
   issue: 68,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  probeKind: "behavior",
+  sources: [
+    "CreatureData#prepareAtributos",
+    "CharacterData#prepareDerivedData",
+    "MenaceData#prepareDerivedData",
+    "SimpleData#prepareDerivedData",
+    "ActorT20#getRollData"
+  ],
   isNeeded,
   apply
 };

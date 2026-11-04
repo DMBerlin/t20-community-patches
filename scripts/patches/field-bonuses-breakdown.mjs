@@ -1,7 +1,7 @@
 /**
  * Sheet breakdowns that disagree with the prepared value (tormenta20 1.6.5).
  *
- * The `fieldBonuses` Handlebars helper (T20:4254-4463) rebuilds the total of PV, PM, perícias and Defesa from its own
+ * The `fieldBonuses` Handlebars helper (T20:3081-3290) rebuilds the total of PV, PM, perícias and Defesa from its own
  * list. That list diverges from the prepared value:
  * - manual: the manual PV/PM bonuses per level are summed once ("Configuração Manual") and the manual total is missing;
  * - zeroLevel: a per-even-level bonus at level 1 has multiplier 0, which is falsy, so it is added once;
@@ -46,7 +46,7 @@ export const OUTROS_KEY = "system.attributes.defesa.outros";
 export const CONDI_KEY = "system.attributes.defesa.condi";
 /** Default priorities of Foundry 14 change types (common/constants.mjs). */
 export const DEFAULT_PRIORITY = { custom: 0, multiply: 10, add: 20, subtract: 20, downgrade: 30, upgrade: 40, override: 50 };
-/** Wildcard keys ActorT20._prepareProxyChange expands (T20:18195-18203); other wildcards are not applied at all. */
+/** Wildcard keys ActorT20._prepareProxyChange expands (T20:17036-17044); other wildcards are not applied at all. */
 export const PROXY_KEYS = [
   "system.atributos.*.value",
   "system.atributos.*.bonus",
@@ -160,7 +160,7 @@ export function expandWildcards(entries, keysOf) {
  * A subtract that would leave fewer than `min` elements fails validation in the core and is ignored.
  * @param {{label: string, value: unknown, hidden?: boolean}[]} seed  Elements already in the list (manual source values).
  * @param {object[]} entries  Annotated entries of one key.
- * @param {{min?: number}} [options]  The field's minimum length (1 for the PV/PM bonus lists, T20:19252).
+ * @param {{min?: number}} [options]  The field's minimum length (1 for the PV/PM bonus lists, T20:18094).
  * @returns {{label: string, value: unknown, hidden?: boolean}[]}
  */
 export function simulateArray(seed = [], entries = [], { min = 0 } = {}) {
@@ -253,7 +253,7 @@ export function normalizeModifiedFields(
 }
 
 /**
- * The value of the helper's "Configuração Manual" line (T20:4283), from the prepared lists.
+ * The value of the helper's "Configuração Manual" line (`manualOverride`, T20:3110), from the prepared lists.
  * @param {Record<string, unknown[]>} [bonus]  Prepared system.attributes[pv|pm].bonus.
  */
 export function manualOverrideValue(bonus) {
@@ -279,8 +279,8 @@ export function removeTooltipLine(html, label, value) {
 }
 
 /**
- * The PV the helper leaves out when the Constituição it reads (value − bonus) is 0: preparePVPM (T20:20001) still
- * raises each level to at least 1 PV, but the helper only counts that inside its Constituição branch (T20:4313).
+ * The PV the helper leaves out when the Constituição it reads (value − bonus) is 0: preparePVPM (T20:18842) still
+ * raises each level to at least 1 PV, but the helper only counts that inside its Constituição branch (`atributoSemBonus`, T20:3148).
  * @param {{classes: {inicial?: boolean, porNivel: number, niveis: number}[], nivel?: number, nivelPar?: number,
  *   nivelImpar?: number}} data  Classes in item order; sums of the prepared per-level bonuses.
  */
@@ -328,7 +328,8 @@ export function roundingDelta(html) {
 }
 
 /**
- * What prepareDefense (T20:19892-19906) adds for the Defesa attribute minus what the helper (T20:4396-4404) shows.
+ * What prepareDefense adds for the Defesa attribute (`atributo`, T20:18733-18747) minus what the helper shows
+ * (`armaduraPesada`, T20:3223-3231).
  * @param {{attribute?: string, rollValue?: number, abilityValue?: number, armorType?: string, maxAtr?: number,
  *   helperHeavy?: boolean}} data  armorType/maxAtr: the first equipped light or heavy armor; helperHeavy: the helper
  *   found an equipped heavy armor with a Defesa value.
@@ -546,7 +547,7 @@ function helperSource(fn) {
   return typeof base === "function" ? Function.prototype.toString.call(base) : undefined;
 }
 
-/** The actor the helper reads (T20:4256), from the root it receives. */
+/** The `actor` the helper reads (T20:3083), from the root it receives. */
 function helperActor(root) {
   return game.actors?.get(root?.actor?._id) || foundry.utils.fromUuidSync(root?.uuid) || null;
 }
@@ -637,7 +638,7 @@ function defenseSourcesHTML(html, actor) {
     sourceOutros: source.outros,
     outrosChanges: changes.outros,
     preparedOutros: defesa.outros,
-    // NpcData#prepareBaseData resets condi before the effects (T20:20235).
+    // NpcData#prepareBaseData resets `defesa.condi` before the effects (T20:19076).
     condiBase: actor.type === "npc" ? 0 : source.condi,
     condiChanges: changes.condi,
     preparedCondi: defesa.condi,
@@ -755,8 +756,10 @@ function install(ctx) {
   );
 }
 
-function isNeeded() {
-  return diagnoseHelperSource(helperSource(globalThis.Handlebars?.helpers?.fieldBonuses));
+const HELPER = "#helper:fieldBonuses";
+
+function isNeeded(ctx) {
+  return diagnoseHelperSource(ctx.platform.sourceOfMethod(HELPER) ?? undefined);
 }
 
 export default {
@@ -764,6 +767,14 @@ export default {
   group: "sheet-effects",
   issue: 70,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  sources: [
+    HELPER,
+    "ActorT20#modifiedFields",
+    "ActiveEffectT20._prepareProxyChange",
+    "AttributesFields.prepareDefense",
+    "AttributesFields.preparePVPM",
+    "MenaceData#prepareBaseData"
+  ],
   // The breakdown mirrors what prone-defense and field-bonuses-tooltip change when they are applied.
   interactsWith: ["prone-defense", "field-bonuses-tooltip"],
   isNeeded,

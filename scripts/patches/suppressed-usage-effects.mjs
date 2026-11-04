@@ -13,6 +13,7 @@ export function collectsIgnoringSuppression(source) {
 /* -------------------------------------------- */
 
 const ROLL_METHODS = ["rollPericia", "rollAtributo"];
+const SOURCES = ["ItemT20#_allApplicableOnUseEffects", ...ROLL_METHODS.map((method) => `ActorT20#${method}`)];
 
 /** Depth of the synchronous collection window of rollPericia/rollAtributo, by actor. */
 const collecting = new WeakMap();
@@ -70,10 +71,7 @@ function install(ctx) {
  * @returns {boolean|undefined}
  */
 function isNeeded(ctx) {
-  const { classes, sourceOf } = ctx.platform;
-  const itemProto = classes.item?.prototype;
-  const actorProto = classes.actor?.prototype;
-  const sources = [itemProto?._allApplicableOnUseEffects, ...ROLL_METHODS.map((m) => actorProto?.[m])].map(sourceOf);
+  const sources = SOURCES.map((label) => ctx.platform.sourceOfMethod(label));
   if (sources.some((source) => typeof source !== "string")) return undefined;
   return sources.some(collectsIgnoringSuppression) || undefined;
 }
@@ -83,6 +81,7 @@ export default {
   group: "usage-effects",
   issue: 4,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  sources: SOURCES,
   isNeeded,
   install
 };

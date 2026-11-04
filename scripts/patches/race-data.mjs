@@ -124,7 +124,7 @@ export function fixElf(src) {
 }
 
 const MOVEMENT = "system.attributes.movement";
-/** Changes that set the walking base; ActiveEffectT20.applyChange turns a non-add ".walk" change into ".walk.base" (T20:18143). */
+/** Changes that set the walking base; ActiveEffectT20.applyChange turns a non-add ".walk" change into ".walk.base" (T20:16985). */
 const walkBase = (c) =>
   c?.key === WALK || c?.key === `${MOVEMENT}.*.base` || (c?.key === `${MOVEMENT}.walk` && c?.type !== "add");
 /** Walking fields the system reads; a change to any of their ancestors makes the result unknown. */
@@ -161,7 +161,7 @@ export const senseIsCorrect = (sense) => (src) => src?.type === "poder" && passi
 
 /**
  * Whether no race attributes were applied to the actor yet. _onCreateOwnedRace copies the race attributes to
- * system.atributos.<x>.racial (T20:8463), so a duplicated actor already holds the old values: its race is left as is.
+ * system.atributos.<x>.racial (T20:7294), so a duplicated actor already holds the old values: its race is left as is.
  */
 export const racialUnset = (actor) =>
   Object.values(actor?.system?.atributos ?? {}).every((a) => !a?.racial);
@@ -263,6 +263,7 @@ export default {
   issue: 57,
   guarded: true,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  probeKind: "behavior",
   isNeeded,
   lateProbe,
   apply

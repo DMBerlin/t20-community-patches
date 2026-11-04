@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import patch, { diagnose, findDescriptor, isTrackableUsageEffect } from "../scripts/patches/temporary-usage-effect-expiry.mjs";
+import { unwrap } from "../scripts/lib/source.mjs";
 
 const usageEffect = (overrides = {}) => ({
   system: { onuse: true },
@@ -74,6 +75,8 @@ test("apply makes usage effects trackable and keeps other effects unchanged", ()
     assert.equal(new Effect(usageEffect({ disabled: true })).isExpiryTrackable, false);
     assert.equal(new Effect(usageEffect({ parent: { documentName: "Item" } })).isExpiryTrackable, false);
     assert.equal(new Effect(usageEffect({ system: { onuse: false } })).isExpiryTrackable, true);
+    const { get } = Object.getOwnPropertyDescriptor(Effect.prototype, "isExpiryTrackable");
+    assert.equal(unwrap(get), findDescriptor(Object.getPrototypeOf(Effect.prototype), "isExpiryTrackable").get, "the getter is tagged with the one it replaced");
     assert.equal(new Effect(usageEffect({ system: { onuse: false }, isTemporary: false })).isExpiryTrackable, false);
     const broken = new Effect(usageEffect());
     Object.defineProperty(broken, "isTemporary", { get() { throw new Error("boom"); } });

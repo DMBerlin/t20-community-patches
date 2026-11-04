@@ -10,7 +10,6 @@
  * effects held by items keep toggling `disabled` (default vs optional application on the chat card).
  */
 import { MODULE_ID } from "../lib/module.mjs";
-import { unwrap } from "../lib/source.mjs";
 import { resolveEffectFromRow } from "../lib/effect-rows.mjs";
 import { sheetEffectClass } from "../platform/foundry.mjs";
 import { wraps } from "../kernel/wrap.mjs";
@@ -90,9 +89,11 @@ function scheduleFixToggles(owner, html) {
   });
 }
 
-function isNeeded() {
-  const manage = unwrap(sheetEffectClass()?.onManageActiveEffect);
-  return typeof manage === "function" ? toggleFlipsDisabled(Function.prototype.toString.call(manage)) : undefined;
+const MANAGE = "ActiveEffectT20.onManageActiveEffect";
+
+function isNeeded(ctx) {
+  const manage = ctx.platform.sourceOfMethod(MANAGE);
+  return manage == null ? undefined : toggleFlipsDisabled(manage);
 }
 
 function apply() {
@@ -126,6 +127,7 @@ export default {
   group: "sheet-effects",
   issue: 5,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  sources: [MANAGE],
   isNeeded,
   apply
 };

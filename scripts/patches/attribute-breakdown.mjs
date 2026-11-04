@@ -4,7 +4,7 @@
  * Bug: every other value of the sheet (PV, PM, Defesa, perícias) shows its composition on hover, through the
  * `fieldBonuses` helper. The attributes do not: in templates/actor/parts/abilities.hbs the tooltip is wrapped in
  * `{{#if wip}}`, a flag the system never defines, and sits in the content of the `<span>` instead of being an attribute
- * of it. The helper's `atributos` branch (T20:4267-4276) would not help either: it shows a single "Bônus Temporário"
+ * of it. The helper's `atributos` branch (T20:3094-3103) would not help either: it shows a single "Bônus Temporário"
  * with the prepared bonus (manual bonus and every effect summed, no source named) and lists effects on `.value`.
  *
  * Fix: while the actor is prepared, every change the core actually applies to `system.atributos.<key>.(value|bonus)`
@@ -92,7 +92,7 @@ const escapeHTML = (text) =>
   String(text).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
 /**
- * The tooltip HTML, in the markup of the system's breakdowns (`ul.fieldBonuses`, T20:4455-4461).
+ * The tooltip HTML, in the markup of the system's breakdowns (`ul.fieldBonuses`, T20:3282-3288).
  * @param {ReturnType<typeof attributeBreakdown>} breakdown
  * @param {(key: string) => string} localize  Localizes a key (Base, Racial, Temporary, Other, Total, Type.<type>).
  * @returns {string}
@@ -235,6 +235,8 @@ export default {
   issue: 72,
   guarded: true,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  probeKind: "behavior",
+  sources: ["#helper:fieldBonuses", "CreatureData#prepareAtributos"],
   isNeeded,
   lateProbe,
   apply

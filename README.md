@@ -134,6 +134,7 @@ As convenções completas estão em [`AGENTS.md`](AGENTS.md).
 | `make worktree ISSUE=<n>`  | Cria ou reutiliza a worktree da issue                                   |
 | `make active`              | Faz o Foundry carregar a worktree atual (`FOUNDRY_DATA` muda o caminho) |
 | `make active-status`       | Mostra qual worktree o Foundry está carregando                          |
+| `make audit`               | Confere os patches contra o Tormenta20 instalado, sem abrir o Foundry   |
 | `make package`             | Gera `dist/module.zip` e `dist/module.json`                             |
 
 Fluxo de trabalho, pelas skills em `.github/skills/`:

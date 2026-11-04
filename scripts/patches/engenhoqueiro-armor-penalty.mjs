@@ -1,7 +1,7 @@
 /**
  * Bug: CONFIG.T20.pericias.enge (Ofício: Engenhoqueiro) has armorPenalty, so new actors store pericias.enge.pda =
- * true and CreatureData#prepareSkill adds @pda to the skill (T20:3447, 18908, 19835-19853). Ofício takes no armor
- * penalty (Tabela 2-1, p. 115; "Int • Treinada", p. 121).
+ * true and CreatureData#prepareSkill adds @pda to the skill (`armorPenalty`, T20:2274, 17749, 18676-18694). Ofício
+ * takes no armor penalty (Tabela 2-1, p. 115; "Int • Treinada", p. 121).
  * Fix: in memory, before the 1.6.5 prepareSkill builds the Engenhoqueiro formula, turn its prepared pda off. Nothing is
  * written: CONFIG and stored actor data are left as they are, and the condition penalty (condi) is untouched. Updates
  * that carry the prepared value back (the system's custom Ofício creation) get the stored pda again.
@@ -73,7 +73,8 @@ export function engePdaHolders(changes, path = PDA_PATH, Operator = coreOperator
 
 /**
  * The prepared pda this patch turned off can reach an update when the system writes prepared skills back (adding a
- * custom Ofício sends every prepared skill, T20:13950-13974). Puts the stored value back so nothing is persisted.
+ * custom Ofício sends every prepared skill, `system.pericias`, T20:12790-12814). Puts the stored value back so
+ * nothing is persisted.
  * Returns true when it changed the update data.
  */
 export function keepStoredEngePda(changes, storedPda, Operator = coreOperator()) {
@@ -147,6 +148,8 @@ export default {
   group: "actor",
   issue: 41,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  probeKind: "behavior",
+  sources: ["CreatureData#prepareSkill", "CreatureData._initialSkillValue"],
   isNeeded,
   apply
 };

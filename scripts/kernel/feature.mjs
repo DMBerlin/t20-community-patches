@@ -26,6 +26,8 @@
  * @property {string[]} [services]              Services used through ctx.services[id] (scripts/services/).
  * @property {string[]} [interactsWith]         Features whose state or settings this one reads at run time.
  * @property {boolean} [guarded]
+ * @property {"source"|"behavior"} [probeKind]   See Patch in scripts/patches/index.mjs (used by `make audit`).
+ * @property {string[]} [sources]               Method labels the feature depends on (fingerprinted by `make audit`).
  * @property {(ctx: FeatureContext) => import("../registry.mjs").Diagnosis|boolean|undefined} [isNeeded]
  *                                                 Legacy patches ignore ctx and read globals until #88.
  * @property {(ctx: FeatureContext) => Promise<import("../registry.mjs").Diagnosis|boolean|undefined>} [lateProbe]

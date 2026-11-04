@@ -11,6 +11,7 @@ import patch, {
 } from "../scripts/patches/default-damage-attribute.mjs";
 import { markWrapper, sourceFingerprint } from "../scripts/lib/source.mjs";
 import { ROLL_DAMAGE_1_6_6 } from "./fixtures/roll-damage-1.6.6.mjs";
+import { createProbeContext } from "./support/fake-platform.mjs";
 
 const weapon = (system = {}) => ({ type: "arma", system: { empunhadura: "uma", proposito: "corpo-a-corpo", propriedades: {}, ...system } });
 const NO_DEX = { finesse: false, shootingStyle: false };
@@ -149,6 +150,7 @@ class FakeItem extends SystemItem {
 const PristineRollDamage = SystemItem.prototype.rollDamage;
 globalThis.CONFIG = { Item: { documentClass: FakeItem } };
 globalThis.game = { settings: { get: (_scope, key) => settings[key] } };
+const probeCtx = createProbeContext(patch, { "ItemT20#rollDamage": () => FakeItem.prototype.rollDamage });
 
 test("without the patch the 1.6.6 code fails on Padrão (reproduces the bug)", async () => {
   const item = new FakeItem();
@@ -156,7 +158,7 @@ test("without the patch the 1.6.6 code fails on Padrão (reproduces the bug)", a
 });
 
 test("isNeeded reports the bug on the 1.6.6 code", () => {
-  assert.equal(patch.isNeeded().bug, "present");
+  assert.equal(patch.isNeeded(probeCtx).bug, "present");
 });
 
 test("with the patch every case of the issue rolls and the stored data never changes", async () => {
@@ -221,13 +223,13 @@ test("a failing roll leaves the item intact and an item without actor is not tou
 });
 
 test("isNeeded reads the original method under the wrapper", () => {
-  assert.equal(patch.isNeeded().bug, "present");
+  assert.equal(patch.isNeeded(probeCtx).bug, "present");
   const wrapped = FakeItem.prototype.rollDamage;
   FakeItem.prototype.rollDamage = markWrapper(function (...args) {
     return wrapped.apply(this, args);
   }, wrapped);
   try {
-    assert.equal(patch.isNeeded().bug, "present");
+    assert.equal(patch.isNeeded(probeCtx).bug, "present");
   } finally {
     FakeItem.prototype.rollDamage = wrapped;
   }

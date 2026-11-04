@@ -10,7 +10,7 @@
  * The system's callback still reads the (hidden, numeric) inputs. Closing without applying warns the user.
  */
 import { MODULE_ID } from "../lib/module.mjs";
-import { stripComments, unwrap } from "../lib/source.mjs";
+import { stripComments } from "../lib/source.mjs";
 
 export const PICK_COUNT = 3;
 const KNOWN_DESCRIPTIONS = ["+1 em tres atributos diferentes", "+1 in three different attributes"];
@@ -181,10 +181,12 @@ function enhance(app, html) {
   sync();
 }
 
-function isNeeded() {
-  const method = unwrap(CONFIG.Item?.documentClass?.prototype?._onCreateOwnedRace);
-  if (typeof method !== "function") return { bug: "unknown", confidence: "low", evidence: "_onCreateOwnedRace not found" };
-  return raceDialogDiagnosis(Function.prototype.toString.call(method));
+const ON_CREATE_RACE = "ItemT20#_onCreateOwnedRace";
+
+function isNeeded(ctx) {
+  const source = ctx.platform.sourceOfMethod(ON_CREATE_RACE);
+  if (source == null) return { bug: "unknown", confidence: "low", evidence: "_onCreateOwnedRace not found" };
+  return raceDialogDiagnosis(source);
 }
 
 function apply() {
@@ -202,6 +204,7 @@ export default {
   group: "items",
   issue: 75,
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  sources: [ON_CREATE_RACE],
   guarded: true,
   isNeeded,
   apply

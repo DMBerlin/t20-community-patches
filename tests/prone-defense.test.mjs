@@ -9,6 +9,7 @@ import {
   planProneChange
 } from "../scripts/lib/prone.mjs";
 import patch, { diagnoseProneChanges, isBuggyProneChange, toAdditive } from "../scripts/patches/prone-defense.mjs";
+import { createFakePlatform, createTestKernel } from "./support/fake-platform.mjs";
 
 const change = (type, value, phase = "initial", extra = {}) => ({ key: OUTROS_KEY, type, value, phase, priority: 20, ...extra });
 
@@ -220,6 +221,9 @@ class FakeActor {
 }
 class FakeEffect {
   static applyChange(target, c, options) {
+    return this.applyChangeField(target, c, options);
+  }
+  static applyChangeField(target, c, options) {
     if (throwOnce) {
       throwOnce = false;
       throw new Error("boom");
@@ -232,7 +236,9 @@ class FakeEffect {
 }
 globalThis.foundry = { documents: { Actor: FakeActor } };
 globalThis.CONFIG = { Actor: { documentClass: FakeActor }, ActiveEffect: { documentClass: FakeEffect } };
-patch.apply();
+const kernel = createTestKernel({ platform: createFakePlatform({ classes: { actor: FakeActor, activeEffect: FakeEffect } }) });
+kernel.install(patch);
+const applied = kernel.service("applied-changes");
 
 test("wrapper: the preparation pass adds -5 once, even with identical changes in one effect", () => {
   const actor = new FakeActor(3, [effect([change("downgrade", -5), change("downgrade", -5)])]);
@@ -258,4 +264,18 @@ test("wrapper: a failed application does not mark the penalty as counted", () =>
   throwOnce = true;
   actor.applyActiveEffects("initial");
   assert.equal(actor.system.attributes.defesa.outros, -2);
+});
+
+test("wrapper: the duplicated copy left out of the preparation is reported once to applied-changes", () => {
+  const ef = effect([change("downgrade", -5), change("downgrade", -5)]);
+  ef.name = "Caído";
+  const actor = new FakeActor(3, [ef]);
+  FakeEffect.applyChange(actor, { ...ef.system.changes[0], effect: ef }, { modifyTarget: false });
+  actor.applyActiveEffects("initial");
+  actor.applyActiveEffects("final");
+  assert.deepEqual(applied.suppressed(actor), [{ key: OUTROS_KEY, label: "Caído", value: -5, reason: "not-stacking" }]);
+  assert.deepEqual(
+    applied.changes(actor).map((c) => [c.key, c.type, c.value]),
+    [[OUTROS_KEY, "add", -5]]
+  );
 });

@@ -521,7 +521,10 @@
       "ManualOther": "Outros (manual)",
       "NotStacking": "não acumula",
       "MinimumPV": "mínimo de 1 PV por nível",
-      "Rounding": "Arredondamento"
+      "Rounding": "Arredondamento",
+      "Folded": "incorporado ao item",
+      "NotCounted": "não conta: só a primeira armadura e o primeiro escudo",
+      "Unidentified": "Outros (não identificado)"
     },
     "AttributeBreakdown": {
       "Base": "Base",

@@ -22,6 +22,10 @@ Não edite as seções de versão à mão.
 - Camada de plataforma e injeção de dependências: globais do Foundry ficam isolados num único módulo (#86).
 - Código compartilhado separado em lib e serviços, com dependências entre correções declaradas (#87).
 
+### Fixed
+
+- `field-bonuses-breakdown` (#91): o detalhamento da Defesa e das perícias passa a mostrar só o que a preparação do ator aplicou; bônus incorporados à armadura, bônus que não acumulam e armaduras ou escudos além do primeiro aparecem atenuados com o motivo, e o total sempre bate com a ficha. Afeta Tormenta20 1.6.5–1.6.6.
+
 ## v1.1.0 - 2026-10-27
 
 **Compatibilidade:** Foundry VTT (mínimo 14, verificado 14.369) · Tormenta20 (mínimo 1.6.5, verificado 1.6.6)

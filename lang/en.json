@@ -521,7 +521,10 @@
       "ManualOther": "Other (manual)",
       "NotStacking": "doesn't stack",
       "MinimumPV": "minimum 1 HP per level",
-      "Rounding": "Rounding"
+      "Rounding": "Rounding",
+      "Folded": "folded into the item",
+      "NotCounted": "not counted: only the first armor and shield",
+      "Unidentified": "Other (unidentified)"
     },
     "AttributeBreakdown": {
       "Base": "Base",

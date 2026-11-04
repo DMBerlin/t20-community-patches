@@ -123,15 +123,18 @@ export function compareOrder(a, b) {
  * the source with the greatest bonus keeps its bonuses and the one with the greatest penalty keeps its penalties.
  * Ties go to the first source in order. Every other source loses its bonuses (or penalties) on that key.
  * @param {StackEntry[]} entries
- * @returns {{suppressed: Set<unknown>, report: {category: string, key: string, sign: 1|-1,
+ * `amounts` has the signed amount of each suppressed ref, as it was compared.
+ * @returns {{suppressed: Set<unknown>, amounts: Map<unknown, number>, report: {category: string, key: string, sign: 1|-1,
  *   loser: {source: string, name: string, total: number, effects: string[], items: string[]},
  *   winner: {source: string, name: string, total: number, effects: string[], items: string[]}}[]}}
  */
 export function planSuppression(entries) {
   const groups = new Map();
+  const amountOf = new Map();
   for (const entry of entries ?? []) {
     if (!entry || !CATEGORIES.has(entry.category) || entry.exempt) continue;
     if (!Number.isFinite(entry.amount) || entry.amount === 0 || typeof entry.key !== "string" || !entry.key) continue;
+    amountOf.set(entry.ref, (amountOf.get(entry.ref) ?? 0) + entry.amount);
     const groupKey = `${entry.category}\u0000${entry.key}`;
     let group = groups.get(groupKey);
     if (!group) groups.set(groupKey, (group = { category: entry.category, key: entry.key, sources: new Map() }));
@@ -170,7 +173,8 @@ export function planSuppression(entries) {
       }
     }
   }
-  return { suppressed, report };
+  const amounts = new Map([...suppressed].map((ref) => [ref, amountOf.get(ref)]));
+  return { suppressed, amounts, report };
 }
 
 /**
@@ -545,9 +549,19 @@ const SETTING_SPEC = {
  * actor wrappers sit outside armor-penalty-reduction's (the phase is passed through untouched).
  * The stamp is always applied (it is inert), so effects applied while the rule is off are recognized later.
  */
-/** @param {{isExcluded: (effect: object, change: object) => boolean}} stackingExclusions  The service API. */
-export function installSourceStackingRule(stackingExclusions) {
+/**
+ * @param {{isExcluded: (effect: object, change: object) => boolean}} stackingExclusions  The service API.
+ * @param {{reportSuppressed: Function}} [appliedChanges]  The applied-changes service: the breakdowns list what is cut.
+ */
+export function installSourceStackingRule(stackingExclusions, appliedChanges = null) {
   exclusions = stackingExclusions;
+  const report = (actor, entry, origin) => {
+    try {
+      appliedChanges?.reportSuppressed(actor, entry, origin);
+    } catch (err) {
+      console.error(`${MODULE_ID} | source-stacking: failed to report a suppressed change`, err);
+    }
+  };
   const itemProto = CONFIG.Item?.documentClass?.prototype;
   const onUse = itemProto?._allApplicableOnUseEffects;
   const effectProto = CONFIG.ActiveEffect?.documentClass?.prototype;
@@ -572,7 +586,10 @@ export function installSourceStackingRule(stackingExclusions) {
     const result = shouldApply.call(this, change, ...args);
     if (!result || !active || !active.suppressed.has(change)) return result;
     try {
-      return targetActor(this) === active.actor ? false : result;
+      if (targetActor(this) !== active.actor) return result;
+      const value = active.amounts?.get(change) ?? change.value;
+      report(active.actor, { key: change.key, label: this.name, value, reason: "not-stacking" }, change);
+      return false;
     } catch {
       return result;
     }
@@ -604,7 +621,7 @@ export function installSourceStackingRule(stackingExclusions) {
       console.error(`${MODULE_ID} | source-stacking: failed to plan the effects of ${this?.name}`, err);
     }
     const previous = active;
-    active = plan?.suppressed.size ? { actor: this, suppressed: plan.suppressed } : null;
+    active = plan?.suppressed.size ? { actor: this, suppressed: plan.suppressed, amounts: plan.amounts } : null;
     try {
       return applyEffects.call(this, phase, ...args);
     } finally {
@@ -630,6 +647,10 @@ export function installSourceStackingRule(stackingExclusions) {
         for (const { item, value, penalty } of losers) {
           const armadura = item.system.armadura;
           restore.push([armadura, armadura.value, armadura.penalidade]);
+          if (value && armadura.value) {
+            const entry = { key: DEFENSE_KEY, label: item.name, value: armadura.value, reason: "not-stacking" };
+            report(actor, { ...entry, item: { id: item.id, accessory: true } }, item);
+          }
           if (value) armadura.value = 0;
           if (penalty) armadura.penalidade = 0;
         }
@@ -666,9 +687,9 @@ export default {
   group: "sheet-effects",
   system: { id: "tormenta20" },
   settings: [SETTING_SPEC],
-  services: ["stacking-exclusions"],
+  services: ["stacking-exclusions", "applied-changes"],
   install: (ctx) => {
     documents = ctx.platform.documents;
-    installSourceStackingRule(ctx.services["stacking-exclusions"]);
+    installSourceStackingRule(ctx.services["stacking-exclusions"], ctx.services["applied-changes"]);
   }
 };

@@ -74,7 +74,9 @@ function currentPass(actor) {
   return pass?.actor === actor && pass.phase === "initial" ? pass : null;
 }
 
-function apply() {
+/** @param {{services: Record<string, object>}} ctx */
+function install(ctx) {
+  const applied = ctx.services["applied-changes"];
   const ActorClass = CONFIG.Actor.documentClass;
   wraps.wrap(ActorClass.prototype, "applyActiveEffects", "prone-defense", function (applyActiveEffects, phase, ...args) {
     passes.push({ actor: this, phase, counted: false });
@@ -105,7 +107,18 @@ function apply() {
           },
           collectProneCandidates(targetDoc.allApplicableEffects())
         );
-        if (plan === "skip") return undefined;
+        if (plan === "skip") {
+          // Only the actor's own pass is the preparation the breakdown shows.
+          if (pass) {
+            try {
+              const entry = { key: OUTROS_KEY, label: effect.name, value: Number(change.value), reason: "not-stacking" };
+              applied?.reportSuppressed(targetDoc, entry, change);
+            } catch (err) {
+              console.error(`${LOG} could not report the Caído change left out`, err);
+            }
+          }
+          return undefined;
+        }
         counts = plan === "add" || plan === "count";
         if (plan === "add") next = toAdditive(change);
       }
@@ -144,7 +157,9 @@ export default {
   system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
   probeKind: "behavior",
   guarded: true,
+  // The breakdowns of field-bonuses-breakdown list the Caído copies left out.
+  services: ["applied-changes"],
   isNeeded,
   lateProbe,
-  apply
+  install
 };

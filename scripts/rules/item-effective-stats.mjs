@@ -1148,7 +1148,8 @@ function guarded(label, fn) {
 /**
  * Installs the rule. Must run after the patches and the other rules, so these wrappers are the outermost ones.
  */
-export function installItemEffectiveStatsRule() {
+/** @param {{reportSuppressed: Function}} [appliedChanges]  The applied-changes service: the breakdowns list what is folded. */
+export function installItemEffectiveStatsRule(appliedChanges = null) {
   const itemProto = CONFIG.Item?.documentClass?.prototype;
   const EffectClass = CONFIG.ActiveEffect?.documentClass;
   const onUse = itemProto?._allApplicableOnUseEffects;
@@ -1198,7 +1199,17 @@ export function installItemEffectiveStatsRule() {
           onuse: !!effect.system?.onuse,
           folded: foldedState(item)
         });
-      if (skip) return undefined;
+      if (skip) {
+        try {
+          if (change.key === DEFENSE_KEY) {
+            const entry = { key: change.key, label: effect.name, value: change.value, reason: "folded" };
+            appliedChanges?.reportSuppressed(targetDoc, entry, change);
+          }
+        } catch (err) {
+          console.error(`${MODULE_ID} | item-effective-stats: failed to report a folded change`, err);
+        }
+        return undefined;
+      }
     } catch (err) {
       console.error(`${MODULE_ID} | item-effective-stats: failed to check a change`, err);
     }
@@ -1237,8 +1248,9 @@ export default {
   after: ["*"],
   // Folds like the patches that are applied, and leaves the effects limited by usage-effect-max unfolded.
   interactsWith: ["armor-penalty-reduction", "threatening-crit-range", "usage-effect-max"],
+  services: ["applied-changes"],
   install: (ctx) => {
     features = ctx.features;
-    installItemEffectiveStatsRule();
+    installItemEffectiveStatsRule(ctx.services["applied-changes"]);
   }
 };

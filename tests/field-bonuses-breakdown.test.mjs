@@ -21,9 +21,11 @@ import patch, {
   simulateNumericChanges
 } from "../scripts/patches/field-bonuses-breakdown.mjs";
 import tooltipPatch, { hasConditionLines } from "../scripts/patches/field-bonuses-tooltip.mjs";
+import pronePatch from "../scripts/patches/prone-defense.mjs";
 import { fieldBonuses165 } from "./fixtures/field-bonuses-1.6.5.mjs";
 import { createPlatform } from "../scripts/platform/foundry.mjs";
 import { createTestKernel } from "./support/fake-platform.mjs";
+import { fieldsFromChanges } from "../scripts/lib/applied-breakdown.mjs";
 
 const HELPER_SOURCE = fieldBonuses165.toString();
 const lines = (html) => [...html.matchAll(/<label>([^<]*):<\/label><span>([^<]*)/g)].map((m) => `${m[1]} ${m[2]}`);
@@ -47,6 +49,8 @@ test("helperParts recognizes every part in the 1.6.5 helper and ignores comments
   assert.deepEqual([diagnoseHelperSource(fixedTypes).bug, diagnoseHelperSource(fixedTypes).confidence], ["present", "low"]);
   const condiListed = HELPER_SOURCE.replace("...armaduras,", "...armaduras, defesa.condi ? { label: 'C', value: defesa.condi } : false,");
   assert.equal(helperParts(condiListed).defenseSources, false);
+  const firstArmor = HELPER_SOURCE.replace("...armaduras,", "...armaduras.filter((a) => a === armaduras.find((b) => b.tipo === a.tipo)),");
+  assert.equal(helperParts(firstArmor).armorSlots, false);
   const commented = "function () { /* Number(nivel[0]) + Number(nivelImpar[0]) + Number(nivelPar[0]) switch (item.mode) */ }";
   assert.equal(diagnoseHelperSource(commented).bug, "unknown");
   assert.equal(diagnoseHelperSource(undefined).bug, "unknown");
@@ -266,10 +270,11 @@ class FakeActor {
 }
 
 const DEFAULT_PRIORITY = { custom: 0, multiply: 10, add: 20, subtract: 20, downgrade: 30, upgrade: 40, override: 50 };
-function effect(name, changes, statuses = []) {
+function effect(name, changes, statuses = [], { cut = false } = {}) {
   const list = changes.map(([key, type, value]) => ({ key, type, value, phase: "initial", priority: DEFAULT_PRIORITY[type] }));
   return {
     name,
+    cut,
     active: true,
     modifiesActor: true,
     statuses: new Set(statuses),
@@ -279,7 +284,7 @@ function effect(name, changes, statuses = []) {
   };
 }
 
-function makeActor({ level = 5, bonus = {}, effects = [], defesa = {}, sourceDefesa = {}, armor = null, skill = {} } = {}) {
+function makeActor({ level = 5, bonus = {}, effects = [], defesa = {}, sourceDefesa = {}, armor = null, items = [], skill = {} } = {}) {
   const actor = new FakeActor();
   const pvBonus = { nivel: [], nivelPar: [], nivelImpar: [], total: [], ...bonus };
   actor._id = "a1";
@@ -288,7 +293,7 @@ function makeActor({ level = 5, bonus = {}, effects = [], defesa = {}, sourceDef
   actor.flags = {};
   actor.effects = effects;
   actor.items = [{ type: "classe", name: "Guerreiro", system: { inicial: true, pvPorNivel: 5, pmPorNivel: 3, niveis: level } }];
-  actor.itemTypes = { equipamento: armor ? [armor] : [] };
+  actor.itemTypes = { equipamento: armor ? [armor, ...items] : items };
   actor.system = {
     attributes: {
       nivel: { value: level },
@@ -306,7 +311,37 @@ function makeActor({ level = 5, bonus = {}, effects = [], defesa = {}, sourceDef
   return actor;
 }
 
+/**
+ * Document classes of one scenario: applyActiveEffects applies the changes as the core does (shouldApplyChange on the
+ * stored change, a copy with `effect`, ActiveEffect.applyChange → applyChangeField); an effect with `cut` stands for
+ * a change a feature skipped. `actor.duringPreparation(phase)` runs inside each phase.
+ */
+function documentClasses() {
+  class PreparedEffect {
+    static applyChange(target, change, options) {
+      if (change.effect?.cut) return undefined;
+      return this.applyChangeField(target, change, options);
+    }
+    static applyChangeField() {
+      return undefined;
+    }
+  }
+  class PreparedActor extends FakeActor {
+    applyActiveEffects(phase) {
+      const changes = this.allApplicableEffects()
+        .filter((e) => e.active)
+        .flatMap((e) => e.system.changes.filter((c) => e.shouldApplyChange(c, { phase })).map((c) => ({ ...c, effect: e })))
+        .sort((a, b) => a.priority - b.priority);
+      for (const change of changes) PreparedEffect.applyChange(this, change, {});
+      this.duringPreparation?.(phase);
+    }
+  }
+  return { PreparedActor, PreparedEffect };
+}
+
 function setup(actor) {
+  const { PreparedActor, PreparedEffect } = documentClasses();
+  Object.setPrototypeOf(actor, PreparedActor.prototype);
   const helpers = { fieldBonuses: fieldBonuses165 };
   globalThis.Handlebars = { helpers, registerHelper: (name, fn) => (helpers[name] = fn) };
   globalThis.game = {
@@ -316,21 +351,30 @@ function setup(actor) {
   };
   globalThis.fromUuidSync = (uuid) => (uuid === actor.uuid ? actor : null);
   globalThis.Roll = FakeRoll;
-  globalThis.CONFIG = { T20: { atributos: { for: "Força", des: "Destreza", con: "Constituição" } } };
+  globalThis.CONFIG = {
+    T20: { atributos: { for: "Força", des: "Destreza", con: "Constituição" } },
+    Actor: { documentClass: PreparedActor },
+    ActiveEffect: { documentClass: PreparedEffect }
+  };
   globalThis.foundry = {
     utils: {
       fromUuidSync: globalThis.fromUuidSync,
       getProperty: (obj, path) => path.split(".").reduce((o, k) => o?.[k], obj)
     },
-    dice: { Roll: FakeRoll }
+    dice: { Roll: FakeRoll },
+    documents: { Actor: PreparedActor }
   };
   return helpers;
 }
 
-/** Installs a patch over the globals of setup(); `status` is what ctx.features.isActive reads. */
-function install(p, status = []) {
-  if (!p.install) return p.apply();
-  createTestKernel({ platform: createPlatform(), status }).install(p);
+/** Installs patches over the globals of setup() in one kernel; `status` is what ctx.features.isActive reads. */
+function install(patches, status = []) {
+  const kernel = createTestKernel({ platform: createPlatform(), status });
+  for (const p of patches) {
+    if (p.install) kernel.install(p);
+    else p.apply();
+  }
+  return kernel;
 }
 
 function teardown() {
@@ -341,13 +385,23 @@ function render(helpers, actor, path) {
   return helpers.fieldBonuses.call({ system: actor.system }, path, { data: { root: { actor: { _id: actor._id }, uuid: actor.uuid } } });
 }
 
-function scenario(options, path, { status = [], patches = [patch], mutate } = {}) {
+/**
+ * Renders `path` before and after installing `patches`. With `prepare`, the actor is prepared after the install
+ * (applied-changes records it) and `report(actor, applied)` runs inside the "initial" phase.
+ */
+function scenario(options, path, { status = [], patches = [patch], mutate, prepare = false, report } = {}) {
   const actor = makeActor(options);
   mutate?.(actor);
   const helpers = setup(actor);
   try {
     const before = render(helpers, actor, path);
-    for (const p of patches) install(p, status);
+    const kernel = install(patches, status);
+    if (prepare) {
+      const applied = kernel.service("applied-changes");
+      actor.duringPreparation = (phase) => phase === "initial" && report?.(actor, applied);
+      actor.applyActiveEffects("initial");
+      actor.applyActiveEffects("final");
+    }
     const after = render(helpers, actor, path);
     assert.equal(Object.hasOwn(actor, "modifiedFields"), false);
     return { before, after };
@@ -463,7 +517,8 @@ test("defenseSources: manual Outros, Caído (prone-defense on) and conditions by
   };
   const { after } = scenario(options, DEF, {
     status: APPLIED("prone-defense", "field-bonuses-tooltip", "field-bonuses-breakdown"),
-    patches: [patch, tooltipPatch]
+    patches: [pronePatch, patch, tooltipPatch],
+    prepare: true
   });
   assert.deepEqual(lines(after), [
     "Base +10",
@@ -498,7 +553,7 @@ test("the shadow is removed when the helper throws", () => {
   const actor = makeActor();
   const helpers = setup(actor);
   try {
-    install(patch);
+    install([patch]);
     game.settings.get = () => {
       throw new Error("boom");
     };
@@ -507,4 +562,105 @@ test("the shadow is removed when the helper throws", () => {
   } finally {
     teardown();
   }
+});
+
+/* -------------------------------------------- */
+/*  Applied changes (#91)                       */
+/* -------------------------------------------- */
+
+const item = (id, name, tipo, value) => ({ id, name, system: { tipo, equipado: true, armadura: { value } } });
+
+test("applied: a Defesa bonus folded into the armor is muted and the total matches the sheet (zayn)", () => {
+  const options = {
+    level: 1,
+    items: [item("i1", "Couraça", "leve", 5)],
+    effects: [effect("Reforçada", [[DEF, "add", "1"]], [], { cut: true })],
+    defesa: { value: 19 }
+  };
+  const report = (actor, applied) =>
+    applied.reportSuppressed(actor, { key: DEF, label: "Reforçada", value: "1", reason: "folded" }, options.effects[0]);
+  const { before, after } = scenario(options, DEF, { prepare: true, report });
+  assert.equal(total(before), "+20");
+  assert.deepEqual(lines(after), ["Base +10", "Destreza +4", "Couraça +5", "Reforçada (+1) T20CP.FieldBonuses.Folded", "Total +19"]);
+  assert.match(after, /class="flexrow t20cp-muted"><label>Reforçada:/);
+});
+
+test("applied: armors and shields after the first are muted as not counted; accessories cut are muted too", () => {
+  const options = {
+    level: 1,
+    items: [
+      item("a1", "Couro", "leve", 2),
+      item("s1", "Escudo leve", "escudo", 1),
+      item("a2", "Brunea", "leve", 5),
+      item("s2", "Escudo pesado", "escudo", 2),
+      item("r1", "Anel de Proteção", "acessorio", 1),
+      item("r2", "Manto de Proteção", "acessorio", 1)
+    ]
+  };
+  const report = (actor, applied) =>
+    applied.reportSuppressed(actor, { key: DEF, label: "Manto de Proteção", value: 1, reason: "not-stacking", item: { id: "r2", accessory: true } });
+  const { before, after } = scenario(options, DEF, { prepare: true, report });
+  assert.equal(total(before), "+26");
+  assert.deepEqual(lines(after), [
+    "Base +10",
+    "Destreza +4",
+    "Couro +2",
+    "Escudo leve +1",
+    "Brunea (+5) T20CP.FieldBonuses.NotCounted",
+    "Escudo pesado (+2) T20CP.FieldBonuses.NotCounted",
+    "Anel de Proteção +1",
+    "Manto de Proteção (+1) T20CP.FieldBonuses.NotStacking",
+    "Total +18"
+  ]);
+});
+
+test("applied: without a recorded preparation the extra armors are still muted, effects come from modifiedFields", () => {
+  const options = { level: 1, items: [item("a1", "Couro", "leve", 2), item("a2", "Brunea", "leve", 5)], effects: [effect("E", [[DEF, "add", "1"]])] };
+  const { after } = scenario(options, DEF);
+  assert.deepEqual(lines(after), ["Base +10", "Destreza +4", "Couro +2", "Brunea (+5) T20CP.FieldBonuses.NotCounted", "E +1", "Total +17"]);
+});
+
+test("applied: a skill lists what features add outside effects and the bonuses cut, including wildcard ones", () => {
+  const options = { effects: [effect("Bênção", [["system.pericias.*.bonus", "add", "1"]], [], { cut: true })], skill: { value: 3 } };
+  const report = (actor, applied) => {
+    applied.contribute(actor, LUTA, { label: "T20CP.NonProficiency.TooltipLabel", value: -4, owner: "non-proficiency" });
+    applied.reportSuppressed(actor, { key: "system.pericias.*.bonus", label: "Bênção", value: "1", reason: "not-stacking" });
+  };
+  const { after } = scenario(options, LUTA, { prepare: true, report });
+  assert.deepEqual(lines(after).slice(-3), ["T20CP.NonProficiency.TooltipLabel -4", "Bênção (+1) T20CP.FieldBonuses.NotStacking", "Total +3"]);
+});
+
+test("applied: what the breakdown still misses becomes an unidentified line, for skills and the Defesa", () => {
+  const skill = scenario({ skill: { value: 9 } }, LUTA, { prepare: true });
+  assert.deepEqual(lines(skill.after).slice(-2), ["T20CP.FieldBonuses.Unidentified +2", "Total +9"]);
+  const def = scenario({ level: 1, defesa: { value: 13 } }, DEF, { prepare: true });
+  assert.deepEqual(lines(def.after).slice(-2), ["T20CP.FieldBonuses.Unidentified -1", "Total +13"]);
+  const matches = scenario({ skill: { value: 7 } }, LUTA, { prepare: true });
+  assert.doesNotMatch(matches.after, /Unidentified/);
+  // Not prepared since the install: what other wrappers add is unknown, so nothing is guessed.
+  assert.doesNotMatch(scenario({ skill: { value: 9 } }, LUTA).after, /Unidentified/);
+});
+
+test("applied: Defesa conditions count as unidentified only when field-bonuses-tooltip does not add them", () => {
+  const options = { level: 1, effects: [DESPREVENIDO()], defesa: { condi: -5, value: 9 }, sourceDefesa: { condi: 0 } };
+  const { after } = scenario(options, DEF, { status: APPLIED("field-bonuses-tooltip"), patches: [patch, tooltipPatch], prepare: true });
+  assert.deepEqual(lines(after), ["Base +10", "Destreza +4", "Desprevenido -5", "Total +9"]);
+  const alone = scenario({ ...options, effects: [DESPREVENIDO()] }, DEF, { prepare: true });
+  assert.deepEqual(lines(alone.after), ["Base +10", "Destreza +4", "T20CP.FieldBonuses.Unidentified -5", "Total +9"]);
+});
+
+test("applied: recorded changes are simulated in the order the core applied them, not re-sorted by phase", () => {
+  const key = "system.attributes.pv.bonus.nivel";
+  const recorded = [
+    { key, label: "Final", type: "add", value: "2", priority: 20, phase: "final" },
+    { key, label: "Initial", type: "override", value: "3", priority: 50, phase: "initial" }
+  ];
+  const fields = normalizeModifiedFields(fieldsFromChanges(recorded), { parts: { types: true }, changes: recorded, ordered: true });
+  assert.deepEqual(fields[key], [{ label: "Initial", value: "3" }]);
+  const outros = [
+    { label: "Final", type: "add", value: "2", priority: 20, phase: "final" },
+    { label: "Initial", type: "override", value: "3", priority: 50, phase: "initial" }
+  ];
+  assert.equal(simulateNumericChanges(0, outros, { ordered: true }).result, 3);
+  assert.equal(simulateNumericChanges(0, outros).result, 5);
 });

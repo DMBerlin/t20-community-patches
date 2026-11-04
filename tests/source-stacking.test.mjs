@@ -135,7 +135,7 @@ test("keyLabel: Defense, penalty, skills and abilities; unknown keys as is", () 
 
 const MODULE = "t20-community-patches";
 
-function setupFoundry() {
+function setupFoundry(appliedChanges = null) {
   const settings = { rule: "on" };
   const hooks = {};
   const infos = [];
@@ -295,7 +295,7 @@ function setupFoundry() {
     }
   });
   const exclusions = createStackingExclusions();
-  installSourceStackingRule(exclusions);
+  installSourceStackingRule(exclusions, appliedChanges);
   return { settings, hooks, infos, Actor, ItemT20, exclusions };
 }
 
@@ -507,4 +507,27 @@ test("integration: an excluded change neither competes nor is suppressed", () =>
     off();
   }
   assert.equal(actor.prepare().totals[DEFENSE_KEY], 5, "the smaller one is suppressed again");
+});
+
+test("integration: what is cut is reported to applied-changes with its signed amount, changes and accessories", () => {
+  const reports = [];
+  const { Actor } = setupFoundry({ reportSuppressed: (actor, entry, origin) => reports.push({ actor, entry, origin }) });
+  const actor = new Actor("guerreiro");
+  const spell = { [MODULE]: { source: "magia" } };
+  actor.addEffect("arcana", { name: "Armadura Arcana", time: 1, flags: spell, changes: [{ key: DEFENSE_KEY, value: "5" }] });
+  actor.addEffect("fe", { name: "Escudo da Fé", time: 2, flags: spell, changes: [{ key: DEFENSE_KEY, value: "1+1" }] });
+  actor.addEffect("praga", { name: "Praga", time: 5, flags: spell, changes: [{ key: DEFENSE_KEY, value: "-3" }] });
+  actor.addEffect("maldicao", { name: "Maldição", time: 6, flags: spell, changes: [{ key: DEFENSE_KEY, value: "-2" }] });
+  actor.addItem("braceletes", { name: "Braceletes de Ouro", time: 3, system: { tipo: "acessorio", armadura: { value: 8, penalidade: 0 } } });
+  actor.addItem("colar", { name: "Colar Guardião", time: 4, system: { tipo: "acessorio", armadura: { value: 5, penalidade: -1 } } });
+  actor.prepare();
+  assert.ok(reports.every((r) => r.actor === actor));
+  assert.deepEqual(
+    reports.map((r) => r.entry),
+    [
+      { key: DEFENSE_KEY, label: "Escudo da Fé", value: 2, reason: "not-stacking" },
+      { key: DEFENSE_KEY, label: "Maldição", value: -2, reason: "not-stacking" },
+      { key: DEFENSE_KEY, label: "Colar Guardião", value: 5, reason: "not-stacking", item: { id: "colar", accessory: true } }
+    ]
+  );
 });

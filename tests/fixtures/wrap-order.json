@@ -28,6 +28,7 @@
       "label": "ActorT20#applyActiveEffects",
       "owners": [
         "petrified-damage-reduction",
+        "applied-changes",
         "prone-defense",
         "condition-skill-lists",
         "conditional-powers",
@@ -136,16 +137,17 @@
       ]
     },
     {
+      "label": "ActiveEffectT20.applyChangeField",
+      "owners": [
+        "applied-changes",
+        "attribute-breakdown"
+      ]
+    },
+    {
       "label": "ActiveEffectT20.onManageActiveEffect",
       "owners": [
         "item-effects-on-actor-sheet",
         "usage-effect-toggle"
-      ]
-    },
-    {
-      "label": "ActiveEffectT20.applyChangeField",
-      "owners": [
-        "attribute-breakdown"
       ]
     },
     {

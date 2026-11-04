@@ -10,7 +10,15 @@
  * - wildcard: `system.pericias.*.bonus` keeps its literal key in modifiedFields and never reaches a skill;
  * - heavyArmor: with heavy armor the Defesa drops the attribute; prepareDefense adds clamp(attr, 0, maxAtr);
  * - defenseSources: the Defesa shows "Outros" as one aggregated number and the conditions as one line, so the player
- *   cannot tell which effect changes it nor why a condition did nothing.
+ *   cannot tell which effect changes it nor why a condition did nothing;
+ * - armorSlots: the Defesa lists every equipped item with a Defesa value, while AttributesFields.prepareDefense (T20:18717) only
+ *   adds the first armor and the first shield.
+ *
+ * modifiedFields also lists changes that never reached the actor (#91): the ones a feature cut (item-effective-stats,
+ * source-stacking, prone-defense) and, outside effects, what non-proficiency adds in prepareSkill is missing. When
+ * the applied-changes service has a published cycle for the actor, the copy is built from what was really applied,
+ * the cut contributions are listed muted with their reason and, for the Defesa and the skills, a residual line
+ * ("Outros (não identificado)") makes the total match the sheet.
  *
  * Fix: during the call the actor's modifiedFields is shadowed by a normalized copy (array fields simulated as the core
  * applies them, wildcards expanded, values evaluated, manual elements listed); afterwards the system's "Configuração
@@ -22,14 +30,28 @@ import { addTooltipLine } from "../lib/tooltip.mjs";
 import { stripComments, unwrap } from "../lib/source.mjs";
 import { resolveDataRefs } from "../lib/data-refs.mjs";
 import { fieldTerms } from "../lib/tooltip.mjs";
-import { PRONE, collectProneCandidates, isProneDefenseChange, planProneChange } from "../lib/prone.mjs";
+import {
+  CONDI_KEY,
+  DEFENSE_BONUS_KEY,
+  OUTROS_KEY,
+  appendLines,
+  defenseItemLines,
+  fieldsFromChanges,
+  isArrayKey,
+  lineHTML,
+  muteItemLines,
+  residual,
+  skillModifierKeys,
+  suppressedLines,
+  tooltipTotal
+} from "../lib/applied-breakdown.mjs";
 import { wraps } from "../kernel/wrap.mjs";
 
 /** Data references of a formula, resolved as core does. */
 const dataRefs = (raw, data) => resolveDataRefs(raw, data, foundry.dice.Roll.defaultImplementation);
 
 const LOG = "t20-community-patches | field-bonuses-breakdown:";
-export const PARTS = ["manual", "zeroLevel", "formula", "types", "wildcard", "heavyArmor", "defenseSources"];
+export const PARTS = ["manual", "zeroLevel", "formula", "types", "wildcard", "heavyArmor", "defenseSources", "armorSlots"];
 const INPUT_PARTS = ["manual", "zeroLevel", "formula", "types", "wildcard"];
 export const MANUAL_KEYS = {
   nivel: "T20CP.FieldBonuses.ManualPerLevel",
@@ -42,8 +64,14 @@ export const MANUAL_OTHER_KEY = "T20CP.FieldBonuses.ManualOther";
 export const NOT_STACKING_KEY = "T20CP.FieldBonuses.NotStacking";
 export const MINIMUM_PV_KEY = "T20CP.FieldBonuses.MinimumPV";
 export const ROUNDING_KEY = "T20CP.FieldBonuses.Rounding";
-export const OUTROS_KEY = "system.attributes.defesa.outros";
-export const CONDI_KEY = "system.attributes.defesa.condi";
+export const UNIDENTIFIED_KEY = "T20CP.FieldBonuses.Unidentified";
+/** Text of a muted line, by reason. */
+export const REASON_KEYS = {
+  "not-stacking": NOT_STACKING_KEY,
+  folded: "T20CP.FieldBonuses.Folded",
+  "not-counted": "T20CP.FieldBonuses.NotCounted"
+};
+export { OUTROS_KEY, CONDI_KEY, isArrayKey };
 /** Default priorities of Foundry 14 change types (common/constants.mjs). */
 export const DEFAULT_PRIORITY = { custom: 0, multiply: 10, add: 20, subtract: 20, downgrade: 30, upgrade: 40, override: 50 };
 /** Wildcard keys ActorT20._prepareProxyChange expands (T20:17036-17044); other wildcards are not applied at all. */
@@ -59,8 +87,6 @@ export const PROXY_KEYS = [
 const PHASES = ["initial", "final"];
 const HELPER_TYPES = new Set(["pv", "pm", "pericias", "defesa"]);
 const NUMERIC_TYPES = new Set(["add", "subtract", "multiply", "override", "upgrade", "downgrade"]);
-const ARRAY_KEY =
-  /^system\.(?:attributes\.(?:pv|pm)\.bonus\.(?:nivel|nivelPar|nivelImpar|total)|attributes\.defesa\.bonus|pericias\.[^.*]+\.bonus|modificadores\.pericias\.(?:geral|ataque|resistencia|semataque|atr\.[^.*]+))$/;
 const TOTAL = /(<label>Total:<\/label><span>)([+-]?\d+(?:\.\d+)?)(<\/span>)/;
 const EPSILON = 1e-9;
 const signed = (n) => (n >= 0 ? `+${n}` : String(n));
@@ -68,14 +94,6 @@ const tidy = (n) => Math.round(n * 1e9) / 1e9;
 const escapeHTML = (text) =>
   String(text).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 const phaseIndex = (phase) => (PHASES.includes(phase ?? "initial") ? PHASES.indexOf(phase ?? "initial") : PHASES.length);
-
-/**
- * Whether the helper reads this modifiedFields key as an ArrayField(StringField) of the actor.
- * @param {string} key
- */
-export function isArrayKey(key) {
-  return typeof key === "string" && ARRAY_KEY.test(key);
-}
 
 /**
  * How many times the helper (and preparePVPM) counts an element of a PV/PM per-level list; 1 for other keys.
@@ -161,10 +179,13 @@ export function expandWildcards(entries, keysOf) {
  * @param {{label: string, value: unknown, hidden?: boolean}[]} seed  Elements already in the list (manual source values).
  * @param {object[]} entries  Annotated entries of one key.
  * @param {{min?: number}} [options]  The field's minimum length (1 for the PV/PM bonus lists, T20:18094).
+ *   options.ordered: the entries are already in application order (recorded changes); only their order counts.
  * @returns {{label: string, value: unknown, hidden?: boolean}[]}
  */
-export function simulateArray(seed = [], entries = [], { min = 0 } = {}) {
-  const sorted = [...entries].sort((a, b) => phaseIndex(a.phase) - phaseIndex(b.phase) || a.priority - b.priority || a.seq - b.seq);
+export function simulateArray(seed = [], entries = [], { min = 0, ordered = false } = {}) {
+  const sorted = [...entries].sort((a, b) =>
+    ordered ? a.seq - b.seq : phaseIndex(a.phase) - phaseIndex(b.phase) || a.priority - b.priority || a.seq - b.seq
+  );
   let result = seed.map(({ label, value, hidden }) => (hidden ? { label, value, hidden } : { label, value }));
   for (const entry of sorted) {
     const item = { label: entry.label, value: entry.value };
@@ -214,10 +235,11 @@ export function manualEntries(type, bonus, localize = (k) => k) {
  * @param {{parts?: Record<string, boolean>, changes?: object[], keysOf?: Function, evaluate?: Function,
  *   resolve?: (value: string) => string, seeds?: Record<string, object[]>, level?: number}} [options]
  *   resolve: replaces the data references of a change value, as StringField#_castChangeDelta does (no arithmetic).
+ *   ordered: `changes` are the recorded changes, in the order the core applied them.
  */
 export function normalizeModifiedFields(
   modFields,
-  { parts = {}, changes = [], keysOf = () => [], evaluate, resolve, seeds = {}, level = 0 } = {}
+  { parts = {}, changes = [], keysOf = () => [], evaluate, resolve, seeds = {}, level = 0, ordered = false } = {}
 ) {
   let entries = annotateEntries(modFields, changes);
   if (parts.wildcard) entries = expandWildcards(entries, keysOf);
@@ -243,7 +265,7 @@ export function normalizeModifiedFields(
       }
     };
     let fields = parts.types
-      ? simulateArray(seed, list.map((e) => ({ ...e, value: cast(e.value) })), { min })
+      ? simulateArray(seed, list.map((e) => ({ ...e, value: cast(e.value) })), { min, ordered })
       : [...seed, ...[...list].sort((a, b) => a.seq - b.seq).map(({ label, value, type }) => ({ label, value, type }))];
     fields = fields.filter((f) => !f.hidden).map((f) => ({ ...f, value: value(f.value) }));
     if (parts.zeroLevel && level > 0 && levelMultiplier(key, level) === 0) fields = [];
@@ -361,19 +383,21 @@ export function plainNumber(value) {
  * the current value on ties) gets the whole contribution of the run; the losers get 0.
  * @param {number} base  Value of the field before the changes.
  * @param {{label: string, type: string, value: unknown, priority?: number, phase?: string}[]} changes
+ * @param {{ordered?: boolean}} [options]  ordered: the changes are already in application order (recorded changes).
  * @returns {{lines: {label: string, type: string, value: number, delta: number}[], result: number}|null}
  *   Lines in application order; null for a custom type, an unknown type or a value that is not a plain number.
  */
-export function simulateNumericChanges(base, changes = []) {
+export function simulateNumericChanges(base, changes = [], { ordered = false } = {}) {
   let current = Number(base);
   if (!Number.isFinite(current)) return null;
   const indexed = changes.map((change, seq) => ({ change, seq }));
-  indexed.sort(
-    (a, b) =>
-      phaseIndex(a.change.phase) - phaseIndex(b.change.phase) ||
-      (a.change.priority ?? DEFAULT_PRIORITY[a.change.type] ?? 0) - (b.change.priority ?? DEFAULT_PRIORITY[b.change.type] ?? 0) ||
-      a.seq - b.seq
-  );
+  if (!ordered)
+    indexed.sort(
+      (a, b) =>
+        phaseIndex(a.change.phase) - phaseIndex(b.change.phase) ||
+        (a.change.priority ?? DEFAULT_PRIORITY[a.change.type] ?? 0) - (b.change.priority ?? DEFAULT_PRIORITY[b.change.type] ?? 0) ||
+        a.seq - b.seq
+    );
   const lines = [];
   for (const { change } of indexed) {
     if (!NUMERIC_TYPES.has(change.type)) return null;
@@ -420,11 +444,14 @@ export function simulateNumericChanges(base, changes = []) {
  * The Defesa lines that replace the helper's "Outros" line and the aggregated condition line, or null when a
  * simulation is impossible or does not match the prepared values (the tooltip then stays as it is).
  * @param {{sourceOutros: number, outrosChanges: object[], preparedOutros: number, condiBase?: number,
- *   condiChanges: object[], preparedCondi: number, skipped?: {label: string, value: number}[], manualLabel?: string}} data
- *   skipped: Caído penalties prone-defense drops (duplicates that do not stack), listed as not stacking.
+ *   condiChanges: object[], preparedCondi: number, skipped?: {label: string, value: number, reason?: string}[],
+ *   condiSkipped?: {label: string, value: number, reason?: string}[], manualLabel?: string}} data
+ *   skipped, condiSkipped: changes a feature cut from defesa.outros and defesa.condi (applied-changes), listed muted
+ *   with their reason (not stacking by default).
  *   condiBase: persisted defesa.condi (0 for NPCs), listed as condiLabel when not 0.
- * @returns {{outros: {label: string, value: number, muted: boolean}[], condi: {label: string, value: number,
- *   muted: boolean}[]}|null}
+ *   ordered: the changes are the recorded ones, in application order.
+ * @returns {{outros: {label: string, value: number, muted: boolean, reason?: string}[], condi: {label: string,
+ *   value: number, muted: boolean, reason?: string}[]}|null}
  */
 export function defenseSourceLines({
   sourceOutros,
@@ -434,11 +461,13 @@ export function defenseSourceLines({
   condiChanges = [],
   preparedCondi,
   skipped = [],
+  condiSkipped = [],
   manualLabel = "Outros (manual)",
-  condiLabel = "Condição"
+  condiLabel = "Condição",
+  ordered = false
 } = {}) {
-  const outros = simulateNumericChanges(Number(sourceOutros) || 0, outrosChanges);
-  const condi = simulateNumericChanges(Number(condiBase) || 0, condiChanges);
+  const outros = simulateNumericChanges(Number(sourceOutros) || 0, outrosChanges, { ordered });
+  const condi = simulateNumericChanges(Number(condiBase) || 0, condiChanges, { ordered });
   if (!outros || !condi) return null;
   if (Math.abs(outros.result - (Number(preparedOutros) || 0)) > EPSILON) return null;
   if (Math.abs(condi.result - (Number(preparedCondi) || 0)) > EPSILON) return null;
@@ -447,13 +476,14 @@ export function defenseSourceLines({
     return { label: l.label, value: muted ? l.value : l.delta, muted };
   };
   const manual = Number(sourceOutros) || 0;
+  const cut = (s) => ({ label: s.label, value: s.value, muted: true, ...(s.reason ? { reason: s.reason } : {}) });
   return {
-    outros: [
-      ...(manual ? [{ label: manualLabel, value: manual, muted: false }] : []),
-      ...outros.lines.map(toLine),
-      ...skipped.map((s) => ({ label: s.label, value: s.value, muted: true }))
-    ],
-    condi: [...(Number(condiBase) ? [{ label: condiLabel, value: Number(condiBase), muted: false }] : []), ...condi.lines.map(toLine)]
+    outros: [...(manual ? [{ label: manualLabel, value: manual, muted: false }] : []), ...outros.lines.map(toLine), ...skipped.map(cut)],
+    condi: [
+      ...(Number(condiBase) ? [{ label: condiLabel, value: Number(condiBase), muted: false }] : []),
+      ...condi.lines.map(toLine),
+      ...condiSkipped.map(cut)
+    ]
   };
 }
 
@@ -462,17 +492,14 @@ export function defenseSourceLines({
  * marked with data-t20cp="condi" so field-bonuses-tooltip does not add its aggregated line. Muted lines do not count.
  * Returns the HTML unchanged when the "Outros" line (if any) or the total is not found.
  * @param {string} html
- * @param {{preparedOutros: number, outros: object[], condi: object[], notStacking?: string}} data
+ * @param {{preparedOutros: number, outros: object[], condi: object[], notStacking?: string,
+ *   noteOf?: (reason: string) => string}} data  noteOf: text of a muted line with a reason (notStacking otherwise).
  */
-export function applyDefenseSources(html, { preparedOutros, outros = [], condi = [], notStacking = "doesn't stack" }) {
+export function applyDefenseSources(html, { preparedOutros, outros = [], condi = [], notStacking = "doesn't stack", noteOf }) {
   if (typeof html !== "string") return html;
   const hr = html.lastIndexOf("<hr>");
   if (hr < 0 || !TOTAL.test(html.slice(hr))) return html;
-  const render = (line, attr = "") => {
-    const cls = line.muted ? "flexrow t20cp-muted" : "flexrow";
-    const value = line.muted ? `(${signed(line.value)}) ${escapeHTML(notStacking)}` : signed(line.value);
-    return `<li class="${cls}"${attr}><label>${escapeHTML(line.label)}:</label><span>${value}</span></li>`;
-  };
+  const render = (line, attr = "") => lineHTML(line, line.reason && noteOf ? noteOf(line.reason) : notStacking, attr);
   const sum = (lines) => lines.reduce((s, l) => s + (l.muted ? 0 : l.value), 0);
   const prepared = Number(preparedOutros) || 0;
   let head = html.slice(0, hr);
@@ -513,6 +540,8 @@ export function helperParts(source) {
   parts.heavyArmor = /defesa\.atributo\s*&&\s*!armaduraPesada/.test(defense) && !/maxAtr/.test(defense);
   parts.defenseSources =
     /defesa\.outros\s*\?\s*\{\s*label:\s*["']Outros["']\s*,\s*value:\s*defesa\.outros\s*\}/.test(defense) && !/\bcondi\b/.test(defense);
+  parts.armorSlots =
+    /\.filter\(\s*\(?\s*(\w+)\s*\)?\s*=>\s*\1\.system\.armadura\.value\b[\s\S]*?\)\s*\.map\(/.test(defense) && !/\.find\(/.test(defense);
   return parts;
 }
 
@@ -552,7 +581,7 @@ function helperActor(root) {
   return game.actors?.get(root?.actor?._id) || foundry.utils.fromUuidSync(root?.uuid) || null;
 }
 
-function appliedChanges(actor) {
+function effectChanges(actor) {
   const changes = [];
   for (const effect of actor.appliedEffects ?? []) {
     if (!effect?.modifiesActor) continue;
@@ -589,44 +618,54 @@ function heavyArmorLine(actor, rollData) {
   return { label, value: delta };
 }
 
-/** Other features this patch reads (ctx.features); null before the install. */
+/** Other features this patch reads (ctx.features) and the applied-changes service; null before the install. */
 let features = null;
+let applied = null;
 const isActive = (id) => !!features?.isActive(id);
 
+/** The changes of the last published preparation of the actor, or null (not prepared since the install). */
+function recordedChanges(actor) {
+  try {
+    return applied?.changes(actor) ?? null;
+  } catch (err) {
+    warnOnce("could not read the applied changes", err);
+    return null;
+  }
+}
+
+const recordedSuppressed = (actor) => (recordedChanges(actor) ? (applied.suppressed(actor) ?? []) : []);
+
 /**
- * The changes the core applies to defesa.outros and defesa.condi (Actor#applyActiveEffects: active applicable
- * effects whose shouldApplyChange accepts the change in its phase), with the Caído penalty as prone-defense applies
- * it when that patch is on.
+ * The changes applied to defesa.outros and defesa.condi and the ones a feature cut. Without a published cycle, the
+ * changes the core would apply (active applicable effects whose shouldApplyChange accepts the change in its phase).
  */
 function defenseChanges(actor) {
+  const toEntry = (ch) => ({ label: ch.label, type: ch.type, value: ch.value, priority: ch.priority, phase: ch.phase ?? "initial" });
+  const recorded = recordedChanges(actor);
+  if (recorded) {
+    const suppressed = recordedSuppressed(actor);
+    return {
+      outros: recorded.filter((ch) => ch.key === OUTROS_KEY).map(toEntry),
+      condi: recorded.filter((ch) => ch.key === CONDI_KEY).map(toEntry),
+      skipped: suppressedLines(suppressed, OUTROS_KEY),
+      condiSkipped: suppressedLines(suppressed, CONDI_KEY),
+      ordered: true
+    };
+  }
   const outros = [];
   const condi = [];
-  const skipped = [];
-  const effects = [...(actor.allApplicableEffects?.() ?? [])].filter((e) => e?.active);
-  const proneOn = isActive("prone-defense");
-  const candidates = proneOn ? collectProneCandidates(effects) : [];
-  let counted = false;
-  for (const effect of effects) {
+  for (const effect of [...(actor.allApplicableEffects?.() ?? [])].filter((e) => e?.active)) {
     for (const change of effect.system?.changes ?? []) {
       if (change.key !== OUTROS_KEY && change.key !== CONDI_KEY) continue;
       const phase = change.phase ?? "initial";
       if (typeof effect.shouldApplyChange === "function" && !effect.shouldApplyChange(change, { phase })) continue;
-      let type = change.type;
-      if (proneOn && change.key === OUTROS_KEY && isProneDefenseChange(change) && effect.statuses?.has(PRONE)) {
-        const plan = planProneChange({ effect, change, eligible: phase === "initial", alreadyCounted: counted }, candidates);
-        if (plan === "skip") {
-          skipped.push({ label: effect.name, value: Number(change.value) });
-          continue;
-        }
-        if (plan === "add" || plan === "count") counted = true;
-        if (plan === "add") type = "add";
-      }
-      const entry = { label: effect.name, type, value: change.value, priority: change.priority, phase };
-      (change.key === OUTROS_KEY ? outros : condi).push(entry);
+      (change.key === OUTROS_KEY ? outros : condi).push(toEntry({ ...change, label: effect.name, phase }));
     }
   }
-  return { outros, condi, skipped };
+  return { outros, condi, skipped: [], condiSkipped: [], ordered: false };
 }
+
+const noteOf = (reason) => game.i18n.localize(REASON_KEYS[reason] ?? NOT_STACKING_KEY);
 
 function defenseSourcesHTML(html, actor) {
   const defesa = actor.system?.attributes?.defesa;
@@ -643,16 +682,71 @@ function defenseSourcesHTML(html, actor) {
     condiChanges: changes.condi,
     preparedCondi: defesa.condi,
     skipped: changes.skipped,
+    condiSkipped: changes.condiSkipped,
     manualLabel: game.i18n.localize(MANUAL_OTHER_KEY),
-    condiLabel: game.i18n.localize("T20CP.FieldBonuses.Condition")
+    condiLabel: game.i18n.localize("T20CP.FieldBonuses.Condition"),
+    ordered: changes.ordered
   });
   if (!lines) return html;
   return applyDefenseSources(html, {
     preparedOutros: defesa.outros,
     outros: lines.outros,
     condi: includeCondi ? lines.condi : [],
-    notStacking: game.i18n.localize(NOT_STACKING_KEY)
+    notStacking: game.i18n.localize(NOT_STACKING_KEY),
+    noteOf
   });
+}
+
+/** Equipped items as the helper and AttributesFields.prepareDefense (T20:18717) filter them. */
+function equippedItems(actor) {
+  const slots = game.settings.get("tormenta20", "equipmentSlots");
+  return (actor.itemTypes?.equipamento ?? [])
+    .filter((i) => (slots ? i.system?.equipado2?.slot : i.system?.equipado))
+    .map((i) => ({ id: i.id, name: i.name, tipo: i.system?.tipo, value: i.system?.armadura?.value }));
+}
+
+/** The Defesa item lines that prepareDefense leaves out, muted, and the Defesa bonuses a feature cut. */
+function defenseItemsHTML(html, actor, parts) {
+  const suppressed = recordedSuppressed(actor);
+  if (parts.armorSlots) html = muteItemLines(html, defenseItemLines(equippedItems(actor), suppressed), noteOf);
+  return appendLines(html, suppressedLines(suppressed, DEFENSE_BONUS_KEY), noteOf);
+}
+
+/** The skill contributions added outside effects and the skill bonuses a feature cut. */
+function skillHTML(html, actor, key, path) {
+  if (!recordedChanges(actor)) return html;
+  const contributions = (applied.contributions(actor, path) ?? []).map((c) => ({ label: game.i18n.localize(c.label), value: Number(c.value) }));
+  const keys = [...skillModifierKeys(key, actor.system?.pericias?.[key]?.atributo), path];
+  return appendLines(appendLines(html, contributions), suppressedLines(recordedSuppressed(actor), keys), noteOf);
+}
+
+/** Fields already reported as unidentified, per actor (one debug message each). */
+const reported = new WeakMap();
+
+/**
+ * Adds the "Outros (não identificado)" line with what the breakdown still misses to reach the prepared value.
+ * @param {number} prepared  The value on the sheet, minus what an outer wrapper adds (the tooltip's Condição line).
+ */
+function residualHTML(html, actor, path, prepared) {
+  const diff = residual(tooltipTotal(html), prepared);
+  if (!diff) return html;
+  const fields = reported.get(actor) ?? new Set();
+  reported.set(actor, fields);
+  if (!fields.has(path)) {
+    fields.add(path);
+    console.debug(`${LOG} ${actor.name}: ${path} breakdown misses ${diff} to reach ${prepared}`);
+  }
+  return appendLines(html, [{ label: game.i18n.localize(UNIDENTIFIED_KEY), value: diff }]);
+}
+
+/** The prepared value the breakdown of a Defesa or skill path must reach, or NaN. */
+function preparedValue(html, actor, type, key) {
+  if (type === "pericias") return Number(actor.system?.pericias?.[key]?.value);
+  const defesa = actor.system?.attributes?.defesa;
+  // The helper never lists defesa.condi: field-bonuses-tooltip, when applied, adds it outside, unless this patch
+  // listed it. Without that patch the residual line covers it.
+  const outside = isActive("field-bonuses-tooltip") && !(typeof html === "string" && html.includes('data-t20cp="condi"'));
+  return Number(defesa?.value) - (outside ? Number(defesa?.condi) || 0 : 0);
 }
 
 /** The PV minimum and the rounding preparePVPM applies, which the helper leaves out. */
@@ -684,11 +778,12 @@ function resourceHTML(html, actor, type, rollData, context) {
 
 function install(ctx) {
   features = ctx.features;
+  applied = ctx.services["applied-changes"];
   const original = globalThis.Handlebars?.helpers?.fieldBonuses;
   if (typeof original !== "function") throw new Error("Handlebars helper fieldBonuses not found");
   const parts = helperParts(helperSource(original));
   const inputs = INPUT_PARTS.some((p) => parts[p]);
-  if (!inputs && !parts.heavyArmor && !parts.defenseSources) {
+  if (!inputs && !parts.heavyArmor && !parts.defenseSources && !parts.armorSlots) {
     console.warn(`${LOG} fieldBonuses not recognized; nothing to fix`);
     return;
   }
@@ -711,14 +806,17 @@ function install(ctx) {
           const data = rollData;
           const seeds =
             parts.manual && resource ? manualEntries(type, actor._source?.system?.attributes?.[type]?.bonus, (k) => game.i18n.localize(k)) : {};
-          const fields = normalizeModifiedFields(actor.modifiedFields ?? {}, {
-            parts,
-            changes: appliedChanges(actor),
+          // The changes really applied in the last preparation; their keys are concrete (wildcards already expanded).
+          const recorded = recordedChanges(actor);
+          const fields = normalizeModifiedFields(recorded ? fieldsFromChanges(recorded) : (actor.modifiedFields ?? {}), {
+            parts: recorded ? { ...parts, wildcard: false } : parts,
+            changes: recorded ?? effectChanges(actor),
             keysOf: (p) => proxyKeys(actor, p),
             evaluate: (formula) => foundry.dice.Roll.create(dataRefs(formula, data)).evaluateSync().total,
             resolve: (value) => dataRefs(value, data),
             seeds,
-            level: Number(actor.system?.attributes?.nivel?.value) || 0
+            level: Number(actor.system?.attributes?.nivel?.value) || 0,
+            ordered: Boolean(recorded)
           });
           Object.defineProperty(actor, "modifiedFields", { value: fields, configurable: true, writable: true });
           shadowed = true;
@@ -746,6 +844,13 @@ function install(ctx) {
         if (parts.heavyArmor && type === "defesa") {
           const line = heavyArmorLine(actor, rollData ?? actor.getRollData());
           if (line) html = addTooltipLine(html, line.label, line.value);
+        }
+        if (type === "defesa") html = defenseItemsHTML(html, actor, parts);
+        if (type === "pericias") html = skillHTML(html, actor, key, typeof path === "object" ? path?.string : path);
+        // Only for a recorded preparation: without it, what other features add (non-proficiency draws its own
+        // line outside this wrapper) is unknown and would be counted twice.
+        if ((type === "defesa" || type === "pericias") && recordedChanges(actor)) {
+          html = residualHTML(html, actor, `${type}.${key}`, preparedValue(html, actor, type, key));
         }
       } catch (err) {
         warnOnce("could not adjust the breakdown", err);
@@ -775,8 +880,10 @@ export default {
     "AttributesFields.preparePVPM",
     "MenaceData#prepareBaseData"
   ],
-  // The breakdown mirrors what prone-defense and field-bonuses-tooltip change when they are applied.
-  interactsWith: ["prone-defense", "field-bonuses-tooltip"],
+  // The breakdown lists the Defesa conditions only when field-bonuses-tooltip is applied; what the other features cut
+  // or add comes from applied-changes (#91).
+  interactsWith: ["field-bonuses-tooltip"],
+  services: ["applied-changes"],
   isNeeded,
   install
 };

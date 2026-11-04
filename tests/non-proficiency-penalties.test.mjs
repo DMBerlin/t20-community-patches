@@ -294,7 +294,7 @@ const effect = (parent, { name = "Efeito", value = 1, identifier, phase = "initi
 });
 
 /** Builds the module environment, installs the rule once per call and returns the patched methods. */
-function setup({ rule = "on", reduction = "applied", slots = false, gm = true } = {}) {
+function setup({ rule = "on", reduction = "applied", slots = false, gm = true, breakdown } = {}) {
   const hooks = {};
   const notifications = [];
   const calls = { attack: 0, skill: 0 };
@@ -335,7 +335,7 @@ function setup({ rule = "on", reduction = "applied", slots = false, gm = true } 
   const warn = console.warn;
   console.warn = (message) => warnings.push(String(message));
   try {
-    installNonProficiencyRule(() => APPLY_STATES.has(reduction));
+    installNonProficiencyRule(() => APPLY_STATES.has(reduction), breakdown);
   } finally {
     console.warn = warn;
   }
@@ -583,6 +583,34 @@ test("unrecognized system code: still installed, console warning and a GM notifi
     const actor = makeActor();
     const item = Object.assign(Object.create(env.Item.prototype), { type: "arma", name: "Espada longa", isOwned: true, actor, system: { proficiencia: "marcial" } });
     assert.deepEqual(item.getAttackToHit().parts, ["@skill", "-5"]);
+  } finally {
+    teardown();
+  }
+});
+
+test("skill breakdown with field-bonuses-breakdown: the penalty is contributed; the line is left to it once the actor is recorded", () => {
+  const contributed = [];
+  const recorded = new Set();
+  let active = true;
+  const breakdown = {
+    appliedChanges: { contribute: (actor, path, entry) => contributed.push([path, entry]), changes: (actor) => (recorded.has(actor) ? [] : null) },
+    isBreakdownActive: () => active
+  };
+  const env = setup({ breakdown });
+  try {
+    const actor = makeActor({ armor: [{ name: "Armadura completa", tipo: "pesada", penalty: -5 }] });
+    const data = Object.setPrototypeOf({ parent: actor, pericias: {}, tracos: actor.system.tracos }, env.Character.prototype);
+    actor.system = data;
+    data.prepareSkill("luta", { skillData: { value: 1 }, rollData: {} });
+    assert.deepEqual(contributed, [
+      ["system.pericias.luta.bonus", { label: "T20CP.NonProficiency.TooltipLabel", value: -5, owner: "non-proficiency" }]
+    ]);
+    const tip = () => tooltipLines(env.helpers.fieldBonuses("system.pericias.luta.bonus", { data: { root: { actor } } }));
+    assert.deepEqual(tip(), ["Força +1", "T20CP.NonProficiency.TooltipLabel -5", "Total -4"], "not recorded yet: the rule draws it");
+    recorded.add(actor);
+    assert.deepEqual(tip(), ["Força +1", "Total +1"]);
+    active = false;
+    assert.deepEqual(tip(), ["Força +1", "T20CP.NonProficiency.TooltipLabel -5", "Total -4"]);
   } finally {
     teardown();
   }

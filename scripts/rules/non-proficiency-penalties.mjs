@@ -298,6 +298,10 @@ function warnOnce(err) {
 
 /** Whether armor-penalty-reduction is applied; set by the install. */
 let reductionApplied = () => false;
+/** The applied-changes service (the breakdown lists the penalty) and whether field-bonuses-breakdown draws it. */
+let appliedChanges = null;
+/** @type {(actor: object) => boolean} */
+let breakdownOwnsLine = () => false;
 
 function slotsEnabled() {
   return game.settings.get("tormenta20", "equipmentSlots");
@@ -460,6 +464,7 @@ function installSkills() {
         let extras = extraBySystem.get(this);
         if (!extras) extraBySystem.set(this, (extras = new Map()));
         extras.set(skillId, extra);
+        appliedChanges?.contribute(actor, `system.pericias.${skillId}.bonus`, { label: TOOLTIP_KEY, value: extra, owner: "non-proficiency" });
       }
     } catch (err) {
       warnOnce(err);
@@ -489,6 +494,8 @@ function installSkillTooltip() {
         const sheet = options?.data?.root;
         const actor = sheet?.actor?.system ? sheet.actor : foundry.utils.fromUuidSync(sheet?.uuid) || game.actors?.get(sheet?.actor?._id);
         if (actor?.type !== "character") return html;
+        // field-bonuses-breakdown lists the penalty from applied-changes; a second line would count it twice.
+        if (breakdownOwnsLine(actor)) return html;
         const extra = extraBySystem.get(actor.system)?.get(key) ?? 0;
         return addTooltipLine(html, game.i18n.localize(TOOLTIP_KEY), extra);
       } catch (err) {
@@ -569,9 +576,14 @@ const SETTING_SPEC = {
 /**
  * Installs both wrappers and the sheet marker. The wrappers are inert while the setting is off.
  * @param {() => boolean} [isReductionApplied]  Whether armor-penalty-reduction is applied, read on every use.
+ * @param {{appliedChanges?: {contribute: Function}, isBreakdownActive?: () => boolean}} [breakdown]
+ *   The applied-changes service and whether field-bonuses-breakdown is applied, read on every use.
  */
-export function installNonProficiencyRule(isReductionApplied = () => false) {
+export function installNonProficiencyRule(isReductionApplied = () => false, { appliedChanges: service = null, isBreakdownActive = () => false } = {}) {
   reductionApplied = isReductionApplied;
+  appliedChanges = service;
+  // Only for an actor whose preparation was recorded: otherwise the breakdown has no contribution to list.
+  breakdownOwnsLine = (actor) => Boolean(service?.changes(actor)) && isBreakdownActive();
   installAttack();
   installSkills();
   installSkillTooltip();
@@ -592,10 +604,15 @@ export default {
   group: "items",
   system: { id: "tormenta20" },
   settings: [SETTING_SPEC],
-  // The armor penalty follows armor-penalty-reduction when that patch is applied.
-  interactsWith: ["armor-penalty-reduction"],
+  // The armor penalty follows armor-penalty-reduction when that patch is applied; the skill breakdown line belongs to
+  // field-bonuses-breakdown when it is applied.
+  interactsWith: ["armor-penalty-reduction", "field-bonuses-breakdown"],
+  services: ["applied-changes"],
   install: (ctx) => {
     documents = ctx.platform.documents;
-    installNonProficiencyRule(() => ctx.features.isActive("armor-penalty-reduction"));
+    installNonProficiencyRule(() => ctx.features.isActive("armor-penalty-reduction"), {
+      appliedChanges: ctx.services["applied-changes"],
+      isBreakdownActive: () => ctx.features.isActive("field-bonuses-breakdown")
+    });
   }
 };

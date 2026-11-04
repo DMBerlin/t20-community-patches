@@ -9,21 +9,21 @@ import {
   attackParts,
   attackSelection,
   chargeEffectData,
-  decorate,
   defenseAdjustmentsByTarget,
   defenseRecord,
-  installSituationalModifiersRule,
   isChargeEffect,
   normalizeValues,
-  onRenderDialog,
   parseDefenseSelection,
   shouldCreateCharge
-} from "../scripts/rules/situational-modifiers.mjs";
+} from "../scripts/features/situational-modifiers/domain.mjs";
+import situationalModifiers from "../scripts/features/situational-modifiers/index.mjs";
+import { onRenderDialog as renderDialog } from "../scripts/features/situational-modifiers/integration.mjs";
+import { decorate as decorateCard } from "../scripts/features/situational-modifiers/ui.mjs";
 import { sanitizeFlavor } from "../scripts/lib/text.mjs";
 import { USE_PURPOSES } from "../scripts/lib/targets.mjs";
 import { markCastFailed } from "../scripts/lib/cast-outcome.mjs";
 import { markWrapper } from "../scripts/lib/source.mjs";
-import { currentUseTargets as uses } from "./support/legacy-services.mjs";
+import { createFakePlatform, createTestKernel } from "./support/fake-platform.mjs";
 
 const MODULE = "t20-community-patches";
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -179,24 +179,13 @@ const token = (id, { name = id, displayName = 50 } = {}) => ({
  * roll's parts, displayCard returns the card. `wrapBefore` installs a foreign wrapper before this rule.
  */
 function setup({ rule = "on", isGM = true, invisible = false, wrapBefore, wrapAfter } = {}) {
-  const settings = { [`${MODULE}.situationalModifiersRule`]: rule };
   const strings = LANG["pt-BR"];
   const docs = new Map();
   const hooks = {};
   const registered = {};
   const created = [];
   const seen = [];
-  globalThis.game = {
-    user: { isGM, targets: new Set() },
-    settings: { get: (scope, key) => settings[`${scope}.${key}`] },
-    i18n: {
-      has: (key) => key in strings,
-      localize: (key) => strings[key] ?? key,
-      format: (key, data) => (strings[key] ?? key).replace(/\{(\w+)\}/g, (_, k) => data[k])
-    }
-  };
-  globalThis.Hooks = { on: (name, fn) => (registered[name] = fn) };
-  globalThis.foundry = { utils: { fromUuidSync: (uuid) => docs.get(uuid) ?? null } };
+  const env = { targets: new Set(), isGM };
   globalThis.document = { createElement: (tag) => new FakeElement(tag), createTextNode: (text) => ({ textContent: String(text) }) };
 
   const actor = {
@@ -233,7 +222,7 @@ function setup({ rule = "on", isGM = true, invisible = false, wrapBefore, wrapAf
     async rollAttack({ options } = {}) {
       const first = this.system.rolls.find((r) => r.type === "ataque");
       const formula = first.parts.map((p) => p[0]).join(" + ");
-      seen.push({ formula, adjustments: uses().defenseAdjustmentsFor(this, "Scene.s.Token.A") });
+      seen.push({ formula, adjustments: env.uses.defenseAdjustmentsFor(this, "Scene.s.Token.A") });
       for (const r of this.system.rolls.filter((x) => x.type === "ataque")) this.system.rolled[r.name] = { formula, options: {} };
       return "attack-result";
     }
@@ -242,10 +231,24 @@ function setup({ rule = "on", isGM = true, invisible = false, wrapBefore, wrapAf
       return { card: true };
     }
   }
-  globalThis.CONFIG = { Item: { documentClass: ItemT20 } };
-  wrapBefore?.(ItemT20.prototype, seen);
-  installSituationalModifiersRule(uses());
-  wrapAfter?.(ItemT20.prototype, seen);
+  const platform = createFakePlatform({
+    settings: { situationalModifiersRule: rule },
+    classes: { item: ItemT20 },
+    targets: () => env.targets,
+    documents: { fromUuidSync: (uuid) => docs.get(uuid) ?? null },
+    i18n: {
+      has: (key) => key in strings,
+      localize: (key) => strings[key] ?? key,
+      format: (key, data) => (strings[key] ?? key).replace(/\{(\w+)\}/g, (_, k) => data[k])
+    }
+  });
+  platform.user.isGM = () => env.isGM;
+  const kernel = createTestKernel({ platform, features: [situationalModifiers] });
+  env.uses = kernel.service("use-targets");
+  wrapBefore?.(ItemT20.prototype, seen, env.uses);
+  const ctx = kernel.install(situationalModifiers);
+  for (const { name, fn } of platform.hookCalls) registered[name] = fn;
+  wrapAfter?.(ItemT20.prototype, seen, env.uses);
 
   const weapon = () =>
     new ItemT20({
@@ -257,9 +260,13 @@ function setup({ rule = "on", isGM = true, invisible = false, wrapBefore, wrapAf
     });
   const target = (...tokens) => {
     for (const t of tokens) docs.set(t.document.uuid, t.document);
-    game.user.targets = new Set(tokens);
+    env.targets = new Set(tokens);
   };
-  return { ItemT20, weapon, target, actor, created, seen, settings, hooks, registered, docs };
+  return Object.assign(env, {
+    ItemT20, weapon, target, actor, created, seen, platform, kernel, ctx, hooks, registered, docs,
+    onRenderDialog: (app, html) => renderDialog(ctx, app, html),
+    decorate: (message, html) => decorateCard(ctx, message, html)
+  });
 }
 
 /** A minimal use dialog body with the "Melhor/Pior de 2d20" group. */
@@ -325,11 +332,11 @@ test("rollAttack twice with the same options adds the modifiers once", async () 
 
 test("Defense boxes register per-target adjustments for attack-vs-defense, in either wrapper order", async () => {
   // A fake attack-vs-defense: reads the shared adjustments after its inner rollAttack.
-  const fakeAvd = (proto, seen) => {
+  const fakeAvd = (proto, seen, uses) => {
     const inner = proto.rollAttack;
     proto.rollAttack = markWrapper(async function (...args) {
       const result = await inner.apply(this, args);
-      seen.push({ avd: uses().defenseAdjustmentsFor(this, "Scene.s.Token.A") });
+      seen.push({ avd: uses.defenseAdjustmentsFor(this, "Scene.s.Token.A") });
       return result;
     }, inner);
   };
@@ -359,7 +366,7 @@ test("targets changed with the dialog open: the frozen targets are used", async 
 test("maneuver resistance: only higher ground, no Defense, no charge", async () => {
   const env = setup();
   env.target(token("A"));
-  const { item } = await uses().withUsePurpose(USE_PURPOSES.MANEUVER_RESISTANCE, () =>
+  const { item } = await env.uses.withUsePurpose(USE_PURPOSES.MANEUVER_RESISTANCE, () =>
     env.weapon().roll({ form: { [FORM_ATTACK]: ["elevated", "charge", "flank"], [FORM_DEFENSE]: "*|cover" } })
   );
   assert.equal(env.seen[0].formula, "1d20 + luta + 2[Posição elevada]");
@@ -395,7 +402,7 @@ test("charge is not created for an actor the user does not own", async () => {
 test("dialog: one section after rollKeep, one row per frozen target, invisible pre-checked", () => {
   const env = setup({ invisible: true });
   env.target(token("A", { name: "Goblin" }), token("B", { name: "Segredo", displayName: 0 }));
-  game.user.isGM = false;
+  env.isGM = false;
   const item = env.weapon();
   const { app, root, form } = dialog(item);
   env.registered.renderAbilityUseDialog(app, [root]);
@@ -421,18 +428,18 @@ test("dialog: one section after rollKeep, one row per frozen target, invisible p
 test("dialog: no targets shows 'Qualquer alvo'; rule off, no attack roll or maneuver hides the Defense", () => {
   const env = setup();
   const { app, root, form } = dialog(env.weapon());
-  onRenderDialog(app, root);
+  env.onRenderDialog(app, root);
   assert.match(form.querySelector(".t20cp-situational").textContent, /Qualquer alvo/);
   assert.ok(inputs(form).some((b) => b.value === "*|cover"));
 
   const spell = new env.ItemT20({ rolls: [{ type: "dano", name: "Dano", parts: [["1d6"]] }] });
   const noAttack = dialog(spell);
-  onRenderDialog(noAttack.app, noAttack.root);
+  env.onRenderDialog(noAttack.app, noAttack.root);
   assert.equal(noAttack.form.querySelector(".t20cp-situational"), null);
 
-  env.settings[`${MODULE}.situationalModifiersRule`] = "off";
+  env.platform.settings.set("situationalModifiersRule", "off");
   const off = dialog(env.weapon());
-  onRenderDialog(off.app, off.root);
+  env.onRenderDialog(off.app, off.root);
   assert.equal(off.form.querySelector(".t20cp-situational"), null);
 });
 
@@ -442,9 +449,9 @@ test("dialog: the maneuver resistance test only shows higher ground", async () =
   let rendered;
   env.hooks.duringDialog = (item) => {
     rendered = dialog(item);
-    onRenderDialog(rendered.app, rendered.root);
+    env.onRenderDialog(rendered.app, rendered.root);
   };
-  await uses().withUsePurpose(USE_PURPOSES.MANEUVER_RESISTANCE, () => env.weapon().roll());
+  await env.uses.withUsePurpose(USE_PURPOSES.MANEUVER_RESISTANCE, () => env.weapon().roll());
   assert.deepEqual(inputs(rendered.form).map((b) => b.value), ["elevated"]);
 });
 
@@ -474,8 +481,8 @@ test("card note: listed per target with the recorded name policy; skipped when a
     { options: { title: "Ataque", [MODULE]: { situational } } },
     { options: { title: "Disparo", [MODULE]: { situational, attackVsDefense: { targets: [{}] } } } }
   ]);
-  decorate(message, html);
-  decorate(message, html);
+  env.decorate(message, html);
+  env.decorate(message, html);
   const notes = html.querySelectorAll(".t20cp-situational-note");
   assert.equal(notes.length, 1);
   assert.equal(notes[0].parent.dataset.rollTitle, "Ataque");
@@ -494,14 +501,14 @@ test("card note: a hidden target keeps its number from the dialog when earlier t
   const rolled = item.system.rolled.Ataque;
   rolled.options.title = "Ataque";
   const { message, html } = card([rolled]);
-  decorate(message, html);
+  env.decorate(message, html);
   const text = html.querySelector(".t20cp-situational-note").textContent;
   assert.match(text, /Alvo 2: cobertura leve: \+5/);
   assert.doesNotMatch(text, /Alvo 1|Oculto/);
 });
 
 test("card note: hidden content, no data or no adjustments add nothing", () => {
-  setup();
+  const env = setup();
   const situational = { v: 1, attack: ["flank"], defense: [] };
   for (const [rolls, visible] of [
     [[{ options: { title: "Ataque", [MODULE]: { situational } } }], true],
@@ -510,7 +517,7 @@ test("card note: hidden content, no data or no adjustments add nothing", () => {
   ]) {
     const { message, html } = card(rolls);
     message.isContentVisible = visible;
-    decorate(message, html);
+    env.decorate(message, html);
     assert.equal(html.querySelector(".t20cp-situational-note"), null);
   }
 });

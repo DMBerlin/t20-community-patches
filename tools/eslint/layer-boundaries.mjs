@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 
-const LAYERS = new Set(["kernel", "platform", "services", "lib", "features"]);
+const LAYERS = new Set(["kernel", "platform", "services", "lib", "features", "apps"]);
 const IMPURE = new Set(["integration", "ui"]);
 
 /**
@@ -33,6 +33,8 @@ export function violation(source, target) {
     if (target.layer === "platform") return "featurePlatform";
   }
   if (source.layer === "lib" && target.layer === "features") return "libFeature";
+  // The Center receives the platform, the features and their status from platform/manager-menu.mjs (#89).
+  if (source.layer === "apps" && (target.layer === "platform" || target.layer === "features")) return "appsInjected";
   if (!isDomain(source) && source.layer !== "lib") return null;
   if (target.layer === "platform" || target.layer === "services") return "impureDomain";
   if (target.layer === "legacy") return "legacyImport";
@@ -57,6 +59,7 @@ export default {
       impureDomain: "A camada de domínio é pura: não importa integration, ui, platform nem services.",
       legacyImport: "O domínio e scripts/lib não importam o código legado de scripts/: mova o código puro para scripts/lib.",
       libFeature: "scripts/lib não importa features.",
+      appsInjected: "scripts/apps recebe a plataforma e as features por parâmetro: não importa platform nem features.",
       dynamicImport: "Importação dinâmica só com caminho literal, para que as fronteiras possam ser verificadas.",
       badSpecifier: "Caminho de importação com codificação inválida.",
       relativeOnly: "Nas camadas, use caminhos relativos (./ ou ../): caminhos absolutos, URLs e pacotes escapam das fronteiras."

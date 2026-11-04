@@ -1,22 +1,21 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import attackVsDefense, {
+import {
   attackKind,
   buildTargetResult,
   canSeeDefense,
   combineWithConcealment,
-  decorate,
-  describeTarget,
   effectiveDefense,
-  installAttackVsDefenseRule,
   resolveAttack,
   resultVisibility
-} from "../scripts/rules/attack-vs-defense.mjs";
+} from "../scripts/features/attack-vs-defense/domain.mjs";
+import attackVsDefense from "../scripts/features/attack-vs-defense/index.mjs";
+import { createAttackView } from "../scripts/features/attack-vs-defense/ui.mjs";
 import { finalOutcome, keepCritical } from "../scripts/lib/attack-outcome.mjs";
 import { USE_PURPOSES } from "../scripts/lib/targets.mjs";
 import { markWrapper } from "../scripts/lib/source.mjs";
-import { currentUseTargets as uses, currentAttackOutcome as outcome } from "./support/legacy-services.mjs";
+import { createFakePlatform, createTestKernel } from "./support/fake-platform.mjs";
 
 const MODULE = "t20-community-patches";
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -193,26 +192,12 @@ function makeToken(id, { name = id, defense = 15, type = "npc", prone = false, o
 }
 
 function setup({ rule = "on", lang = "pt-BR", isGM = true, showFoeDc = true, visibility = "show", before } = {}) {
-  const settings = {
-    [`${MODULE}.attackVsDefenseRule`]: rule,
-    [`${MODULE}.attackVsDefenseVisibility`]: visibility,
-    "tormenta20.showFoeDc": showFoeDc
-  };
   const strings = LANG[lang];
   const docs = new Map();
   const seen = [];
   const calls = [];
   const hooks = {};
-  globalThis.game = {
-    user: { isGM, targets: new Set() },
-    settings: { get: (scope, key) => settings[`${scope}.${key}`] },
-    i18n: {
-      has: (key) => key in strings,
-      localize: (key) => strings[key] ?? key,
-      format: (key, data) => (strings[key] ?? key).replace(/\{(\w+)\}/g, (_, k) => data[k])
-    }
-  };
-  globalThis.foundry = { utils: { fromUuidSync: (uuid) => docs.get(uuid) ?? null } };
+  const env = { targets: new Set(), isGM, messages: undefined, reposted: [] };
   globalThis.document = { createElement: (tag) => new FakeElement(tag), createTextNode: (text) => ({ textContent: String(text) }) };
 
   class ItemT20 {
@@ -255,9 +240,25 @@ function setup({ rule = "on", lang = "pt-BR", isGM = true, showFoeDc = true, vis
       return this.html;
     }
   }
-  globalThis.CONFIG = { Item: { documentClass: ItemT20 }, ChatMessage: { documentClass: ChatMessageT20 } };
-  before?.();
-  installAttackVsDefenseRule(uses(), outcome());
+  const platform = createFakePlatform({
+    settings: { attackVsDefenseRule: rule, attackVsDefenseVisibility: visibility },
+    namespaceSettings: { "tormenta20.showFoeDc": showFoeDc },
+    classes: { item: ItemT20, chatMessage: ChatMessageT20 },
+    targets: () => env.targets,
+    documents: { fromUuidSync: (uuid) => docs.get(uuid) ?? null, messages: () => env.messages },
+    chat: { updateMessage: (m) => env.reposted.push(m.id) },
+    i18n: {
+      has: (key) => key in strings,
+      localize: (key) => strings[key] ?? key,
+      format: (key, data) => (strings[key] ?? key).replace(/\{(\w+)\}/g, (_, k) => data[k])
+    }
+  });
+  platform.user.isGM = () => env.isGM;
+  const kernel = createTestKernel({ platform, features: [attackVsDefense] });
+  const outcome = kernel.service("attack-outcome");
+  before?.({ ItemT20, outcome, targets: () => env.targets });
+  kernel.install(attackVsDefense);
+  const view = createAttackView(kernel.contextFor(attackVsDefense));
 
   const weapon = (overrides = {}) =>
     new ItemT20({
@@ -268,10 +269,17 @@ function setup({ rule = "on", lang = "pt-BR", isGM = true, showFoeDc = true, vis
     });
   const target = (...tokens) => {
     for (const token of tokens) docs.set(token.document.uuid, token.document);
-    game.user.targets = new Set(tokens);
+    env.targets = new Set(tokens);
   };
   const data = (item, name = "Ataque") => item.system.rolled[name].options[MODULE]?.attackVsDefense;
-  return { ItemT20, ChatMessageT20, weapon, target, data, seen, calls, hooks, docs, settings };
+  /** Writes a setting without its listeners (a stored value read on the next use). */
+  const set = (key, value) => (key === "showFoeDc" ? platform.settingsOf("tormenta20").set(key, value) : platform.settings.set(key, value));
+  return Object.assign(env, {
+    ItemT20, ChatMessageT20, weapon, target, data, seen, calls, hooks, docs, platform, kernel, set, outcome,
+    uses: kernel.service("use-targets"),
+    describeTarget: view.describeTarget,
+    decorate: view.decorate
+  });
 }
 
 /* -------------------------------------------- */
@@ -297,7 +305,7 @@ test("rule off, no targets or a maneuver resistance use: the system's result is 
     const env = setup({ rule: variant === "off" ? "off" : "on" });
     if (variant !== "none") env.target(makeToken("A", { defense: 20 }));
     const weapon = env.weapon({ naturals: [19] });
-    const item = variant === "maneuver" ? await uses().withUsePurpose(USE_PURPOSES.MANEUVER_RESISTANCE, () => weapon.roll()) : await weapon.roll();
+    const item = variant === "maneuver" ? await env.uses.withUsePurpose(USE_PURPOSES.MANEUVER_RESISTANCE, () => weapon.roll()) : await weapon.roll();
     assert.equal(item.system.rolled.Ataque._critical, true, variant);
     assert.equal(env.data(item), undefined, variant);
     assert.equal(env.seen[0].critical, true, variant);
@@ -406,7 +414,7 @@ test("Defense adjustments registered on the clone are added per target", async (
   const env = setup();
   env.target(makeToken("A", { defense: 10 }), makeToken("B", { defense: 10, prone: true, outros: -5 }));
   env.hooks.duringDialog = (clone) =>
-    uses().addDefenseAdjustments(clone, new Map([["Scene.s.Token.A", [{ id: "cover", delta: 5 }]], ["Scene.s.Token.B", [{ id: "x", delta: -2 }]]]));
+    env.uses.addDefenseAdjustments(clone, new Map([["Scene.s.Token.A", [{ id: "cover", delta: 5 }]], ["Scene.s.Token.B", [{ id: "x", delta: -2 }]]]));
   const item = await env.weapon({ rolls: [{ type: "ataque", name: "Ataque", parts: [["1d20"], ["pont"]] }] }).roll();
   assert.deepEqual(env.data(item).targets.map((t) => [t.defense, t.adjustments]), [[15, ["cover"]], [18, ["prone-ranged", "x"]]]);
 });
@@ -427,14 +435,14 @@ test("a target without a matching token or with a broken actor gives an unknown 
 });
 
 /** A stand-in for the concealment rule (#49): publishes checks before the original, cancels after it. */
-function installConcealmentDouble(missedUuids) {
-  const proto = CONFIG.Item.documentClass.prototype;
+function installConcealmentDouble({ ItemT20, outcome, targets }, missedUuids) {
+  const proto = ItemT20.prototype;
   const original = proto.rollAttack;
   proto.rollAttack = markWrapper(async function (...args) {
-    outcome().setConcealmentChecks(this, missedUuids.map((uuid) => ({ rollName: "Ataque", targetUuid: uuid, missed: true })));
+    outcome.setConcealmentChecks(this, missedUuids.map((uuid) => ({ rollName: "Ataque", targetUuid: uuid, missed: true })));
     const result = await original.apply(this, args);
     const roll = this.system.rolled?.Ataque;
-    const uuids = [...game.user.targets].map((t) => t.document.uuid);
+    const uuids = [...targets()].map((t) => t.document.uuid);
     if (roll?._critical && !keepCritical(uuids.map((u) => finalOutcome(undefined, missedUuids.includes(u))))) roll._critical = false;
     return result;
   }, original);
@@ -445,8 +453,8 @@ test("concealment: a target missed by concealment is a miss without critical, in
     for (const missB of [true, false]) {
       const label = `double ${inside ? "inside" : "outside"}, B ${missB ? "missed" : "passed"}`;
       const missed = missB ? ["Scene.s.Token.B"] : [];
-      const env = setup({ before: inside ? () => installConcealmentDouble(missed) : undefined });
-      if (!inside) installConcealmentDouble(missed);
+      const env = setup({ before: inside ? (kernel) => installConcealmentDouble(kernel, missed) : undefined });
+      if (!inside) installConcealmentDouble({ ItemT20: env.ItemT20, outcome: env.outcome, targets: () => env.targets }, missed);
       env.target(makeToken("A", { defense: 30 }), makeToken("B", { defense: 10 }));
       const item = await env.weapon({ naturals: [19] }).roll();
       const targets = env.data(item).targets;
@@ -465,8 +473,8 @@ test("concealment: a target missed by concealment is a miss without critical, in
 
 test("a critical cancelled by another rule is not restored, and the threat is still recorded", async () => {
   const env = setup({
-    before: () => {
-      const proto = CONFIG.Item.documentClass.prototype;
+    before: ({ ItemT20 }) => {
+      const proto = ItemT20.prototype;
       const original = proto.rollAttack;
       proto.rollAttack = async function (...args) {
         const result = await original.apply(this, args);
@@ -542,7 +550,7 @@ test("renderHTML: in hide mode a player sees no block, and a cancelled critical 
   assert.doesNotMatch(player.root.textContent, /Sem acerto crítico/);
   assert.deepEqual([player.total.classList.contains("critical"), player.total.classList.contains("failure")], [false, true]);
 
-  game.user.isGM = true;
+  env.isGM = true;
   const gm = card();
   const gmMsg = message(env, data);
   gmMsg.html = gm.root;
@@ -579,39 +587,39 @@ test("describeTarget: names follow ownership and display mode; the recorded name
   env.docs.set(token.document.uuid, token.document);
   // Observer without ownership, name mode "Never" or "Owner": hidden.
   token.actor.testUserPermission = () => true;
-  assert.equal(describeTarget(recorded(), 0).name, "Alvo 1");
+  assert.equal(env.describeTarget(recorded(), 0).name, "Alvo 1");
   token.document.displayName = 40;
-  assert.equal(describeTarget(recorded(), 1).name, "Alvo 2");
+  assert.equal(env.describeTarget(recorded(), 1).name, "Alvo 2");
   token.document.isOwner = true;
-  assert.equal(describeTarget(recorded(), 0).name, "Orc Combatente");
+  assert.equal(env.describeTarget(recorded(), 0).name, "Orc Combatente");
   // Deleted token: recorded display mode.
   env.docs.clear();
-  assert.equal(describeTarget(recorded({ displayName: 30 }), 0).name, "Orc Combatente");
-  assert.equal(describeTarget(recorded({ displayName: 0 }), 0).name, "Alvo 1");
+  assert.equal(env.describeTarget(recorded({ displayName: 30 }), 0).name, "Orc Combatente");
+  assert.equal(env.describeTarget(recorded({ displayName: 0 }), 0).name, "Alvo 1");
 });
 
 test("describeTarget: the Defense number follows showFoeDc for foes, with GM, observer and character exceptions", () => {
   const env = setup({ isGM: false, showFoeDc: false });
   const token = makeToken("A");
   env.docs.set(token.document.uuid, token.document);
-  assert.equal(describeTarget(recorded(), 0).text, "Errou");
-  assert.equal(describeTarget(recorded({ actorType: "character" }), 0).text, "Errou · Defesa 17");
+  assert.equal(env.describeTarget(recorded(), 0).text, "Errou");
+  assert.equal(env.describeTarget(recorded({ actorType: "character" }), 0).text, "Errou · Defesa 17");
   token.actor.testUserPermission = (user, level) => level === "OBSERVER";
-  assert.equal(describeTarget(recorded(), 0).text, "Errou · Defesa 17");
-  game.user.isGM = true;
+  assert.equal(env.describeTarget(recorded(), 0).text, "Errou · Defesa 17");
+  env.isGM = true;
   token.actor.testUserPermission = () => false;
-  assert.equal(describeTarget(recorded(), 0).text, "Errou · Defesa 17");
-  env.settings["tormenta20.showFoeDc"] = true;
-  game.user.isGM = false;
-  assert.equal(describeTarget(recorded(), 0).text, "Errou · Defesa 17");
-  assert.equal(describeTarget(recorded(), 0).visible, true);
-  env.settings[`${MODULE}.attackVsDefenseVisibility`] = "announce";
-  assert.equal(describeTarget(recorded(), 0).text, "Errou");
-  assert.equal(describeTarget(recorded({ actorType: "character" }), 0).text, "Errou · Defesa 17");
-  env.settings[`${MODULE}.attackVsDefenseVisibility`] = "hide";
-  assert.equal(describeTarget(recorded(), 0).visible, false);
-  game.user.isGM = true;
-  assert.deepEqual(describeTarget(recorded(), 0), { name: "Orc Combatente", text: "Errou · Defesa 17", visible: true });
+  assert.equal(env.describeTarget(recorded(), 0).text, "Errou · Defesa 17");
+  env.set("showFoeDc", true);
+  env.isGM = false;
+  assert.equal(env.describeTarget(recorded(), 0).text, "Errou · Defesa 17");
+  assert.equal(env.describeTarget(recorded(), 0).visible, true);
+  env.set("attackVsDefenseVisibility", "announce");
+  assert.equal(env.describeTarget(recorded(), 0).text, "Errou");
+  assert.equal(env.describeTarget(recorded({ actorType: "character" }), 0).text, "Errou · Defesa 17");
+  env.set("attackVsDefenseVisibility", "hide");
+  assert.equal(env.describeTarget(recorded(), 0).visible, false);
+  env.isGM = true;
+  assert.deepEqual(env.describeTarget(recorded(), 0), { name: "Orc Combatente", text: "Errou · Defesa 17", visible: true });
 });
 
 test("describeTarget: adjustment labels come from the shared namespace, in the user's language", () => {
@@ -619,10 +627,10 @@ test("describeTarget: adjustment labels come from the shared namespace, in the u
     ["pt-BR", "caído: +5 contra ataque à distância", "Defesa desconhecida", "Errou (camuflagem)"],
     ["en", "prone: +5 against ranged attack", "Unknown Defense", "Miss (concealment)"]
   ]) {
-    setup({ lang });
-    assert.match(describeTarget(recorded({ adjustments: ["prone-ranged", "no-such-id"] }), 0).text, new RegExp(`${prone.replace(/[+()]/g, "\\$&")} · no-such-id`), lang);
-    assert.match(describeTarget(recorded({ outcome: "unknown", defense: null }), 0).text, new RegExp(unknown), lang);
-    assert.match(describeTarget(recorded({ concealment: true }), 0).text, new RegExp(miss.replace(/[()]/g, "\\$&")), lang);
+    const env = setup({ lang });
+    assert.match(env.describeTarget(recorded({ adjustments: ["prone-ranged", "no-such-id"] }), 0).text, new RegExp(`${prone.replace(/[+()]/g, "\\$&")} · no-such-id`), lang);
+    assert.match(env.describeTarget(recorded({ outcome: "unknown", defense: null }), 0).text, new RegExp(unknown), lang);
+    assert.match(env.describeTarget(recorded({ concealment: true }), 0).text, new RegExp(miss.replace(/[()]/g, "\\$&")), lang);
   }
 });
 
@@ -648,36 +656,30 @@ test("changing the visibility setting rebuilds the block in place on every displ
   const copies = [copy(), copy()];
   const msg = message(env, data);
   msg.id = "a";
-  for (const c of copies) decorate(msg, c.root);
+  for (const c of copies) env.decorate(msg, c.root);
   const old = message(env, data);
   old.id = "old";
-  game.messages = { contents: [old, msg, { id: "b", rolls: [{ options: {} }] }, { id: "c" }] };
+  env.messages = { contents: [old, msg, { id: "b", rolls: [{ options: {} }] }, { id: "c" }] };
   const queried = [];
   globalThis.document.querySelectorAll = (sel) => {
     const id = sel.match(/data-message-id="(\w+)"/)[1];
     queried.push(id);
     return id === "a" ? copies.map((c) => c.root) : [];
   };
-  const reposted = [];
-  globalThis.ui = { chat: { updateMessage: (m) => reposted.push(m.id) } };
   for (const spec of attackVsDefense.settings) registered[spec.key] = spec;
   assert.deepEqual(Object.keys(registered.attackVsDefenseVisibility.choices), ["show", "announce", "hide"]);
   assert.equal(registered.attackVsDefenseVisibility.default, "show");
   const block = (c) => c.container.querySelectorAll(".t20cp-attack-vs-defense");
 
-  env.settings[`${MODULE}.attackVsDefenseVisibility`] = "announce";
-  registered.attackVsDefenseVisibility.onChange("announce");
+  await env.kernel.changeSetting("attackVsDefenseVisibility", "announce");
   for (const c of copies) {
     assert.equal(block(c).length, 1);
     assert.match(block(c)[0].textContent, /Orc Combatente: Errou$/);
   }
-  env.settings[`${MODULE}.attackVsDefenseVisibility`] = "hide";
-  registered.attackVsDefenseVisibility.onChange("hide");
+  await env.kernel.changeSetting("attackVsDefenseVisibility", "hide");
   for (const c of copies) assert.equal(block(c).length, 0);
-  env.settings[`${MODULE}.attackVsDefenseVisibility`] = "show";
-  registered.attackVsDefenseVisibility.onChange("show");
+  await env.kernel.changeSetting("attackVsDefenseVisibility", "show");
   for (const c of copies) assert.match(block(c)[0].textContent, /Errou · Defesa 17$/);
   assert.deepEqual([...new Set(queried)], ["old", "a"]);
-  assert.deepEqual(reposted, []);
-  delete globalThis.ui;
+  assert.deepEqual(env.reposted, []);
 });

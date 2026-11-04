@@ -1,6 +1,5 @@
 import { test } from "node:test";
-import { createPlatform } from "../scripts/platform/foundry.mjs";
-import { createTestKernel } from "./support/fake-platform.mjs";
+import { createFakePlatform, createTestKernel } from "./support/fake-platform.mjs";
 import assert from "node:assert/strict";
 import { markCastFailed } from "../scripts/lib/cast-outcome.mjs";
 import { markWrapper } from "../scripts/lib/source.mjs";
@@ -15,14 +14,12 @@ import {
   finalReaction,
   isReactionExecution,
   preUseConditionVerdict,
-  validateCastingDialog,
   castsAfter,
   collectStampedEffects,
   concentrationCheck,
   createScanCache,
   effectSources,
   exceedsLimit,
-  installCastingRestrictionsRule,
   isSpellCast,
   isSupersededCast,
   isSustainedSpell,
@@ -33,7 +30,8 @@ import {
   shouldWarn,
   stampSustainedCast,
   sustainedSpellCapacity
-} from "../scripts/rules/casting-restrictions.mjs";
+} from "../scripts/features/casting-restrictions/domain/index.mjs";
+import castingRestrictions from "../scripts/features/casting-restrictions/index.mjs";
 
 const MODULE_ID = "t20-community-patches";
 const cast = (castId, casterUuid = "Actor.mago", spell = "Velocidade") => ({ castId, casterUuid, spell });
@@ -252,8 +250,8 @@ let uid = 0;
 const STATUS_NAMES = { atordoado: "Atordoado", paralisado: "Paralisado", inconsciente: "Inconsciente", caido: "Caído", surdo: "Surdo", pasmo: "Pasmo" };
 
 function setupFoundry(modes = {}) {
-  const settings = { UsageConfig: "default", sustainedSpellRule: "off", castingConditionRule: "off", concentrationRule: "off", ...modes };
-  const hooks = {};
+  const { UsageConfig: usage = "default", ...rules } = modes;
+  const settings = { sustainedSpellRule: "off", castingConditionRule: "off", concentrationRule: "off", ...rules };
   const notes = { warn: [], error: [] };
   const created = [];
   const calls = { roll: [], display: [] };
@@ -262,7 +260,7 @@ function setupFoundry(modes = {}) {
   const sceneList = [];
   let sceneReads = 0;
   let clock = 0;
-  const fire = (name, ...args) => (hooks[name] ?? []).map((fn) => fn(...args));
+  let fire = () => [];
 
   class ItemT20 {
     _allApplicableOnUseEffects() {
@@ -290,58 +288,61 @@ function setupFoundry(modes = {}) {
     }
   }
 
-  globalThis.CONFIG = {
-    Item: { documentClass: ItemT20 },
-    statusEffects: Object.entries(STATUS_NAMES).map(([id, name]) => ({ id, name }))
-  };
-  globalThis.game = {
-    get actors() {
-      return [...actors.values()];
-    },
-    get scenes() {
-      sceneReads++;
-      return sceneList;
-    },
-    messages,
-    settings: { get: (module, key) => settings[key], register() {} },
-    i18n: {
-      localize: (key) => key,
-      format: (key, data) => `${key}${JSON.stringify(data)}`,
-      getListFormatter: () => ({ format: (items) => [...items].join(" | ") })
+  class Element {
+    querySelector(selector) {
+      return selector === "form" ? this.form : null;
     }
-  };
-  globalThis.ui = { notifications: { warn: (m) => notes.warn.push(m), error: (m) => notes.error.push(m) } };
-  globalThis.Hooks = { on: (name, fn) => (hooks[name] ??= []).push(fn) };
-  globalThis.ChatMessage = {
-    getSpeaker: ({ actor }) => ({ alias: actor.name }),
-    applyMode: (data, mode) => {
-      data.mode = mode;
-      return data;
-    },
-    create: async (data) => {
-      created.push(data);
-      return data;
+  }
+  class AbilityUseDialog {
+    constructor(item, formData) {
+      this.item = item;
+      this.element = Object.assign(new Element(), { form: { formData } });
+      this.submitted = 0;
     }
-  };
-  globalThis.foundry = {
-    utils: {
-      getProperty: (obj, path) => path.split(".").reduce((o, k) => o?.[k], obj),
-      expandObject: (flat) => {
-        const out = {};
-        for (const [path, value] of Object.entries(flat)) {
-          const keys = path.split(".");
-          let node = out;
-          for (const key of keys.slice(0, -1)) node = node[key] ??= {};
-          node[keys.at(-1)] = value;
-        }
-        return out;
+    submit() {
+      this.submitted++;
+      return "submitted";
+    }
+  }
+
+  const platform = createFakePlatform({
+    settings,
+    namespaceSettings: { "tormenta20.UsageConfig": usage },
+    classes: { item: ItemT20 },
+    t20: { applications: { AbilityUseDialog } },
+    forms: { data: (form) => form.formData },
+    statusEffects: Object.entries(STATUS_NAMES).map(([id, name]) => ({ id, name })),
+    documents: {
+      actors: () => [...actors.values()],
+      scenes: () => {
+        sceneReads++;
+        return sceneList;
       },
-      fromUuidSync: (uuid) => actors.get(uuid),
-      randomID: () => `r${++uid}`,
-      escapeHTML: (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      messages: () => messages,
+      fromUuidSync: (uuid) => actors.get(uuid)
+    },
+    i18n: {
+      format: (key, data) => `${key}${JSON.stringify(data)}`,
+      listFormat: (items) => [...items].join(" | ")
+    },
+    chat: {
+      speaker: ({ actor }) => ({ alias: actor.name }),
+      applyMode: (data, mode) => {
+        data.mode = mode;
+        return data;
+      },
+      create: async (data) => {
+        created.push(data);
+        return data;
+      }
     }
-  };
-  installCastingRestrictionsRule(createTestKernel({ platform: createPlatform() }).service("use-dialog-guard"));
+  });
+  platform.utils.escapeHTML = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  platform.notify.warn = (m) => notes.warn.push(m);
+  platform.notify.error = (m) => notes.error.push(m);
+  fire = (name, ...args) => platform.hookCalls.filter((h) => h.name === name).map((h) => h.fn(...args));
+  const setMode = (key, mode) => platform.settings.set(key, mode);
+  createTestKernel({ platform, features: [castingRestrictions] }).install(castingRestrictions);
 
   const makeActor = (name, { statuses = [], powers = [] } = {}) => {
     const actor = { name, uuid: `Actor.${name}-${++uid}`, statuses: new Set(statuses), effects: [], items: [] };
@@ -357,7 +358,7 @@ function setupFoundry(modes = {}) {
   /** The card options built by applyOnUseEffects for a sustained spell: one button per effect. */
   const useOptions = (item, buttons = [item.name], manaCost = 3) => ({
     manaCost,
-    effects: buttons.map((name) => [{ name, duration: { expiry: item.system.duracao.units === "sust" ? "sustainEnd" : "scene" }, origin: `${item.actor.uuid}.ActiveEffect.${foundry.utils.randomID()}`, flags: {} }])
+    effects: buttons.map((name) => [{ name, duration: { expiry: item.system.duracao.units === "sust" ? "sustainEnd" : "scene" }, origin: `${item.actor.uuid}.ActiveEffect.${platform.utils.randomID()}`, flags: {} }])
   });
   const castSpell = (item, { buttons, manaCost, rollMode = "gm", createMessage } = {}) =>
     item.displayCard({ options: useOptions(item, buttons, manaCost), rollMode, createMessage });
@@ -385,7 +386,7 @@ function setupFoundry(modes = {}) {
     fire("deleteActiveEffect", { duration: { expiry: "sustainEnd" }, flags: { [MODULE_ID]: { [CAST_FLAG]: { castId: "any", casterUuid: actor.uuid } } } });
   };
   return {
-    settings, hooks, notes, created, calls, actors, messages, sceneList, fire, ItemT20, makeActor, makeItem, castSpell, apply, endCast, useOptions,
+    setMode, notes, created, calls, actors, messages, sceneList, fire, ItemT20, AbilityUseDialog, makeActor, makeItem, castSpell, apply, endCast, useOptions,
     get sceneReads() {
       return sceneReads;
     }
@@ -402,14 +403,14 @@ test("roll: Bloquear stops the use before the original; Avisar warns and keeps t
   assert.match(env.notes.error[0], /Conditions\.Warning.*Atordoado/);
   assert.match(env.notes.error[0], /Conditions\.Blocked/);
 
-  env.settings.castingConditionRule = "warn";
+  env.setMode("castingConditionRule", "warn");
   const args = { event: { shiftKey: false }, createMessage: false };
   assert.equal(await fireball.roll(args), "rolled");
   assert.equal(env.calls.roll[0].self, fireball);
   assert.equal(env.calls.roll[0].args[0], args);
   assert.equal(env.notes.warn.length, 1);
 
-  env.settings.castingConditionRule = "off";
+  env.setMode("castingConditionRule", "off");
   await fireball.roll({});
   assert.equal(env.notes.warn.length, 1);
 });
@@ -485,13 +486,19 @@ test("roll + dialog: Campo de Força under Atordoado opens the dialog; the submi
   assert.deepEqual(env.notes.error, []);
 
   const clone = { ...field, actor: mago, system: field.system, type: "magia", applicableOnUseEffects: field.useEffects };
-  const refused = validateCastingDialog({ item: clone, formData: { "aprs.cf.aplica": false } });
-  assert.equal(refused.block, true);
-  assert.match(refused.message, /Atordoado.*Conditions\.Reaction.*Conditions\.Blocked/);
-  assert.equal(validateCastingDialog({ item: clone, formData: { "aprs.cf.aplica": true } }), null);
-  env.settings.castingConditionRule = "warn";
-  assert.equal(validateCastingDialog({ item: clone, formData: {} }).block, false);
-  env.settings.castingConditionRule = "block";
+  const dialog = (formData) => new env.AbilityUseDialog(clone, formData);
+  const refused = dialog({ "aprs.cf.aplica": false });
+  assert.equal(refused.submit(), undefined);
+  assert.equal(refused.submitted, 0);
+  assert.equal(env.notes.warn.length, 1);
+  assert.match(env.notes.warn[0], /Atordoado.*Conditions\.Reaction.*Conditions\.Blocked/);
+  assert.equal(dialog({ "aprs.cf.aplica": true }).submit(), "submitted");
+  assert.equal(env.notes.warn.length, 1);
+  env.setMode("castingConditionRule", "warn");
+  assert.equal(dialog({}).submit(), "submitted");
+  assert.equal(env.notes.warn.length, 2);
+  assert.doesNotMatch(env.notes.warn[1], /Conditions\.Blocked/);
+  env.setMode("castingConditionRule", "block");
 
   await field.roll({ event: { shiftKey: true } });
   assert.equal(env.calls.roll.length, 1, "Shift skips the dialog: no reaction, blocked before");
@@ -733,7 +740,7 @@ test("concentration: real published uses only, in the card's roll mode, never on
 
   mago.statuses = new Set();
   await env.castSpell(fireball);
-  env.settings.concentrationRule = "off";
+  env.setMode("concentrationRule", "off");
   mago.statuses = new Set(["surdo"]);
   await env.castSpell(fireball);
   assert.equal(env.created.length, 1);

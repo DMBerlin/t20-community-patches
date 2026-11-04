@@ -4,16 +4,15 @@
  */
 import { describeDiagnosis } from "./lifecycle.mjs";
 import { SETTINGS, migrateLegacySettings } from "./patch-settings.mjs";
+import { APPLY_STATES, applyLateDiagnosis } from "./diagnosis.mjs";
 import {
-  APPLY_STATES,
-  applyLateDiagnosis,
   createLateSummary,
   pickLateNotification,
   pickNotification,
   statusRecord,
   summarizeNotifications,
   summaryMessage
-} from "../registry.mjs";
+} from "./notifications.mjs";
 
 /** Waits this long after "ready" for the late diagnoses before summarizing them. */
 export const LATE_SUMMARY_DELAY = 10000;

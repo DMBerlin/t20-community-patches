@@ -8,13 +8,14 @@ import {
   eligibleSkills,
   findPickerSpec,
   hasTrainingEffect,
-  installSkillPickerRule,
   isPickerDone,
   isValidSelection,
   pendingTrainedSkills,
   selectionLimits,
   stalePicks
-} from "../scripts/rules/skill-picker.mjs";
+} from "../scripts/features/skill-picker/domain.mjs";
+import skillPicker from "../scripts/features/skill-picker/index.mjs";
+import { createFakeContext, createFakePlatform } from "./support/fake-platform.mjs";
 
 const MODULE_ID = "t20-community-patches";
 const spec = (id) => PICKER_SPECS.find((s) => s.id === id);
@@ -145,6 +146,7 @@ test("buildTrainingEffects copies the shape of the system's _applyTreinado", () 
 
 /* -------------------------------------------- */
 /*  Integration with a v14-like backend          */
+/*  (fake platform; the backend mimics the core)  */
 /* -------------------------------------------- */
 
 const tick = () => new Promise(setImmediate);
@@ -163,9 +165,17 @@ const SKILLS = ["luta", "atle", "perc", "inic", "vont"];
  * vetoed documents dropped, _preCreateOperation with the survivors, server, actor prepared with transfer effects).
  */
 function setup({ mode = "on", skills = SKILLS, actorType = "character", dialog, server } = {}) {
-  const notes = { warn: [], info: [] };
   const dialogs = [];
   const hooks = [];
+  const backendUser = { id: "u1" };
+  /** The core's Hooks.call for preCreateItem, local to this backend. */
+  const Hooks = {
+    call: (name, ...args) => {
+      if (name !== "preCreateItem") return true;
+      for (const fn of [...hooks]) if (fn(...args) === false) return false;
+      return true;
+    }
+  };
   const actor = {
     documentName: "Actor",
     type: actorType,
@@ -192,7 +202,7 @@ function setup({ mode = "on", skills = SKILLS, actorType = "character", dialog, 
   const backend = {
     async create(cls, operation) {
       const { data, noHook, pack, parent, ...options } = operation;
-      const user = game.user;
+      const user = backendUser;
       const documents = [];
       for (const createData of data) {
         const doc = new cls(structuredClone(createData), { parent });
@@ -230,7 +240,7 @@ function setup({ mode = "on", skills = SKILLS, actorType = "character", dialog, 
       return this._source.system ?? {};
     }
     static get implementation() {
-      return globalThis.CONFIG.Item.documentClass;
+      return ItemT20;
     }
     static async createDocuments(data = [], operation = {}) {
       operation.data = data;
@@ -255,42 +265,36 @@ function setup({ mode = "on", skills = SKILLS, actorType = "character", dialog, 
     }
   }
 
-  let ids = 0;
-  globalThis.game = {
-    user: { id: "u1" },
-    settings: { get: (module, key) => (module === MODULE_ID && key === "skillPickerRule" ? mode : undefined) },
-    i18n: { localize: (k) => k, format: (k, d) => `${k} ${JSON.stringify(d)}` }
+  const DialogV2 = {
+    wait: (config) =>
+      new Promise((resolve) => {
+        const entry = {
+          title: config.window.title,
+          options: [...config.content.matchAll(/value="([^"]+)"/g)].map((m) => m[1]),
+          resolve
+        };
+        dialogs.push(entry);
+        if (dialog) Promise.resolve().then(() => entry.resolve(dialog(entry, dialogs.length - 1)));
+      })
   };
-  globalThis.ui = { notifications: { warn: (m) => notes.warn.push(m), info: (m) => notes.info.push(m) } };
-  globalThis.CONFIG = { Item: { documentClass: ItemT20 }, T20: { pericias: {} } };
-  globalThis.Hooks = {
-    call: (name, ...args) => {
-      if (name !== "preCreateItem") return true;
-      for (const fn of [...hooks]) if (fn(...args) === false) return false;
-      return true;
+  const platform = createFakePlatform({
+    settings: { skillPickerRule: mode },
+    userId: "u1",
+    classes: { item: ItemT20 },
+    core: { Item },
+    t20Config: { pericias: {} },
+    dice: { DialogV2 }
+  });
+  const notes = {
+    get warn() {
+      return platform.notes.filter((n) => n.level === "warn").map((n) => n.message);
+    },
+    get info() {
+      return platform.notes.filter((n) => n.level === "info").map((n) => n.message);
     }
   };
-  globalThis.foundry = {
-    utils: { randomID: () => `r${ids++}`, escapeHTML: (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`) },
-    documents: { Item },
-    applications: {
-      api: {
-        DialogV2: {
-          wait: (config) =>
-            new Promise((resolve) => {
-              const entry = {
-                title: config.window.title,
-                options: [...config.content.matchAll(/value="([^"]+)"/g)].map((m) => m[1]),
-                resolve
-              };
-              dialogs.push(entry);
-              if (dialog) Promise.resolve().then(() => entry.resolve(dialog(entry, dialogs.length - 1)));
-            })
-        }
-      }
-    }
-  };
-  return { actor, Item, ItemT20, dialogs, notes, hooks, backend };
+  const install = () => skillPicker.install(createFakeContext(skillPicker, platform));
+  return { actor, Item, ItemT20, dialogs, notes, hooks, backend, Hooks, user: backendUser, platform, install };
 }
 
 const power = (id, name = "Treinamento em Perícia") => ({
@@ -307,7 +311,7 @@ const trainedSkills = (actor) => Object.entries(actor.system.pericias).filter(([
 
 test("on: a recognized power on a character stores the training effects and the marker", async () => {
   const env = setup({ dialog: () => ["luta"] });
-  installSkillPickerRule();
+  env.install();
   const existing = { _id: "e0", name: "old", system: { changes: [] } };
   const [doc] = await env.Item.createDocuments([{ ...tp(), effects: [existing] }], { parent: env.actor });
   assert.equal(env.dialogs.length, 1);
@@ -320,7 +324,7 @@ test("on: a recognized power on a character stores the training effects and the 
 
 test("Memória Póstuma confirmed with no skill keeps only the marker; its copy does not ask again", async () => {
   const env = setup({ dialog: () => [] });
-  installSkillPickerRule();
+  env.install();
   const [doc] = await env.ItemT20.createDocuments([power("Wj1J9EBK9tOe2hkz", "Memória Póstuma")], { parent: env.actor });
   assert.deepEqual(doc._source.effects, []);
   assert.deepEqual(doc._source.flags[MODULE_ID].skillPicker, { done: true, skills: [] });
@@ -331,7 +335,7 @@ test("Memória Póstuma confirmed with no skill keeps only the marker; its copy 
 
 test("closing the dialog creates the power without training or marker, with a warning", async () => {
   const env = setup({ dialog: () => null });
-  installSkillPickerRule();
+  env.install();
   const [doc] = await env.Item.createDocuments([tp()], { parent: env.actor });
   assert.deepEqual(doc._source.effects, []);
   assert.equal(doc._source.flags?.[MODULE_ID], undefined);
@@ -341,7 +345,7 @@ test("closing the dialog creates the power without training or marker, with a wa
 
 test("an invalid count reopens the dialog", async () => {
   const env = setup({ dialog: (entry, i) => (i === 0 ? ["luta", "atle"] : ["atle"]) });
-  installSkillPickerRule();
+  env.install();
   const [doc] = await env.Item.createDocuments([tp()], { parent: env.actor });
   assert.equal(env.dialogs.length, 2);
   assert.deepEqual(doc._source.flags[MODULE_ID].skillPicker.skills, ["atle"]);
@@ -360,7 +364,7 @@ test("composes with an external _preCreateOperation wrapper in both install orde
       };
     };
     if (externalFirst) wrapExternal();
-    installSkillPickerRule();
+    env.install();
     if (!externalFirst) wrapExternal();
     const docs = await env.ItemT20.createDocuments(
       [{ name: "Guerreiro", type: "classe" }, tp(), { name: "Arcanista", type: "classe" }],
@@ -376,7 +380,7 @@ test("composes with an external _preCreateOperation wrapper in both install orde
 
 test("race grant (nested createDocuments with keepId) asks for Versátil, with a class in the same batch", async () => {
   const env = setup({ dialog: (entry) => entry.options.slice(0, 2) });
-  installSkillPickerRule();
+  env.install();
   const versatil = { _id: "9QQnUgUh5ThF96Cd", name: "Versátil", type: "poder", effects: [] };
   const docs = await env.ItemT20.createDocuments(
     [{ name: "Humano", type: "raca", grants: [versatil] }, { name: "Guerreiro", type: "classe" }],
@@ -392,7 +396,7 @@ test("race grant (nested createDocuments with keepId) asks for Versátil, with a
 test("a mixed batch reserves the training of an already configured power, in both orders", async () => {
   for (const configuredFirst of [true, false]) {
     const env = setup({ dialog: firstOption });
-    installSkillPickerRule();
+    env.install();
     const configured = {
       ...tp(),
       effects: [{ transfer: true, system: { changes: [{ key: "system.pericias.luta.treinado", value: true }] } }]
@@ -406,7 +410,7 @@ test("a mixed batch reserves the training of an already configured power, in bot
 
 test("a usage effect in the same batch does not reserve its skill", async () => {
   const env = setup({ dialog: firstOption });
-  installSkillPickerRule();
+  env.install();
   const usage = {
     name: "Golpe", type: "poder", effects: [{ transfer: true, system: { onuse: true, changes: [{ key: "system.pericias.luta.treinado", value: true }] } }]
   };
@@ -418,7 +422,7 @@ test("a usage effect in the same batch does not reserve its skill", async () => 
 test("same batch never offers a skill twice, through the base class and the system class", async () => {
   for (const which of ["Item", "ItemT20"]) {
     const env = setup({ dialog: firstOption });
-    installSkillPickerRule();
+    env.install();
     await env[which].createDocuments([tp(), tp()], { parent: env.actor });
     assert.equal(env.dialogs.length, 2);
     const [first] = env.dialogs[0].options;
@@ -432,7 +436,7 @@ test("a power vetoed by preCreateItem (registered before or after install) never
     let vetoed = false;
     const veto = () => (vetoed ? true : ((vetoed = true), false));
     if (before) env.hooks.push(veto);
-    installSkillPickerRule();
+    env.install();
     if (!before) env.hooks.push(veto);
     const docs = await env.Item.createDocuments([tp(), tp()], { parent: env.actor });
     assert.equal(docs.length, 1);
@@ -445,8 +449,8 @@ test("a power vetoed by preCreateItem (registered before or after install) never
 
 test("Hooks.call replaced after install still never repeats a skill in the batch", async () => {
   const env = setup({ dialog: firstOption });
-  installSkillPickerRule();
-  globalThis.Hooks.call = () => true;
+  env.install();
+  env.Hooks.call = () => true;
   await env.Item.createDocuments([tp(), tp()], { parent: env.actor });
   assert.notEqual(env.dialogs[0].options[0], env.dialogs[1].options[0]);
   assert.equal(env.dialogs[1].options.includes(env.dialogs[0].options[0]), false);
@@ -454,7 +458,7 @@ test("Hooks.call replaced after install still never repeats a skill in the batch
 
 test("noHook with an external _preCreate veto: one dialog, skill kept for the next power", async () => {
   const env = setup({ skills: ["luta"], dialog: firstOption });
-  installSkillPickerRule();
+  env.install();
   const original = env.ItemT20.prototype._preCreate;
   let first = true;
   env.ItemT20.prototype._preCreate = async function (...args) {
@@ -473,7 +477,7 @@ test("noHook with an external _preCreate veto: one dialog, skill kept for the ne
 
 test("concurrent operations on the same actor: the second waits and sees the first's choice", async () => {
   const env = setup();
-  installSkillPickerRule();
+  env.install();
   const one = env.Item.createDocuments([tp()], { parent: env.actor });
   await until(() => env.dialogs.length === 1, "first dialog");
   const two = env.Item.createDocuments([tp()], { parent: env.actor });
@@ -502,7 +506,7 @@ test("server failure releases the queue; reusing the caller's options never leak
       }
     }
   });
-  installSkillPickerRule();
+  env.install();
   const options = { parent: env.actor };
   await assert.rejects(env.Item.createDocuments([tp()], options), /refused/);
   const docs = await env.Item.createDocuments([tp()], options);
@@ -513,7 +517,7 @@ test("server failure releases the queue; reusing the caller's options never leak
 
 test("an outer _preCreateOperation cancelling after the choice creates nothing and releases the queue", async () => {
   const env = setup({ skills: ["luta"], dialog: firstOption });
-  installSkillPickerRule();
+  env.install();
   const inner = env.ItemT20._preCreateOperation;
   let cancel = true;
   env.ItemT20._preCreateOperation = async function (...args) {
@@ -532,7 +536,7 @@ test("an outer _preCreateOperation cancelling after the choice creates nothing a
 
 test("nested race grant inside an operation with another picker power: no deadlock, no repeated skill", async () => {
   const env = setup({ dialog: firstOption });
-  installSkillPickerRule();
+  env.install();
   const versatil = { _id: "9QQnUgUh5ThF96Cd", name: "Versátil", type: "poder", effects: [] };
   await env.Item.createDocuments([tp(), { name: "Humano", type: "raca", grants: [versatil] }], { parent: env.actor });
   assert.equal(env.dialogs.length, 2);
@@ -542,9 +546,9 @@ test("nested race grant inside an operation with another picker power: no deadlo
 
 test("_preCreateOperation called without the operation id releases the queue itself", async () => {
   const env = setup({ dialog: firstOption });
-  installSkillPickerRule();
+  env.install();
   const doc = new env.ItemT20(tp(), { parent: env.actor });
-  await env.ItemT20._preCreateOperation([doc], { parent: env.actor }, game.user);
+  await env.ItemT20._preCreateOperation([doc], { parent: env.actor }, env.user);
   const docs = await env.Item.createDocuments([tp()], { parent: env.actor });
   assert.equal(docs.length, 1);
   assert.equal(env.dialogs.length, 2);
@@ -562,13 +566,13 @@ test("does not ask when off, for npc, in a pack, for another user, or when the i
   ];
   for (const [label, make] of cases) {
     const env = make();
-    installSkillPickerRule();
+    env.install();
     const docs = await env.Item.createDocuments([tp()], { parent: env.actor });
     assert.equal(docs.length, 1, label);
     assert.equal(env.dialogs.length, 0, label);
   }
   const env = setup({ dialog: firstOption });
-  installSkillPickerRule();
+  env.install();
   const doc = new env.ItemT20(tp(), { parent: env.actor });
   await env.ItemT20._preCreateOperation([doc], { parent: env.actor }, { id: "other" });
   const trained = { ...tp(), effects: [{ system: { changes: [{ key: "system.pericias.luta.treinado" }] } }] };
@@ -581,11 +585,26 @@ test("an original _preCreateOperation returning false stops without asking; its 
   const sentinel = { kept: true };
   let result = false;
   env.ItemT20._preCreateOperation = async () => result;
-  installSkillPickerRule();
+  env.install();
   const doc = new env.ItemT20(tp(), { parent: env.actor });
-  assert.equal(await env.ItemT20._preCreateOperation([doc], { parent: env.actor }, game.user), false);
+  assert.equal(await env.ItemT20._preCreateOperation([doc], { parent: env.actor }, env.user), false);
   assert.equal(env.dialogs.length, 0);
   result = sentinel;
-  assert.equal(await env.ItemT20._preCreateOperation([doc], { parent: env.actor }, game.user), sentinel);
+  assert.equal(await env.ItemT20._preCreateOperation([doc], { parent: env.actor }, env.user), sentinel);
   assert.equal(env.dialogs.length, 1);
+});
+
+test("state: two installs keep their own actor queues", async () => {
+  const first = setup();
+  const second = setup();
+  first.install();
+  second.install();
+  const one = first.Item.createDocuments([tp()], { parent: first.actor });
+  await until(() => first.dialogs.length === 1, "first dialog");
+  const two = second.Item.createDocuments([tp()], { parent: second.actor });
+  await until(() => second.dialogs.length === 1, "second install's dialog");
+  assert.equal(second.notes.info.length, 0);
+  first.dialogs[0].resolve(["luta"]);
+  second.dialogs[0].resolve(["atle"]);
+  await Promise.all([one, two]);
 });

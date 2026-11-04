@@ -4,15 +4,16 @@ import {
   DEFENSE_KEY,
   PENALTY_KEY,
   changeAmount,
-  installSourceStackingRule,
   isArmorExempt,
   keyLabel,
   newSuppressions,
   planSuppression,
   reportSignature,
   sourceCategory
-} from "../scripts/rules/source-stacking.mjs";
-import { createStackingExclusions } from "../scripts/services/stacking-exclusions.mjs";
+} from "../scripts/features/source-stacking/domain.mjs";
+import sourceStacking from "../scripts/features/source-stacking/index.mjs";
+import stackingExclusions from "../scripts/services/stacking-exclusions.mjs";
+import { createFakePlatform, createTestKernel } from "./support/fake-platform.mjs";
 
 const FORT = "system.pericias.fort.bonus";
 
@@ -136,12 +137,11 @@ test("keyLabel: Defense, penalty, skills and abilities; unknown keys as is", () 
 const MODULE = "t20-community-patches";
 
 function setupFoundry(appliedChanges = null) {
-  const settings = { rule: "on" };
   const hooks = {};
+  const actors = [];
   const infos = [];
   class NumberField {}
   class ArrayField {}
-  const getProperty = (obj, path) => path.split(".").reduce((o, k) => o?.[k], obj);
 
   class ActiveEffect {
     constructor(data, parent) {
@@ -261,42 +261,39 @@ function setupFoundry(appliedChanges = null) {
     }
   }
 
-  Object.assign(globalThis, {
-    CONFIG: {
-      Item: { documentClass: ItemT20 },
-      ActiveEffect: { documentClass: ActiveEffect },
-      Actor: { documentClass: Actor, dataModels: { character: CharacterData } },
-      T20: { pericias: { fort: { label: "Fortitude" } } }
-    },
-    game: {
-      user: { id: "u1" },
-      actors: [],
-      scenes: [],
-      settings: {
-        get: (scope, key) => (scope === MODULE && key === "sourceStackingRule" ? settings.rule : false),
-        register: () => {}
-      },
-      i18n: { localize: (key) => key, format: (key, data) => `${key}${JSON.stringify(data)}` }
-    },
-    ui: { notifications: { info: (msg, opts) => infos.push({ msg, opts }) } },
-    Hooks: { on: (name, fn) => (hooks[name] = fn) },
-    foundry: {
-      data: { fields: { NumberField, ArrayField } },
-      utils: { getProperty, escapeHTML: (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`) },
-      dice: {
-        Roll: {
-          defaultImplementation: { replaceFormulaData: (f, data) => f.replace(/@(\w+)/g, (m, k) => (k in data ? String(data[k]) : m)) },
-          create: (formula) => ({
-            isDeterministic: !/\dd\d/.test(formula),
-            evaluateSync: () => ({ total: formula.split("+").reduce((sum, part) => sum + Number(part.trim()), 0) })
-          })
-        }
-      }
-    }
+  const Roll = {
+    defaultImplementation: { replaceFormulaData: (f, data) => f.replace(/@(\w+)/g, (m, k) => (k in data ? String(data[k]) : m)) },
+    create: (formula) => ({
+      isDeterministic: !/\dd\d/.test(formula),
+      evaluateSync: () => ({ total: formula.split("+").reduce((sum, part) => sum + Number(part.trim()), 0) })
+    })
+  };
+  const platform = createFakePlatform({
+    settings: { sourceStackingRule: "on" },
+    userId: "u1",
+    classes: { item: ItemT20, activeEffect: ActiveEffect, actor: Actor },
+    config: { Actor: { documentClass: Actor, dataModels: { character: CharacterData } } },
+    t20Config: { pericias: { fort: { label: "Fortitude" } } },
+    core: { fields: { NumberField, ArrayField } },
+    dice: { Roll },
+    documents: { actors: () => actors, scenes: () => [] },
+    i18n: { format: (key, data) => `${key}${JSON.stringify(data)}` }
   });
-  const exclusions = createStackingExclusions();
-  installSourceStackingRule(exclusions, appliedChanges);
-  return { settings, hooks, infos, Actor, ItemT20, exclusions };
+  platform.notify.info = (msg, opts) => infos.push({ msg, opts });
+  const appliedService = { id: "applied-changes", install: () => appliedChanges ?? {} };
+  const kernel = createTestKernel({ platform, features: [sourceStacking], services: [stackingExclusions, appliedService] });
+  kernel.install(sourceStacking);
+  const exclusions = kernel.service("stacking-exclusions");
+  for (const { name, fn } of platform.hookCalls) hooks[name] = fn;
+  const settings = {
+    get rule() {
+      return platform.settings.get("sourceStackingRule");
+    },
+    set rule(value) {
+      platform.settings.set("sourceStackingRule", value);
+    }
+  };
+  return { settings, hooks, infos, Actor, ItemT20, exclusions, kernel, actors };
 }
 
 test("integration: two spells on Defense apply only the greatest; off keeps the system's sum", () => {
@@ -530,4 +527,29 @@ test("integration: what is cut is reported to applied-changes with its signed am
       { key: DEFENSE_KEY, label: "Colar Guardião", value: 5, reason: "not-stacking", item: { id: "colar", accessory: true } }
     ]
   );
+});
+
+test("integration: turning the rule on or off prepares every actor again and renders open sheets", async () => {
+  const { kernel, actors } = setupFoundry();
+  const calls = [];
+  actors.push({ name: "a", reset: () => calls.push("reset a"), sheet: { rendered: true, render: (force) => calls.push(`render a ${force}`) } });
+  actors.push({ name: "b", reset: () => calls.push("reset b"), sheet: { rendered: false, render: () => calls.push("render b") } });
+  await kernel.changeSetting("sourceStackingRule", "off");
+  assert.deepEqual(calls, ["reset a", "render a false", "reset b"]);
+});
+
+test("integration: two installations do not share the actors' reports", async () => {
+  const first = setupFoundry();
+  const second = setupFoundry();
+  const spell = { [MODULE]: { source: "magia" } };
+  const actor = new first.Actor("guerreiro");
+  actor.addEffect("arcana", { name: "Armadura Arcana", time: 1, flags: spell, changes: [{ key: DEFENSE_KEY, value: "5" }] });
+  const fe = actor.addEffect("fe", { name: "Escudo da Fé", time: 2, flags: spell, changes: [{ key: DEFENSE_KEY, value: "2" }] });
+  actor.prepare();
+  second.hooks.createActiveEffect(fe, {}, "u1");
+  await Promise.resolve();
+  assert.equal(second.infos.length, 0, "the second installation never prepared this actor");
+  first.hooks.createActiveEffect(fe, {}, "u1");
+  await Promise.resolve();
+  assert.equal(first.infos.length, 1);
 });

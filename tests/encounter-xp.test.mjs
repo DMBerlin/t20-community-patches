@@ -8,22 +8,22 @@ import {
   computeAward,
   createQueue,
   encounterNd,
-  escapeHtml,
   executorBlock,
   findOverlap,
-  gmSummaryHtml,
   groupLevel,
   parseNd,
   partitionSnapshot,
   planMap,
   planRecord,
-  publicSummaryHtml,
   recipientStatus,
   recipientsError,
   resolveEncounterNd,
   resumeAudience,
   runAward
-} from "../scripts/rules/encounter-xp.mjs";
+} from "../scripts/features/encounter-xp/domain/index.mjs";
+import { escapeHtml, gmSummaryHtml, publicSummaryHtml } from "../scripts/features/encounter-xp/ui/summary.mjs";
+import encounterXp from "../scripts/features/encounter-xp/index.mjs";
+import { createFakePlatform, createTestKernel } from "./support/fake-platform.mjs";
 
 const XP_TABLE = [0, 1000, 3000, 6000, 10000, 15000, 21000, 28000, 36000, 45000, 55000, 66000, 78000, 91000, 105000, 120000, 136000, 153000, 171000, 190000];
 const won = (key, nd) => ({ key, nd, won: true });
@@ -394,4 +394,104 @@ test("summaries: public message has no threat data, skips recipients already pai
   const gm = gmSummaryHtml({ repeat: false }, results, [{ key: "o", name: "Ogro <i>", ndLabel: "5", treasure: "Padrão.", type: "npc" }], { total: 5000, encounter: null, rows: [{ key: "o", xp: 5000 }] }, t);
   assert.ok(gm.includes("Ogro &lt;i&gt;") && gm.includes("Padrão.") && gm.includes("Skipped") && gm.includes("Bia"));
   assert.equal(escapeHtml(`"'&`), "&quot;&#39;&amp;");
+});
+
+/** A kernel with encounter-xp installed on a fake platform; `world` holds actors (uuid → {xp, awards}) and messages. */
+function installRule({ settings = { encounterXp: "button" }, world = {}, ...overrides } = {}) {
+  const actors = Object.entries(world.actors ?? {}).map(([uuid, a]) => ({
+    uuid,
+    name: a.name ?? uuid,
+    type: "character",
+    _source: { system: { attributes: { nivel: { xp: { value: a.xp } } } }, flags: { "t20-community-patches": { xpAwards: a.awards ?? {} } } }
+  }));
+  const platform = createFakePlatform({
+    settings,
+    documents: {
+      actors: () => actors,
+      combats: () => [],
+      messages: () => ({ contents: world.messages ?? [] }),
+      fromUuidSync: (uuid) => actors.find((a) => a.uuid === uuid) ?? null
+    },
+    ...overrides
+  });
+  const kernel = createTestKernel({ platform, features: [encounterXp] });
+  kernel.install(encounterXp);
+  return { platform, kernel, rewards: kernel.published().rewards };
+}
+
+test("install publishes api.rewards with open, pending, resume and divergences", () => {
+  const { kernel } = installRule();
+  const { rewards } = kernel.published();
+  assert.deepEqual(Object.keys(rewards).sort(), ["divergences", "open", "pending", "resume"]);
+  for (const fn of Object.values(rewards)) assert.equal(typeof fn, "function");
+});
+
+test("api.rewards reads the actor records and the GM plans through the platform", () => {
+  const plan = planRecord({ id: "Z", at: 5, share: 300, outcome: "victory", challenges: ["T.z"], recipients: [{ uuid: "A", name: "Ana", level: 1 }, { uuid: "B", name: "Bia", level: 1 }] });
+  const record = { ...plan, xp: 300, before: 0, after: 300, seq: 1 };
+  const { rewards } = installRule({
+    world: {
+      actors: { A: { name: "Ana", xp: 300, awards: { Z: record } }, B: { name: "Bia", xp: 0 }, C: { name: "Cid", xp: 0, awards: { Z: record } } },
+      messages: [{ author: { isGM: false }, flags: { "t20-community-patches": { xpPlan: { ...plan, id: "F" } } } }, { author: { isGM: true }, flags: { "t20-community-patches": { xpPlan: plan } } }]
+    }
+  });
+  assert.deepEqual(rewards.pending().map((a) => [a.id, a.pending.map((r) => r.uuid)]), [["Z", ["B"]]]);
+  assert.deepEqual(rewards.divergences().map((d) => [d.uuid, d.status, d.expected]), [["C", "lost", 300]]);
+});
+
+test("api.rewards.open refuses a client that is not the active GM, and resume refuses an unknown award", async () => {
+  const { platform, rewards } = installRule({ isGM: true, isActiveGM: false, users: { activeGM: () => ({ name: "Mestre" }) } });
+  await rewards.open();
+  assert.deepEqual(platform.notes.at(-1), { level: "warn", message: 'T20CP.EncounterXp.Warn.Block.notActiveGm {"name":"Mestre"}', options: undefined });
+  assert.deepEqual(await rewards.resume("nope"), { refused: "missing" });
+  assert.equal(platform.notes.at(-1).message, "T20CP.EncounterXp.Warn.Missing");
+});
+
+test("switching the tool off re-renders the scene controls and closes the open dialog", async () => {
+  const calls = [];
+  const { kernel } = installRule({
+    ui: { renderControls: (options) => calls.push(["render", options]), application: (id) => ({ close: () => calls.push(["close", id]) }) }
+  });
+  await kernel.changeSetting("encounterXp", "combat");
+  assert.deepEqual(calls, [["render", { reset: true }]]);
+  await kernel.changeSetting("encounterXp", "off");
+  assert.deepEqual(calls.slice(1), [["render", { reset: true }], ["close", "t20cp-rewards"]]);
+});
+
+test("the scene control is added only for a GM with the tool on", () => {
+  const controls = () => ({ tokens: { tools: { select: {} } } });
+  const on = installRule();
+  const gm = controls();
+  on.platform.callHook("getSceneControlButtons", gm);
+  assert.deepEqual([gm.tokens.tools.t20cpRewards?.name, gm.tokens.tools.t20cpRewards?.order], ["t20cpRewards", 1]);
+  const off = installRule({ settings: { encounterXp: "off" } });
+  const none = controls();
+  off.platform.callHook("getSceneControlButtons", none);
+  assert.equal(none.tokens.tools.t20cpRewards, undefined);
+});
+
+test("api.rewards.open builds the dialog from platform.apps on use, with the snapshot of the given rows", async () => {
+  const rendered = [];
+  class ApplicationV2 {
+    constructor(options) {
+      this.options = options;
+    }
+    render(options) {
+      rendered.push([this, options]);
+      return this;
+    }
+  }
+  const apps = { ApplicationV2, HandlebarsApplicationMixin: (Base) => class extends Base {} };
+  const { rewards } = installRule({ apps });
+  const rows = [
+    { key: "T.o", actorUuid: "Actor.ogro", type: "npc", name: "Ogro", ndText: "5", hostile: true },
+    { key: "T.a", actorUuid: "Actor.ana", type: "character", name: "Ana", playerOwned: true }
+  ];
+  await rewards.open({ rows, source: "combat:c" });
+  await rewards.open({ rows });
+  assert.equal(rendered.length, 2);
+  const [[dialog, options]] = rendered;
+  assert.deepEqual(options, { force: true });
+  assert.equal(dialog.constructor.DEFAULT_OPTIONS.id, "t20cp-rewards");
+  assert.equal(rendered[1][0].constructor, dialog.constructor);
 });

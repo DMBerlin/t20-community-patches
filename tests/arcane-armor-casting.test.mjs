@@ -9,7 +9,6 @@ import {
   canPayGrant,
   failureKey,
   grantUsedKey,
-  installArcaneArmorRule,
   outcomeForSource,
   resolveArmorTest,
   spellSources,
@@ -17,10 +16,11 @@ import {
   usesDiscreetCasting,
   withGrantPayment,
   wornArmor
-} from "../scripts/rules/arcane-armor-casting.mjs";
+} from "../scripts/features/arcane-armor/domain.mjs";
+import arcaneArmor from "../scripts/features/arcane-armor/index.mjs";
 import { castCompleted, castFailed, isCastUse } from "../scripts/lib/cast-outcome.mjs";
 import { automaticApplied } from "../scripts/lib/mana.mjs";
-import manaQueueRule from "../scripts/rules/mana-queue.mjs";
+import manaQueueRule from "../scripts/features/mana-queue/index.mjs";
 import { createFakePlatform, createTestKernel } from "./support/fake-platform.mjs";
 import { isTrainedFor, plainUseEffect, trainingGrants } from "../scripts/lib/skill-training.mjs";
 
@@ -255,18 +255,19 @@ class FakeActor {
 }
 const kernel = createTestKernel({ platform: createFakePlatform({ classes: { actor: FakeActor } }) });
 kernel.install(manaQueueRule);
+/** One queue for every setup: FakeActor#spendMana is wrapped once, and each setup's kernel reuses it. */
+const sharedQueue = { id: "mana-queue", install: () => kernel.service("mana-queue") };
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 /**
- * Fresh globals and a fresh ItemT20 class. `d20s` scripts the natural results of the rolls, in order.
+ * A fresh platform, kernel and ItemT20 class. `d20s` scripts the natural results of the rolls, in order.
  * `outer` installs a #37-like wrapper before (false) or after (true) this rule.
  */
 function setup({ mode = "roll", d20s = [], messageMode = "public", autoSpend = true, wrapOrder = null } = {}) {
   const log = [];
   const created = [];
   const warnings = [];
-  const settings = { arcaneArmorRule: mode, equipmentSlots: false, automaticManaSpend: autoSpend, messageMode };
   const rolls = [...d20s];
 
   class ItemT20 {
@@ -309,29 +310,31 @@ function setup({ mode = "roll", d20s = [], messageMode = "public", autoSpend = t
   }
 
   const sustain = { ends: 0, concentration: 0 };
-  globalThis.CONFIG = { Item: { documentClass: ItemT20 }, T20: { pericias: { mist: { trainedOnly: true } } } };
-  globalThis.game = {
-    settings: { get: (scope, key) => settings[key], register() {} },
-    i18n: { lang: "pt-BR", localize: (key) => key, format: (key, data) => `${key}${JSON.stringify(data)}` }
-  };
-  globalThis.ui = { notifications: { warn: (m) => warnings.push(m) } };
-  globalThis.Hooks = { on() {} };
-  globalThis.ChatMessage = {
-    getSpeaker: ({ actor }) => ({ alias: actor.name }),
-    applyMode: (data, m) => Object.assign(data, { messageMode: m }),
-    create: async (data) => {
-      const message = { id: `m${created.length + 1}`, ...data };
-      created.push(message);
-      return message;
-    }
-  };
-  globalThis.foundry = {
+  const platform = createFakePlatform({
+    settings: { arcaneArmorRule: mode },
+    namespaceSettings: {
+      "tormenta20.equipmentSlots": false,
+      "tormenta20.automaticManaSpend": autoSpend,
+      "core.messageMode": messageMode
+    },
+    classes: { item: ItemT20 },
+    t20Config: { pericias: { mist: { trainedOnly: true } } },
     dice: { Roll },
-    utils: {
-      getProperty: (obj, path) => path.split(".").reduce((o, k) => o?.[k], obj),
-      escapeHTML: (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    i18n: { format: (key, data) => `${key}${JSON.stringify(data)}` },
+    chat: {
+      speaker: ({ actor }) => ({ alias: actor.name }),
+      applyMode: (data, m) => Object.assign(data, { messageMode: m }),
+      create: async (data) => {
+        const message = { id: `m${created.length + 1}`, ...data };
+        created.push(message);
+        return message;
+      }
     }
-  };
+  });
+  platform.utils.escapeHTML = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  platform.notify.warn = (m) => warnings.push(m);
+  const install = () =>
+    createTestKernel({ platform, features: [arcaneArmor], services: [sharedQueue] }).install(arcaneArmor);
 
   // A wrapper that follows the cast-outcome contract like casting-restrictions (#37).
   const installOuter = () => {
@@ -346,14 +349,14 @@ function setup({ mode = "roll", d20s = [], messageMode = "public", autoSpend = t
     };
   };
   if (wrapOrder === "outside") {
-    installArcaneArmorRule(kernel.service("mana-queue"));
+    install();
     installOuter();
   } else if (wrapOrder === "inside") {
     installOuter();
-    installArcaneArmorRule(kernel.service("mana-queue"));
-  } else installArcaneArmorRule(kernel.service("mana-queue"));
+    install();
+  } else install();
 
-  return { ItemT20, log, created, warnings, settings, sustain };
+  return { ItemT20, log, created, warnings, sustain, platform };
 }
 
 const wizard = (extra = {}) =>
@@ -409,15 +412,13 @@ test("natural 20 and 1 decide before the DC; a failure skips the card, returns n
 });
 
 test("a broken roll falls back to the normal card", async () => {
-  const { ItemT20, log } = setup();
-  const original = globalThis.foundry.dice.Roll;
-  globalThis.foundry.dice.Roll = class {
+  const { ItemT20, log, platform } = setup();
+  platform.dice.Roll = class {
     constructor() {
       throw new Error("bad roll");
     }
   };
   const result = await new ItemT20(wizard()).displayCard(cast());
-  globalThis.foundry.dice.Roll = original;
   assert.equal(result.id, "card");
   assert.deepEqual(log, ["card"]);
 });

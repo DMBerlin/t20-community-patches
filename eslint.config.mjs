@@ -3,19 +3,19 @@ import globals from "globals";
 import layerBoundaries from "./tools/eslint/layer-boundaries.mjs";
 import noFoundryGlobals from "./tools/eslint/no-foundry-globals.mjs";
 
-// Globais do Foundry (e do Handlebars que ele expõe): permitidas na plataforma e no legado, proibidas nas camadas puras.
+// Globais do Foundry (e do Handlebars que ele expõe): permitidas só na plataforma.
 const FOUNDRY = ["game", "CONFIG", "ui", "foundry", "canvas", "Hooks", "CONST", "Roll", "ChatMessage", "Actor", "Item", "Handlebars"];
-const LAYERED = ["scripts/kernel/**", "scripts/platform/**", "scripts/services/**", "scripts/lib/**", "scripts/features/**"];
-// Globais do Foundry só em scripts/platform/ (#86): o resto das camadas e os pilotos já migrados recebem tudo por ctx.
-const NO_GLOBALS = [
+const LAYERED = [
   "scripts/kernel/**",
+  "scripts/platform/**",
   "scripts/services/**",
   "scripts/lib/**",
   "scripts/features/**",
-  "scripts/main.mjs",
-  "scripts/rules/mana-limit.mjs",
-  "scripts/rules/use-dialog-guard.mjs"
+  "scripts/apps/**",
+  "scripts/*.mjs"
 ];
+// Globais do Foundry só em scripts/platform/ (#86, #89): o resto de scripts/ recebe tudo pela plataforma.
+const NO_GLOBALS = ["scripts/kernel/**", "scripts/services/**", "scripts/lib/**", "scripts/features/**", "scripts/apps/**", "scripts/*.mjs"];
 const t20 = { rules: { "layer-boundaries": layerBoundaries, "no-foundry-globals": noFoundryGlobals } };
 
 export default [
@@ -55,19 +55,6 @@ export default [
     files: ["scripts/**/*.mjs"],
     plugins: { t20 },
     rules: { "t20/layer-boundaries": "error" }
-  },
-  // Pastas legadas: só avisos até a fase 7 (#89), que leva scripts/apps para LAYERED.
-  {
-    files: ["scripts/rules/**", "scripts/apps/**", "scripts/*.mjs"],
-    rules: {
-      "max-lines": ["warn", { max: 300 }],
-      "max-depth": "warn",
-      "no-else-return": "warn",
-      "no-unused-vars": "warn",
-      eqeqeq: "warn",
-      "prefer-const": "warn",
-      "no-empty": ["warn", { allowEmptyCatch: true }]
-    }
   },
   {
     files: ["tests/**", "tools/**", ".github/**", "eslint.config.mjs"],

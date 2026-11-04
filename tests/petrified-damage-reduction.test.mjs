@@ -13,7 +13,7 @@ import {
   planPetrifiedReduction
 } from "../scripts/features/petrified-damage-reduction/domain.mjs";
 import { findWithRetry } from "../scripts/lib/async.mjs";
-import sourceStacking from "../scripts/rules/source-stacking.mjs";
+import sourceStacking from "../scripts/features/source-stacking/index.mjs";
 import { patchFeature } from "../scripts/kernel/feature.mjs";
 import { createPlatform } from "../scripts/platform/foundry.mjs";
 import { createTestKernel } from "./support/fake-platform.mjs";

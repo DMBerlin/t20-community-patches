@@ -5,10 +5,11 @@ import {
   compareMagnitude,
   decideStacking,
   findSameAbility,
-  installSameAbilityRule,
   planReconcile,
   sustainMarker
-} from "../scripts/rules/same-ability-stacking.mjs";
+} from "../scripts/features/same-ability-stacking/domain.mjs";
+import sameAbilityStacking from "../scripts/features/same-ability-stacking/index.mjs";
+import { createFakePlatform, createTestKernel } from "./support/fake-platform.mjs";
 
 const SOURCE = "Compendium.tormenta20.poderes.Item.Uv6GW8R54wUtv3sm";
 const FLAG = "t20-community-patches";
@@ -128,7 +129,6 @@ class EffectCollection extends Map {
 }
 
 function setupFoundry() {
-  const settings = { mode: "replace" };
   const hooks = {};
   const warnings = [];
   const infos = [];
@@ -157,25 +157,27 @@ function setupFoundry() {
       return undefined;
     }
   }
-  Object.assign(globalThis, {
-    CONFIG: { Item: { documentClass: ItemT20 }, ActiveEffect: { documentClass: ActiveEffectT20 } },
-    game: {
-      actors,
-      scenes: [],
-      user: { id: "u1", isActiveGM: true },
-      settings: { get: () => settings.mode },
-      i18n: { localize: (key) => `<${key}>`, format: (key, data) => `${key}${JSON.stringify(data)}` }
-    },
-    ui: { notifications: { warn: (msg) => warnings.push(msg), info: (msg) => infos.push(msg) } },
-    Hooks: { on: (name, fn) => (hooks[name] = fn) },
-    foundry: {
-      utils: {
-        getProperty: (obj, path) => path.split(".").reduce((o, k) => o?.[k], obj),
-        fromUuidSync: (uuid) => actors.get(uuid)
-      }
-    }
+  const scenes = [];
+  const platform = createFakePlatform({
+    settings: { sameAbilityStackingRule: "replace" },
+    userId: "u1",
+    isActiveGM: true,
+    classes: { item: ItemT20, activeEffect: ActiveEffectT20 },
+    documents: { actors: () => actors, scenes: () => scenes, fromUuidSync: (uuid) => actors.get(uuid) },
+    i18n: { localize: (key) => `<${key}>`, format: (key, data) => `${key}${JSON.stringify(data)}` }
   });
-  installSameAbilityRule();
+  platform.notify.warn = (msg) => warnings.push(msg);
+  platform.notify.info = (msg) => infos.push(msg);
+  createTestKernel({ platform, features: [sameAbilityStacking] }).install(sameAbilityStacking);
+  for (const { name, fn } of platform.hookCalls) hooks[name] = fn;
+  const settings = {
+    get mode() {
+      return platform.settings.get("sameAbilityStackingRule");
+    },
+    set mode(value) {
+      platform.settings.set("sameAbilityStackingRule", value);
+    }
+  };
 
   let nextId = 0;
   let clock = 0;
@@ -237,7 +239,7 @@ function setupFoundry() {
     assert.deepEqual(result, ["usage"]);
     return item.effects;
   };
-  return { settings, hooks, warnings, infos, deleted, markers, actors, makeActor, preCreate, commit, create, cardEffect, clone, use, liveItem, ItemT20 };
+  return { settings, hooks, warnings, infos, deleted, markers, actors, scenes, makeActor, preCreate, commit, create, cardEffect, clone, use, liveItem, ItemT20 };
 }
 
 test("stamp: power clones get the ability identity on instance and source; live items and non-powers do not", () => {
@@ -401,7 +403,7 @@ test("highest: a sustained effect lost to a concurrent one removes its orphan ma
 });
 
 test("marker cleanup waits for a pending creation of the same card and sees tokens of other scenes", async () => {
-  const { settings, preCreate, commit, cardEffect, clone, use, makeActor } = setupFoundry();
+  const { settings, preCreate, commit, cardEffect, clone, use, makeActor, scenes } = setupFoundry();
   settings.mode = "highest";
   const bardA = makeActor("BardoA");
   const bardB = makeActor("BardoB");
@@ -429,7 +431,7 @@ test("marker cleanup waits for a pending creation of the same card and sees toke
 
   // A synthetic actor of an unlinked token in another scene still uses the origin.
   const synthetic = { effects: new EffectCollection([["x", { id: "x", origin: `${bardB.uuid}.ActiveEffect.mS` }]]) };
-  game.scenes.push({ tokens: [{ actorLink: false, actor: synthetic }] });
+  scenes.push({ tokens: [{ actorLink: false, actor: synthetic }] });
   await race(makeActor("Outro"), "mS");
   await new Promise((r) => setTimeout(r));
   assert.ok(bardB.effects.has("mS"), "the marker used in another scene stays");

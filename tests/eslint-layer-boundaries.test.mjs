@@ -60,7 +60,10 @@ const FAIL = [
   ["main.mjs", "export const x = () => game.settings;", "defaultMessage"],
   ["features/patches.mjs", "export const x = () => CONFIG.Actor;", "defaultMessage"],
   ["features/patches.mjs", 'import "../platform/x.mjs";', "featurePlatform"],
-  ["rules/mana-limit.mjs", "export const x = () => Hooks;", "defaultMessage"]
+  ["apps/x/app.mjs", "export const x = () => Hooks;", "defaultMessage"],
+  ["registry.mjs", "export const x = () => game.user;", "defaultMessage"],
+  ["apps/x/app.mjs", 'import "../../platform/foundry.mjs";', "appsInjected"],
+  ["apps/x/rows.mjs", 'export * from "../../features/index.mjs";', "appsInjected"]
 ];
 
 const PASS = [
@@ -68,7 +71,8 @@ const PASS = [
   ["features/a/domain.mjs", 'import "./domain/y.mjs"; import "../../lib/x.mjs"; import "../../kernel/k.mjs";'],
   ["features/a/domain.mjs", 'export const f = () => import("./domain/y.mjs");'],
   ["features/a/integration.mjs", 'import "./domain.mjs"; import "../../lib/x.mjs"; import "../../services/s.mjs"; export const x = (ctx) => ctx.platform.user;'],
-  ["rules/legacy.mjs", "export const x = () => game.user;"],
+  ["apps/x/app.mjs", 'import "./rows.mjs"; import "../../kernel/center.mjs"; import "../../lib/x.mjs";'],
+  ["platform/manager-menu.mjs", 'import "../apps/x/app.mjs"; export const x = () => game.settings;'],
   ["features/patches.mjs", 'import a from "./a/index.mjs"; import b from "./b/index.mjs"; export const P = [a, b];'],
   ["features/a/ui/x.mjs", 'import "../integration.mjs"; import "../domain/y.mjs";'],
   ["lib/x.mjs", 'import "./y.mjs"; import "../kernel/k.mjs"; export const x = () => import("./z.mjs");'],
@@ -78,7 +82,7 @@ const PASS = [
   ["lib/x.mjs", "export function currentUser(window, { game } = window) { return game.user; }"],
   ["kernel/wrap.mjs", 'import { markWrapper } from "../utils.mjs"; export { markWrapper };'],
   ["features/a/integration.mjs", 'import "../../settings.mjs";'],
-  ["rules/x.mjs", 'import "../features/a/integration.mjs"; export const f = (name) => import(name);']
+  ["main.mjs", 'import "./features/index.mjs"; import "./platform/foundry.mjs"; import "./apps/x/app.mjs";']
 ];
 
 for (const [file, code, expected] of FAIL) {

@@ -2,7 +2,7 @@
  * Settings of the patch modes (#86, formerly scripts/settings.mjs). The kernel never reads Foundry globals: every
  * function receives the platform's settings port, whose keys already belong to this module.
  */
-import { normalizeMode, planModeMigration } from "../registry.mjs";
+import { normalizeMode, planModeMigration } from "./modes.mjs";
 
 export const SETTINGS = {
   /** {[patchId]: "auto"|"off"|"force"}. Booleans and missing ids are read through normalizeMode. */
@@ -36,7 +36,7 @@ export function registerPatchSettings(settings, patches) {
 /**
  * @param {SettingsPort} settings
  * @param {string} id
- * @returns {import("../registry.mjs").PatchMode}
+ * @returns {import("./diagnosis.mjs").PatchMode}
  */
 export function getPatchMode(settings, id) {
   const value = settings.get(SETTINGS.patches)?.[id];

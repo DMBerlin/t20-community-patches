@@ -10,21 +10,22 @@ import {
   classifyItemEffects,
   consumedArmorIds,
   computeEffectiveStats,
-  createOnUseWrapper,
   critLabel,
   detailedStats,
   describeEffect,
-  foldItemSystem,
-  foldedState,
   hasDetails,
   linkedPdaCount,
   normalizeMode,
   parseItemCard,
   planCritFold,
   shouldSkipFoldedChange,
-  statsFor,
   tooltipHtml
-} from "../scripts/rules/item-effective-stats.mjs";
+} from "../scripts/features/item-effective-stats/domain/index.mjs";
+import { createEngine } from "../scripts/features/item-effective-stats/integration/engine.mjs";
+import { createOnUseWrapper } from "../scripts/features/item-effective-stats/integration/wrappers.mjs";
+import itemEffectiveStats from "../scripts/features/item-effective-stats/index.mjs";
+import { createWrapRegistry } from "../scripts/kernel/wrap.mjs";
+import { createFakePlatform, createTestKernel } from "./support/fake-platform.mjs";
 import { adjustThreatEffect } from "../scripts/features/threatening-crit-range/domain.mjs";
 
 /* -------------------------------------------- */
@@ -259,7 +260,7 @@ test("Defense: add then subtract of the same entry is not folded", () => {
   assert.equal(canFoldDefense([passive("Mais", [bonus(2)])]), true);
   assert.equal(canFoldDefense([passive("Final", [{ ...bonus(2), phase: "final" }])]), false);
   const armorItem = fakeArmor({ actor: fakeActor(), effects: [{ name: "Mais", changes: [bonus(2)] }, { name: "Menos", changes: [{ key: DEFENSE_KEY, type: "subtract", value: "2" }] }] });
-  foldItemSystem(armorItem.system, "effective", PATCHES_ON());
+  engine.foldItemSystem(armorItem.system, "effective", PATCHES_ON());
   assert.equal(armorItem.system.armadura.value, 10);
   assert.equal(skipFor(armorItem, armorItem.effects[0], armorItem.effects[0].system.changes[0]), false);
 });
@@ -275,7 +276,7 @@ test("penalty: subtract or a non-initial phase is neither corrected by #19 nor f
     assert.equal(shouldSkipFoldedChange({ mode: "effective", change: effect.changes[0], targetIsActor: true, ownedByTarget: true, consumed: true, itemType: "equipamento", tipo: "pesada", hasStatus: false, folded: { penalty: true } }), false);
   }
   const armorItem = fakeArmor({ actor: fakeActor(), effects: [{ name: "Ajustada", identifier: "adjusted", changes: [{ ...pda(-1), phase: "final" }] }] });
-  foldItemSystem(armorItem.system, "effective", PATCHES_ON());
+  engine.foldItemSystem(armorItem.system, "effective", PATCHES_ON());
   assert.equal(armorItem.system.armadura.penalidade, -5);
 });
 
@@ -283,11 +284,11 @@ test("effective armor: a bearer's subtract on Defense keeps the item's bonus on 
   const actor = fakeActor();
   actor.effects.push(fakeEffect({ name: "Menos", onuse: false, changes: [{ key: DEFENSE_KEY, type: "subtract", value: "1" }], parent: actor }));
   const armorItem = fakeArmor({ actor, effects: [{ name: "Reforçada", changes: [bonus(1)] }] });
-  foldItemSystem(armorItem.system, "effective", PATCHES_ON());
+  engine.foldItemSystem(armorItem.system, "effective", PATCHES_ON());
   assert.equal(armorItem.system.armadura.value, 10);
   assert.equal(skipFor(armorItem, armorItem.effects[0], armorItem.effects[0].system.changes[0]), false);
   actor.effects[0].disabled = true;
-  foldItemSystem(armorItem.system, "effective", PATCHES_ON());
+  engine.foldItemSystem(armorItem.system, "effective", PATCHES_ON());
   assert.equal(armorItem.system.armadura.value, 11);
 });
 
@@ -295,7 +296,7 @@ test("effective armor: the penalty of an armor prepareDefense does not read is n
   const actor = fakeActor();
   fakeArmor({ actor, id: "first" });
   const second = fakeArmor({ actor, id: "second", penalidade: -2, effects: [{ name: "Sob Medida", changes: [pda(-2)] }, { name: "Reforçada", changes: [bonus(1)] }] });
-  foldItemSystem(second.system, "effective", PATCHES_ON());
+  engine.foldItemSystem(second.system, "effective", PATCHES_ON());
   assert.equal(second.system.armadura.penalidade, -2);
   assert.equal(second.system.armadura.value, 11);
 });
@@ -305,7 +306,7 @@ test("effective armor: a bearer's non-additive pda change keeps the penalty chai
     const actor = fakeActor();
     actor.effects.push(fakeEffect({ name: "Ator", onuse: false, changes: [{ key: PDA_KEY, type, value: "-1" }], parent: actor }));
     const armorItem = fakeArmor({ actor, effects: [{ name: "Reforçada", changes: [pda(1)] }] });
-    foldItemSystem(armorItem.system, "effective", PATCHES_ON());
+    engine.foldItemSystem(armorItem.system, "effective", PATCHES_ON());
     assert.equal(armorItem.system.armadura.penalidade, -5, type);
     assert.equal(skipFor(armorItem, armorItem.effects[0], armorItem.effects[0].system.changes[0]), false, type);
   }
@@ -313,7 +314,7 @@ test("effective armor: a bearer's non-additive pda change keeps the penalty chai
   const actor = fakeActor();
   actor.effects.push(fakeEffect({ name: "Ator", onuse: false, changes: [pda(1)], parent: actor }));
   const armorItem = fakeArmor({ actor, effects: [{ name: "Reforçada", changes: [pda(1)] }] });
-  foldItemSystem(armorItem.system, "effective", PATCHES_ON());
+  engine.foldItemSystem(armorItem.system, "effective", PATCHES_ON());
   assert.equal(armorItem.system.armadura.penalidade, -6);
 });
 
@@ -366,6 +367,8 @@ test("normalizeMode and parseItemCard", () => {
 /* -------------------------------------------- */
 
 const PATCHES_ON = () => ({ penaltyFix: true, threatFix: true });
+/** One installation's state: what each prepared item folded and the roll clones that keep the base. */
+const engine = createEngine({ patches: PATCHES_ON });
 
 let nextId = 0;
 function fakeEffect({ name, changes, onuse = true, automatic = true, types = ["self"], names = [], disabled = false, transfer = !onuse, status = null, temporary = false, origin, parent, id }) {
@@ -441,10 +444,10 @@ test("roll clone: an actor effect on the critical keeps the whole chain on the r
   const actorEffect = fakeEffect({ name: "Aura", changes: [{ key: "criticoX", type: "add", value: 1 }], parent: actor });
 
   const clone = cloneWeapon(real);
-  foldItemSystem(clone.system, "effective", PATCHES_ON());
+  engine.foldItemSystem(clone.system, "effective", PATCHES_ON());
   assert.equal(clone.system.criticoM, 17, "the preparation folds the own chain");
 
-  const wrapped = createOnUseWrapper(systemOnUse([actorEffect]), { mode: () => "effective", patches: PATCHES_ON });
+  const wrapped = createOnUseWrapper(systemOnUse([actorEffect]), engine, { mode: () => "effective", patches: PATCHES_ON });
   const list = wrapped.call(clone);
   assert.equal(list.length, 2);
   assert.deepEqual(list[0].system.changes, [{ key: "criticoM", type: "add", value: -2 }]);
@@ -454,7 +457,7 @@ test("roll clone: an actor effect on the critical keeps the whole chain on the r
 
   // Display mode gives the same roll.
   const displayClone = cloneWeapon(real);
-  const displayList = createOnUseWrapper(systemOnUse([actorEffect]), { mode: () => "display" }).call(displayClone);
+  const displayList = createOnUseWrapper(systemOnUse([actorEffect]), engine, { mode: () => "display" }).call(displayClone);
   const display = rollCrit(displayClone, displayList);
   assert.equal(critLabel(display.criticoM, display.criticoX), "17/3x");
 });
@@ -463,7 +466,7 @@ test("real item (usage-effect-max query): base during the call, folded value res
   const actor = fakeActor();
   const real = fakeWeapon({ actor, effects: [{ name: "Ameaçadora", changes: [{ key: "criticoM", type: "multiply", value: 2 }] }] });
   actor.items.set(real.id, real);
-  foldItemSystem(real.system, "effective", PATCHES_ON());
+  engine.foldItemSystem(real.system, "effective", PATCHES_ON());
   assert.equal(real.system.criticoM, 17);
   let seen;
   const inner = systemOnUse([fakeEffect({ name: "Aura", changes: [{ key: "criticoX", type: "add", value: 1 }], parent: actor })]);
@@ -472,13 +475,14 @@ test("real item (usage-effect-max query): base during the call, folded value res
       seen = this.system.criticoM;
       return inner.call(this);
     },
+    engine,
     { mode: () => "effective", patches: PATCHES_ON }
   );
   const list = wrapped.call(real);
   assert.equal(seen, 19);
   assert.equal(list.length, 2, "nothing removed on the real item");
   assert.equal(real.system.criticoM, 17);
-  assert.throws(() => createOnUseWrapper(() => { throw new Error("boom"); }, { mode: () => "effective" }).call(real));
+  assert.throws(() => createOnUseWrapper(() => { throw new Error("boom"); }, engine, { mode: () => "effective" }).call(real));
   assert.equal(real.system.criticoM, 17, "restored even on error");
 });
 
@@ -493,14 +497,14 @@ test("roll clone: both plans fold the same ids → folded effects removed, folde
   });
   actor.items.set(real.id, real);
   const clone = cloneWeapon(real);
-  foldItemSystem(clone.system, "effective", PATCHES_ON());
+  engine.foldItemSystem(clone.system, "effective", PATCHES_ON());
   assert.equal(clone.system.criticoM, 18);
-  const list = createOnUseWrapper(systemOnUse(), { mode: () => "effective", patches: PATCHES_ON }).call(clone);
+  const list = createOnUseWrapper(systemOnUse(), engine, { mode: () => "effective", patches: PATCHES_ON }).call(clone);
   assert.equal(list.length, 0);
   assert.equal(rollCrit(clone, list).criticoM, 18);
 
   const displayClone = cloneWeapon(real);
-  const displayList = createOnUseWrapper(systemOnUse(), { mode: () => "display" }).call(displayClone);
+  const displayList = createOnUseWrapper(systemOnUse(), engine, { mode: () => "display" }).call(displayClone);
   assert.equal(rollCrit(displayClone, displayList).criticoM, 18);
 });
 
@@ -509,9 +513,9 @@ test("roll clone: different plan ids → nothing removed, base kept", () => {
   const real = fakeWeapon({ actor, effects: [{ name: "Precisa", changes: [{ key: "criticoM", type: "add", value: -1 }] }] });
   actor.items.set(real.id, real);
   const clone = cloneWeapon(real);
-  foldItemSystem(clone.system, "effective", PATCHES_ON());
+  engine.foldItemSystem(clone.system, "effective", PATCHES_ON());
   const stray = fakeEffect({ name: "Estranho", changes: [{ key: "criticoX", type: "add", value: 1 }], parent: clone });
-  const list = createOnUseWrapper(systemOnUse([stray]), { mode: () => "effective", patches: PATCHES_ON }).call(clone);
+  const list = createOnUseWrapper(systemOnUse([stray]), engine, { mode: () => "effective", patches: PATCHES_ON }).call(clone);
   assert.equal(list.length, 2);
   assert.equal(clone.system.criticoM, 19);
   const result = rollCrit(clone, list);
@@ -520,10 +524,10 @@ test("roll clone: different plan ids → nothing removed, base kept", () => {
 
 test("unowned weapon in effective mode: no fold, the badge shows 18, the wrapper changes nothing", () => {
   const item = fakeWeapon({ effects: [{ name: "Precisa", changes: [{ key: "criticoM", type: "add", value: -1 }] }] });
-  foldItemSystem(item.system, "effective", PATCHES_ON());
+  engine.foldItemSystem(item.system, "effective", PATCHES_ON());
   assert.equal(item.system.criticoM, 19);
-  assert.equal(statsFor(item, "effective", PATCHES_ON()).criticoM.final, 18);
-  const list = createOnUseWrapper(systemOnUse(), { mode: () => "effective", patches: PATCHES_ON }).call(item);
+  assert.equal(engine.statsFor(item, "effective", PATCHES_ON()).criticoM.final, 18);
+  const list = createOnUseWrapper(systemOnUse(), engine, { mode: () => "effective", patches: PATCHES_ON }).call(item);
   assert.deepEqual(list, []);
   assert.equal(item.system.criticoM, 19);
 });
@@ -536,11 +540,11 @@ for (const [label, spec] of [
     const actor = fakeActor();
     const real = fakeWeapon({ actor, effects: [{ name: "Precisa", changes: [{ key: "criticoM", type: "add", value: -1 }], ...spec }] });
     actor.items.set(real.id, real);
-    assert.equal(statsFor(real, "display", PATCHES_ON()).criticoM.final, 18);
+    assert.equal(engine.statsFor(real, "display", PATCHES_ON()).criticoM.final, 18);
     for (const mode of ["display", "effective"]) {
       const clone = cloneWeapon(real);
-      if (mode === "effective") foldItemSystem(clone.system, mode, PATCHES_ON());
-      const list = createOnUseWrapper(systemOnUse(), { mode: () => mode, patches: PATCHES_ON }).call(clone);
+      if (mode === "effective") engine.foldItemSystem(clone.system, mode, PATCHES_ON());
+      const list = createOnUseWrapper(systemOnUse(), engine, { mode: () => mode, patches: PATCHES_ON }).call(clone);
       assert.equal(rollCrit(clone, list).criticoM, 18, mode);
     }
   });
@@ -564,7 +568,7 @@ function fakeArmor({ actor = null, penalidade = -5, value = 10, effects = [], id
   return item;
 }
 
-function skipFor(item, effect, change, consumed = true) {
+function skipFor(item, effect, change, consumed = true, eng = engine) {
   return shouldSkipFoldedChange({
     mode: "effective",
     change,
@@ -575,13 +579,13 @@ function skipFor(item, effect, change, consumed = true) {
     tipo: item._source.system.tipo,
     hasStatus: effect.system.status !== null,
     onuse: effect.system.onuse,
-    folded: foldedState(item)
+    folded: eng.foldedState(item)
   });
 }
 
 test("effective armor: Ajustada folded into the item and skipped on the actor", () => {
   const armorItem = fakeArmor({ actor: fakeActor(), effects: [{ name: "Ajustada", changes: [pda(-1)] }, { name: "Reforçada", changes: [bonus(1)] }] });
-  foldItemSystem(armorItem.system, "effective", PATCHES_ON());
+  engine.foldItemSystem(armorItem.system, "effective", PATCHES_ON());
   assert.equal(armorItem.system.armadura.penalidade, -4);
   assert.equal(armorItem.system.armadura.value, 11);
   assert.equal(armorItem._source.system.armadura.penalidade, -5);
@@ -590,7 +594,7 @@ test("effective armor: Ajustada folded into the item and skipped on the actor", 
   // A second equipped armor is not read by prepareDefense: its changes keep applying to the actor.
   assert.equal(skipFor(armorItem, armorItem.effects[1], armorItem.effects[1].system.changes[0], false), false);
   // Idempotent.
-  foldItemSystem(armorItem.system, "effective", PATCHES_ON());
+  engine.foldItemSystem(armorItem.system, "effective", PATCHES_ON());
   assert.equal(armorItem.system.armadura.penalidade, -4);
   // Not in display mode.
   assert.equal(shouldSkipFoldedChange({ mode: "display", change: pda(-1), targetIsActor: true, ownedByTarget: true, itemType: "equipamento", tipo: "pesada", hasStatus: false, folded: { penalty: true } }), false);
@@ -598,7 +602,7 @@ test("effective armor: Ajustada folded into the item and skipped on the actor", 
 
 test("effective armor: a status Defense bonus (immune bearer) is neither folded nor skipped", () => {
   const armorItem = fakeArmor({ actor: fakeActor(), effects: [{ name: "Mental", changes: [bonus(2)], status: { category: "mental" } }] });
-  foldItemSystem(armorItem.system, "effective", PATCHES_ON());
+  engine.foldItemSystem(armorItem.system, "effective", PATCHES_ON());
   assert.equal(armorItem.system.armadura.value, 10);
   assert.equal(skipFor(armorItem, armorItem.effects[0], armorItem.effects[0].system.changes[0]), false);
 });
@@ -609,7 +613,7 @@ test("effective armor: a status pda increase keeps the base penalty and nothing 
     penalidade: -1,
     effects: [{ name: "Sob Medida", changes: [pda(-2)] }, { name: "Status", changes: [pda(1)], status: { category: "x" } }]
   });
-  foldItemSystem(armorItem.system, "effective", PATCHES_ON());
+  engine.foldItemSystem(armorItem.system, "effective", PATCHES_ON());
   assert.equal(armorItem.system.armadura.penalidade, -1);
   assert.equal(skipFor(armorItem, armorItem.effects[0], armorItem.effects[0].system.changes[0]), false);
 });
@@ -620,18 +624,122 @@ test("effective armor: an actor pda effect linked by origin keeps the base penal
   actor.effects.push(fakeEffect({ name: "Ligado", changes: [pda(1)], onuse: false, origin: "Actor.x.Item.a1", parent: actor }));
   const parseUuid = (uuid) => ({ id: uuid.split(".").pop() });
   assert.equal(linkedPdaCount(armorItem, parseUuid), 1);
-  globalThis.foundry = { utils: { parseUuid } };
-  try {
-    foldItemSystem(armorItem.system, "effective", PATCHES_ON());
-  } finally {
-    delete globalThis.foundry;
-  }
+  const linked = createEngine({ patches: PATCHES_ON, parseUuid: () => parseUuid });
+  linked.foldItemSystem(armorItem.system, "effective", PATCHES_ON());
   assert.equal(armorItem.system.armadura.penalidade, -1);
-  assert.equal(skipFor(armorItem, armorItem.effects[0], armorItem.effects[0].system.changes[0]), false);
+  assert.equal(skipFor(armorItem, armorItem.effects[0], armorItem.effects[0].system.changes[0], true, linked), false);
 });
 
 test("detailedStats keeps the critical range and multiplier together for the chat snapshot", () => {
   const result = detailedStats(stats(weapon({ toHit: "+5", dano: "1d8" }), [macica()]));
   assert.deepEqual(Object.keys(result).sort(), ["criticoM", "criticoX"]);
   assert.equal(critLabel(result.criticoM.final, result.criticoX.final), "19/3x");
+});
+
+/* -------------------------------------------- */
+/*  Installation (fake platform)                */
+/* -------------------------------------------- */
+
+/** A fake Tormenta20 on a fake platform: item, effect and actor classes and the item data models. */
+function fakeSystem(settings = { itemEffectiveStats: "effective" }) {
+  class FakeActor {}
+  class ItemT20 {
+    _allApplicableOnUseEffects() {
+      return [];
+    }
+    prepareFinalAttributes() {}
+  }
+  class EffectT20 {
+    static applyChange() {
+      return "applied";
+    }
+    static applyChangeField() {}
+  }
+  class ActorT20 extends FakeActor {
+    applyActiveEffects() {}
+  }
+  class EquipmentData {
+    prepareDerivedData() {}
+  }
+  class WeaponData {
+    prepareDerivedData() {}
+  }
+  const speaker = { actor: null };
+  const platform = createFakePlatform({
+    settings,
+    classes: {
+      item: ItemT20,
+      activeEffect: EffectT20,
+      actor: ActorT20,
+      chatMessage: { getSpeakerActor: () => speaker.actor }
+    },
+    core: { Actor: FakeActor },
+    config: { Item: { dataModels: { equipamento: EquipmentData, arma: WeaponData } } },
+    namespaceSettings: { "tormenta20.equipmentSlots": false }
+  });
+  const wraps = createWrapRegistry();
+  const kernel = createTestKernel({ platform, wraps, features: [itemEffectiveStats] });
+  return { platform, wraps, kernel, speaker, ItemT20, EffectT20, ActorT20, EquipmentData };
+}
+
+/** An equipped armor with Ajustada, owned by an actor of the fake system, prepared through its data model. */
+function preparedArmor(sys) {
+  const actor = Object.setPrototypeOf(fakeActor(), sys.ActorT20.prototype);
+  const armorItem = fakeArmor({ actor, effects: [{ name: "Ajustada", changes: [pda(-1)] }] });
+  Object.setPrototypeOf(armorItem.system, sys.EquipmentData.prototype);
+  armorItem.system.prepareDerivedData();
+  return { actor, armorItem };
+}
+
+test("install wraps the item, the effect and the data models as the outermost item-effective-stats", () => {
+  const sys = fakeSystem();
+  sys.kernel.install(itemEffectiveStats);
+  const own = sys.wraps.list().filter((entry) => entry.owners.includes("item-effective-stats"));
+  assert.deepEqual(own.map((entry) => entry.label).sort(), [
+    "EffectT20.applyChange",
+    "EquipmentData#prepareDerivedData",
+    "ItemT20#_allApplicableOnUseEffects",
+    "ItemT20#prepareFinalAttributes",
+    "WeaponData#prepareDerivedData"
+  ]);
+  for (const entry of own) assert.equal(entry.owners.at(-1), "item-effective-stats", `${entry.label} is the outermost`);
+  assert.deepEqual(
+    sys.platform.hookCalls.map((hook) => hook.name),
+    ["renderItemSheetT20", "renderActorSheetT20", "preCreateChatMessage", "renderChatMessageHTML"]
+  );
+});
+
+test("install: the folded armor change is skipped on the actor, and two installs keep their own fold state", () => {
+  const a = fakeSystem();
+  const b = fakeSystem();
+  a.kernel.install(itemEffectiveStats);
+  b.kernel.install(itemEffectiveStats);
+  const { actor, armorItem } = preparedArmor(a);
+  assert.equal(armorItem.system.armadura.penalidade, -6, "without armor-penalty-reduction the system adds the penalty");
+  const change = { ...armorItem.effects[0].system.changes[0], effect: armorItem.effects[0] };
+  assert.equal(a.EffectT20.applyChange(actor, change), undefined, "folded by this install: skipped");
+  assert.equal(b.EffectT20.applyChange(actor, change), "applied", "the other install never folded this item");
+});
+
+test("install: display mode folds nothing and the actor keeps every change", () => {
+  const sys = fakeSystem({ itemEffectiveStats: "display" });
+  sys.kernel.install(itemEffectiveStats);
+  const { actor, armorItem } = preparedArmor(sys);
+  assert.equal(armorItem.system.armadura.penalidade, -5);
+  const change = { ...armorItem.effects[0].system.changes[0], effect: armorItem.effects[0] };
+  assert.equal(sys.EffectT20.applyChange(actor, change), "applied");
+});
+
+test("preCreateChatMessage stores the snapshot of the item's effective stats", () => {
+  const sys = fakeSystem({ itemEffectiveStats: "display" });
+  sys.kernel.install(itemEffectiveStats);
+  const actor = fakeActor();
+  const armorItem = fakeArmor({ actor, effects: [{ name: "Reforçada", changes: [bonus(1)] }] });
+  sys.speaker.actor = actor;
+  const updates = [];
+  const message = { speaker: {}, updateSource: (data) => updates.push(data) };
+  const content = `<div class="tormenta20 chat-card item-card" data-actor-id="A1" data-item-id="${armorItem.id}">`;
+  sys.platform.callHook("preCreateChatMessage", message, { content });
+  assert.equal(updates.length, 1);
+  assert.equal(updates[0]["flags.t20-community-patches.effectiveStats"]["armadura.value"].final, 11);
 });

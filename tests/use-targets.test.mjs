@@ -1,7 +1,17 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { USE_PURPOSES, canSeeTokenName, targetRecord } from "../scripts/lib/targets.mjs";
-import { currentUseTargets as uses } from "./support/legacy-services.mjs";
+import { createFakePlatform, createTestKernel } from "./support/fake-platform.mjs";
+
+/** The kernel of the current setup: one use-targets service per fake ItemT20 class, as in main.mjs. */
+const current = { kernel: null, targets: new Set() };
+const uses = () => current.kernel.service("use-targets");
+
+function boot(ItemClass, targets = new Set()) {
+  current.targets = targets;
+  const platform = createFakePlatform({ classes: { item: ItemClass }, targets: () => [...current.targets] });
+  current.kernel = createTestKernel({ platform });
+}
 
 const state = { on: true };
 const consumer = () => state.on;
@@ -51,11 +61,10 @@ function setup({ on = true } = {}) {
       return "card";
     }
   }
-  globalThis.CONFIG = { Item: { documentClass: ItemT20 } };
-  globalThis.game = { user: { targets: new Set() } };
+  boot(ItemT20);
   uses().registerTargetConsumer(consumer);
   const step = (name) => seen.find((entry) => entry.step === name);
-  return { ItemT20, seen, hooks, step, setTargets: (...tokens) => (game.user.targets = new Set(tokens)) };
+  return { ItemT20, seen, hooks, step, setTargets: (...tokens) => (current.targets = new Set(tokens)) };
 }
 
 test("inside a use the same frozen arrays reach rollAttack, rollDamage and displayCard", async () => {
@@ -192,11 +201,10 @@ test("a roll that throws synchronously after the clone releases the clone", asyn
       throw new Error("sync");
     }
   }
-  globalThis.CONFIG = { Item: { documentClass: SyncItem } };
-  globalThis.game = { user: { targets: new Set([token("A")]) } };
+  boot(SyncItem, new Set([token("A")]));
   uses().registerTargetConsumer(consumer);
   await assert.rejects(new SyncItem().roll(), /sync/);
-  game.user.targets = new Set([token("B")]);
+  current.targets = new Set([token("B")]);
   assert.equal(uses().useTargetRecords(copy)[0].uuid, "Scene.s.Token.B");
 });
 

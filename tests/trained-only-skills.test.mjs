@@ -1,14 +1,8 @@
 import { test } from "node:test";
-import { createPlatform } from "../scripts/platform/foundry.mjs";
-import { createTestKernel } from "./support/fake-platform.mjs";
+import { createFakePlatform, createTestKernel } from "./support/fake-platform.mjs";
 import assert from "node:assert/strict";
-import {
-  appliesToActor,
-  decideDialog,
-  decideRoll,
-  installTrainedOnlyRule,
-  needsCardNote
-} from "../scripts/rules/trained-only-skills.mjs";
+import { appliesToActor, decideDialog, decideRoll, needsCardNote } from "../scripts/features/trained-only-skills/domain.mjs";
+import trainedOnlySkills from "../scripts/features/trained-only-skills/index.mjs";
 
 const auto = [{ id: "e", automatic: true }];
 const manual = [{ id: "e", automatic: false }];
@@ -51,7 +45,7 @@ test("decideDialog and needsCardNote", () => {
 });
 
 /* -------------------------------------------- */
-/*  Integration with Foundry mocks              */
+/*  Integration with a fake platform            */
 /* -------------------------------------------- */
 
 const ECLETICO = { key: "roll", type: "add", value: "@treino" };
@@ -70,18 +64,8 @@ function useEffect({ id, name = id, automatic = false, custo = 1, changes = [] }
 const escapeHTML = (text) =>
   String(text).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
-let fakes = null;
-
+/** A fresh platform and kernel per test: the installs do not share state. */
 function setupFoundry() {
-  if (fakes) {
-    fakes.settings.mode = "block";
-    fakes.settings.usage = "default";
-    fakes.warnings.length = 0;
-    return fakes;
-  }
-  const settings = { mode: "block", usage: "default" };
-  const warnings = [];
-
   /** Copies the parts of ActorT20#rollPericia (T20:7589-7700) and #displayCard the rule depends on. */
   class Actor {
     constructor({ type = "character", name = "Guerreiro", pericias = {}, effects = [] } = {}) {
@@ -127,45 +111,21 @@ function setupFoundry() {
     }
   }
 
-  Object.assign(globalThis, {
-    HTMLElement: Element,
-    CONFIG: {
-      Actor: { documentClass: Actor },
-      T20: { pericias: { mist: { trainedOnly: true }, ladi: { trainedOnly: true }, atle: {} } }
-    },
-    tormenta20: { applications: { AbilityUseDialog } },
-    game: {
-      settings: {
-        get: (scope, key) => (scope === "tormenta20" && key === "UsageConfig" ? settings.usage : settings.mode)
-      },
-      i18n: { lang: "pt-BR", localize: (key) => key, format: (key, data) => `${key}${JSON.stringify(data)}` }
-    },
-    ui: { notifications: { warn: (msg) => warnings.push(msg) } },
-    foundry: {
-      applications: {
-        ux: {
-          FormDataExtended: class {
-            constructor(form) {
-              this.object = form.formData;
-            }
-          }
-        }
-      },
-      utils: {
-        escapeHTML,
-        expandObject: (flat) => {
-          const out = {};
-          for (const [path, value] of Object.entries(flat)) {
-            const keys = path.split(".");
-            const last = keys.pop();
-            keys.reduce((o, k) => (o[k] ??= {}), out)[last] = value;
-          }
-          return out;
-        }
-      }
-    }
+  const platform = createFakePlatform({
+    settings: { trainedOnlySkillsRule: "block" },
+    namespaceSettings: { "tormenta20.UsageConfig": "default" },
+    classes: { actor: Actor },
+    t20: { applications: { AbilityUseDialog } },
+    t20Config: { pericias: { mist: { trainedOnly: true }, ladi: { trainedOnly: true }, atle: {} } },
+    forms: { data: (form) => form.formData },
+    i18n: { format: (key, data) => `${key}${JSON.stringify(data)}` }
   });
-  installTrainedOnlyRule(createTestKernel({ platform: createPlatform() }).service("use-dialog-guard"));
+  platform.utils.escapeHTML = escapeHTML;
+  const warnings = [];
+  platform.notify.warn = (msg) => warnings.push(msg);
+  const setMode = (mode) => platform.settings.set("trainedOnlySkillsRule", mode);
+  const setUsage = (usage) => platform.settingsOf("tormenta20").set("UsageConfig", usage);
+  createTestKernel({ platform, features: [trainedOnlySkills] }).install(trainedOnlySkills);
 
   const guerreiro = (extra = {}) =>
     new Actor({
@@ -187,8 +147,7 @@ function setupFoundry() {
     const item = { name: p.label, type: "pericia", id: key, actor, ...p, applicableOnUseEffects: actor.effects };
     return new AbilityUseDialog(item, formData);
   };
-  fakes = { settings, warnings, Actor, guerreiro, bardo, dialogFor };
-  return fakes;
+  return { platform, setMode, setUsage, warnings, Actor, guerreiro, bardo, dialogFor };
 }
 
 const SHIFT = { event: { shiftKey: true } };
@@ -250,21 +209,21 @@ test("block: the dialog stays open until the grant is checked", () => {
 });
 
 test("warn: the dialog warns once and lets the use go on; off does nothing", () => {
-  const { settings, warnings, bardo, dialogFor } = setupFoundry();
-  settings.mode = "warn";
+  const { setMode, warnings, bardo, dialogFor } = setupFoundry();
+  setMode("warn");
   const dialog = dialogFor(bardo(false), "ladi", { "aprs.ecl.aplica": false });
   assert.equal(dialog.submit(), "submitted");
   assert.equal(warnings.length, 1);
   assert.match(warnings[0], /Warned/);
 
-  settings.mode = "off";
+  setMode("off");
   assert.equal(dialogFor(bardo(false), "ladi", {}).submit(), "submitted");
   assert.equal(warnings.length, 1);
 });
 
 test("warn without the dialog: one warning and the escaped note on the card, keeping the flavor", async () => {
-  const { settings, warnings, guerreiro } = setupFoundry();
-  settings.mode = "warn";
+  const { setMode, warnings, guerreiro, Actor } = setupFoundry();
+  setMode("warn");
   const actor = guerreiro({ name: "<i>G</i>" });
   actor.system.pericias.mist.label = "<b>x</b>";
   assert.equal(await actor.rollPericia("mist", SHIFT), "card");
@@ -277,7 +236,7 @@ test("warn without the dialog: one warning and the escaped note on the card, kee
   assert.doesNotMatch(actor.cards[0], /<b>x<\/b>|<i>G<\/i>/);
 
   // An existing flavor is kept.
-  const proto = globalThis.CONFIG.Actor.documentClass.prototype;
+  const proto = Actor.prototype;
   const cards = [];
   const flavored = guerreiro();
   flavored.cards = cards;
@@ -288,9 +247,9 @@ test("warn without the dialog: one warning and the escaped note on the card, kee
 });
 
 test("warn with message: false: exactly one warning and no card", async () => {
-  const { settings, warnings, guerreiro } = setupFoundry();
-  settings.mode = "warn";
-  settings.usage = "shift"; // a plain click skips the dialog
+  const { setMode, setUsage, warnings, guerreiro } = setupFoundry();
+  setMode("warn");
+  setUsage("shift"); // a plain click skips the dialog
   const actor = guerreiro();
   assert.equal(await actor.rollPericia("mist", { message: false }), "roll");
   assert.equal(warnings.length, 1);
@@ -298,8 +257,8 @@ test("warn with message: false: exactly one warning and no card", async () => {
 });
 
 test("warn: the card note follows the grants of the call (dialog aprs or Aplicar Sempre)", async () => {
-  const { settings, bardo } = setupFoundry();
-  settings.mode = "warn";
+  const { setMode, bardo } = setupFoundry();
+  setMode("warn");
   const actor = bardo(false);
   await actor.rollPericia("ladi", { aprs: { ecl: { aplica: 1 } } });
   await actor.rollPericia("ladi", { aprs: { ecl: { aplica: 0 } } });
@@ -311,8 +270,8 @@ test("warn: the card note follows the grants of the call (dialog aprs or Aplicar
 });
 
 test("off: the original runs with the same this and arguments, and the card is untouched", async () => {
-  const { settings, warnings, guerreiro } = setupFoundry();
-  settings.mode = "off";
+  const { setMode, warnings, guerreiro } = setupFoundry();
+  setMode("off");
   const actor = guerreiro();
   const options = { event: { shiftKey: false } };
   assert.equal(await actor.rollPericia("mist", options), "card");
@@ -323,7 +282,7 @@ test("off: the original runs with the same this and arguments, and the card is u
 });
 
 test("overlapping calls do not interfere, and a failing check lets the roll go on", async () => {
-  const { warnings, guerreiro } = setupFoundry();
+  const { platform, warnings, guerreiro } = setupFoundry();
   const blocked = guerreiro();
   const allowed = guerreiro();
   allowed.system.pericias.mist.treinado = 1;
@@ -335,11 +294,6 @@ test("overlapping calls do not interfere, and a failing check lets the roll go o
   broken.traverseEmbeddedDocuments = () => {
     throw new Error("boom");
   };
-  const error = console.error;
-  console.error = () => {};
-  try {
-    assert.equal(await broken.rollPericia("mist"), "card");
-  } finally {
-    console.error = error;
-  }
+  assert.equal(await broken.rollPericia("mist"), "card");
+  assert.match(platform.logs.at(-1)?.args.join(" "), /trained-only-skills: check failed, the roll goes on/);
 });

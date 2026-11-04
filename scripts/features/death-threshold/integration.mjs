@@ -4,19 +4,24 @@ import { ACTOR_TYPES, applyDeathThreshold, diagnoseNpcSource, diagnoseSamples } 
 
 const LOG = "t20-community-patches | death-threshold:";
 
-/** While true, the wrappers keep the system's value, so lateProbe measures the system and not this patch. */
-let bypass = false;
-/** Probe actors whose system prepareDerivedData completed while bypassed. */
-const prepared = new WeakSet();
-let warned = false;
+/**
+ * State shared by install and lateProbe (ctx.state):
+ * - bypass: while true, the wrappers keep the system's value, so lateProbe measures the system and not this patch;
+ * - prepared: probe actors whose system prepareDerivedData completed while bypassed.
+ * @param {FeatureContext} ctx
+ */
+function probeState(ctx) {
+  ctx.state.probe ??= { bypass: false, prepared: new WeakSet(), warned: false };
+  return ctx.state.probe;
+}
 
 /** @param {FeatureContext} ctx */
-function setThreshold(ctx, system) {
+function setThreshold(ctx, state, system) {
   try {
     applyDeathThreshold(system);
   } catch (error) {
-    if (!warned) {
-      warned = true;
+    if (!state.warned) {
+      state.warned = true;
       ctx.log.warn("could not set the minimum HP; keeping the system's value.", error);
     }
   }
@@ -24,6 +29,7 @@ function setThreshold(ctx, system) {
 
 /** @param {FeatureContext} ctx */
 export function install(ctx) {
+  const state = probeState(ctx);
   const dataModels = ctx.platform.config.document("Actor").dataModels;
   const prototypes = new Set(ACTOR_TYPES.map((type) => dataModels?.[type]?.prototype).filter(Boolean));
   for (const proto of prototypes) {
@@ -31,8 +37,8 @@ export function install(ctx) {
     if (typeof original !== "function") continue;
     ctx.wrap(proto, "prepareDerivedData", function (original, ...args) {
       const result = original.apply(this, args);
-      if (!bypass) setThreshold(ctx, this);
-      else if (this.parent) prepared.add(this.parent);
+      if (!state.bypass) setThreshold(ctx, state, this);
+      else if (this.parent) state.prepared.add(this.parent);
       return result;
     });
   }
@@ -73,19 +79,20 @@ const PROBE_ACTORS = [
 export async function lateProbe(ctx) {
   const ActorClass = ctx.platform.classes.actor;
   const samples = [];
-  bypass = true;
+  const state = probeState(ctx);
+  state.bypass = true;
   try {
     for (const { label, expectedMax, data } of PROBE_ACTORS) {
       try {
         const actor = new ActorClass({ name: `t20cp death-threshold probe (${label})`, ...data });
         const pv = actor.system?.attributes?.pv;
-        samples.push({ label, expectedMax, max: pv?.max, min: pv?.min, prepared: prepared.has(actor) });
+        samples.push({ label, expectedMax, max: pv?.max, min: pv?.min, prepared: state.prepared.has(actor) });
       } catch (error) {
         console.debug(`${LOG} probe actor "${label}" failed`, error);
       }
     }
   } finally {
-    bypass = false;
+    state.bypass = false;
   }
   return diagnoseSamples(samples, PROBE_ACTORS.map((p) => p.label));
 }

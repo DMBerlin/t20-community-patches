@@ -5,7 +5,7 @@ import patch from "../scripts/features/death-threshold/index.mjs";
 import { applyDeathThreshold, diagnoseNpcSource, diagnoseSamples } from "../scripts/features/death-threshold/domain.mjs";
 import { wrapDamageFloor } from "../scripts/lib/death-threshold.mjs";
 import { isSystemVersionAffected } from "../scripts/lib/version.mjs";
-import { withNonlethalCall } from "../scripts/rules/nonlethal-damage.mjs";
+import { withNonlethalCall } from "../scripts/features/nonlethal-damage/domain/index.mjs";
 
 test("deathThreshold uses -10 or minus half the maximum, whichever is lower", () => {
   const cases = [[8, -10], [12, -10], [19, -10], [20, -10], [21, -10], [22, -11], [30, -15], [0, -10], ["25", -12]];

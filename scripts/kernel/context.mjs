@@ -33,22 +33,35 @@ export function prefixed(log, id) {
  * @param {{wrap: Function}} kernel.wraps
  * @param {ReturnType<import("./services.mjs").createServiceRegistry>} [kernel.services]
  * @param {ReturnType<import("./features.mjs").createFeatureDirectory>} [kernel.features]
+ * @param {(name: string, value: object) => void} [kernel.publish]  Adds `api.<name>` (see main.mjs).
+ * @param {ReturnType<import("./settings.mjs").createSettingListeners>} [kernel.settingListeners]
  * @returns {import("./feature.mjs").FeatureContext}
  */
 export function createFeatureContext(platform, feature, kernel) {
   const declared = new Set((feature.settings ?? []).map((spec) => spec.key));
   const features = kernel.features?.forFeature(feature) ?? noFeatures(feature);
+  const owner = feature.wrapOwner ?? feature.id;
   return Object.freeze({
     id: feature.id,
     platform,
     log: prefixed(platform.log, feature.id),
     hooks: platform.hooks,
-    wrap: (target, method, wrapper, options) => kernel.wraps.wrap(target, method, feature.id, wrapper, options),
+    wrap: (target, method, wrapper, options) => kernel.wraps.wrap(target, method, owner, wrapper, options),
+    publish: (name, value) => {
+      if (!kernel.publish) throw new Error(`${feature.id}: no module API to publish "${name}"`);
+      kernel.publish(name, value);
+    },
     setting: (key) => {
       // Another feature's setting goes through ctx.features.setting, declared in interactsWith (#87).
       if (!declared.has(key)) throw new Error(`${feature.id}: setting "${key}" is not declared by this feature`);
       return platform.settings.get(key);
     },
+    onSettingChange: (key, fn) => {
+      if (!declared.has(key)) throw new Error(`${feature.id}: setting "${key}" is not declared by this feature`);
+      if (!kernel.settingListeners) throw new Error(`${feature.id}: no setting listeners for "${key}"`);
+      return kernel.settingListeners.on(key, fn);
+    },
+    state: {},
     services: servicesView(feature, kernel.services),
     features
   });

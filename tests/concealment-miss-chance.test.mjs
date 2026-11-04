@@ -5,21 +5,29 @@ import {
   annotate,
   autoSources,
   concealmentOutcomes,
-  installConcealmentRule,
   isMiss,
   missDie,
-  onRenderDialog,
   planChecks,
-  previewLines,
   resolveMissChance,
   targetLabel
-} from "../scripts/rules/concealment-miss-chance.mjs";
-import { installAttackVsDefenseRule } from "../scripts/rules/attack-vs-defense.mjs";
+} from "../scripts/features/concealment-miss-chance/domain.mjs";
+import concealmentMissChance from "../scripts/features/concealment-miss-chance/index.mjs";
+import {
+  onRenderDialog as renderDialog,
+  previewLines as preview
+} from "../scripts/features/concealment-miss-chance/integration.mjs";
+import attackVsDefense from "../scripts/features/attack-vs-defense/index.mjs";
 import { USE_PURPOSES } from "../scripts/lib/targets.mjs";
-import { currentUseTargets as uses, currentAttackOutcome as outcome } from "./support/legacy-services.mjs";
+import { createFakePlatform, createTestKernel } from "./support/fake-platform.mjs";
 
 const MODULE = "t20-community-patches";
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+/** The services and the rule's context of the last setup() (one kernel per setup). */
+const current = {};
+const uses = () => current.uses;
+const outcome = () => current.outcome;
+const previewLines = (item) => preview(current.ctx, item);
+const onRenderDialog = (app, html) => renderDialog(current.ctx, app, html);
 
 /* -------------------------------------------- */
 /*  Pure functions                              */
@@ -201,7 +209,7 @@ function makeToken(id, { name = id, defense = 10, statuses = [], displayName = 0
  *   order: install order of the module's rollAttack wrappers ("concealment", "avd"); the first is the innermost.
  */
 function setup({ rule = "on", avd = "off", order = ["concealment"], isGM = true } = {}) {
-  const settings = { [`${MODULE}.concealmentMissChance`]: rule, [`${MODULE}.attackVsDefenseRule`]: avd, "tormenta20.showFoeDc": true };
+  const env = { targets: new Set(), isGM };
   const docs = new Map();
   const seen = [];
   const calls = [];
@@ -209,16 +217,6 @@ function setup({ rule = "on", avd = "off", order = ["concealment"], isGM = true 
   const dialogHooks = [];
   const counts = { original: 0, concealment: 0, avd: 0 };
   const dice = { queue: [], created: [], fail: false };
-  globalThis.Hooks = { on: (name, fn) => name === "renderAbilityUseDialog" && dialogHooks.push(fn) };
-  globalThis.game = {
-    user: { isGM, targets: new Set() },
-    settings: { get: (scope, key) => settings[`${scope}.${key}`] },
-    i18n: {
-      has: (key) => key in STRINGS,
-      localize: (key) => STRINGS[key] ?? key,
-      format: (key, data) => (STRINGS[key] ?? key).replace(/\{(\w+)\}/g, (_, k) => data[k])
-    }
-  };
   class Roll {
     constructor(formula) {
       this.formula = formula;
@@ -231,7 +229,6 @@ function setup({ rule = "on", avd = "off", order = ["concealment"], isGM = true 
       return this;
     }
   }
-  globalThis.foundry = { utils: { fromUuidSync: (uuid) => docs.get(uuid) ?? null }, dice: { Roll } };
   globalThis.document = { createElement: (tag) => new FakeElement(tag), createTextNode: (text) => ({ textContent: String(text) }) };
 
   const attacker = { statuses: new Set() };
@@ -278,7 +275,24 @@ function setup({ rule = "on", avd = "off", order = ["concealment"], isGM = true 
       return this.html;
     }
   }
-  globalThis.CONFIG = { Item: { documentClass: ItemT20 }, ChatMessage: { documentClass: ChatMessageT20 } };
+  const platform = createFakePlatform({
+    settings: { concealmentMissChance: rule, attackVsDefenseRule: avd },
+    namespaceSettings: { "tormenta20.showFoeDc": true },
+    classes: { item: ItemT20, chatMessage: ChatMessageT20 },
+    targets: () => env.targets,
+    documents: { fromUuidSync: (uuid) => docs.get(uuid) ?? null, messages: () => [] },
+    dice: { Roll },
+    i18n: {
+      has: (key) => key in STRINGS,
+      localize: (key) => STRINGS[key] ?? key,
+      format: (key, data) => (STRINGS[key] ?? key).replace(/\{(\w+)\}/g, (_, k) => data[k])
+    }
+  });
+  platform.user.isGM = () => env.isGM;
+  const kernel = createTestKernel({ platform, features: [attackVsDefense, concealmentMissChance] });
+  current.uses = kernel.service("use-targets");
+  current.outcome = kernel.service("attack-outcome");
+  current.ctx = kernel.contextFor(concealmentMissChance);
   const proto = ItemT20.prototype;
   const count = (key) => {
     const inner = proto.rollAttack;
@@ -288,10 +302,10 @@ function setup({ rule = "on", avd = "off", order = ["concealment"], isGM = true 
     };
   };
   for (const key of order) {
-    if (key === "concealment") installConcealmentRule(uses(), outcome());
-    else installAttackVsDefenseRule(uses(), outcome());
+    kernel.install(key === "concealment" ? concealmentMissChance : attackVsDefense);
     count(key);
   }
+  for (const { name, fn } of platform.hookCalls) if (name === "renderAbilityUseDialog") dialogHooks.push(fn);
 
   const weapon = (overrides = {}) =>
     new ItemT20({
@@ -302,11 +316,11 @@ function setup({ rule = "on", avd = "off", order = ["concealment"], isGM = true 
     });
   const target = (...tokens) => {
     for (const token of tokens) docs.set(token.document.uuid, token.document);
-    game.user.targets = new Set(tokens);
+    env.targets = new Set(tokens);
   };
   const data = (item, name = "Ataque") => item.system.rolled[name]?.options[MODULE]?.concealment;
   const dialog = (app, html) => dialogHooks.forEach((fn) => fn(app, html));
-  return { ItemT20, ChatMessageT20, attacker, weapon, target, data, dialog, seen, calls, hooks, docs, dice, counts, settings };
+  return Object.assign(env, { ItemT20, ChatMessageT20, attacker, weapon, target, data, dialog, seen, calls, hooks, docs, dice, counts, platform, kernel });
 }
 
 /* -------------------------------------------- */
@@ -436,7 +450,7 @@ test("consecutive calls on the same object never inherit the previous checks", a
     assert.equal(outcome().getConcealmentChecks(item)[0].missed, true, second);
     assert.equal(item.system.rolled.Ataque._critical, false, second);
 
-    if (second === "off") env.settings[`${MODULE}.concealmentMissChance`] = "off";
+    if (second === "off") env.platform.settings.set("concealmentMissChance", "off");
     else env.dice.fail = true;
     item.system.rolled = {};
     const originalError = console.error;
@@ -588,8 +602,8 @@ test("both rules: the cancelled critical notice appears once on the card, in bot
 test("both rules: in hide mode a player sees no cancelled critical notice from either rule", async () => {
   for (const order of ORDERS) {
     const { item, env } = await combined(order, [makeToken("A", { defense: 5, statuses: ["invisivel"] })], [2]);
-    env.settings[`${MODULE}.attackVsDefenseVisibility`] = "hide";
-    game.user.isGM = false;
+    env.platform.settings.set("attackVsDefenseVisibility", "hide");
+    env.isGM = false;
     const { root, total } = card();
     const msg = new env.ChatMessageT20();
     Object.assign(msg, { isContentVisible: true, html: root, rolls: [{ ...item.system.rolled.Ataque, options: { ...item.system.rolled.Ataque.options, title: "Ataque" } }] });
@@ -686,7 +700,7 @@ test("renderHTML: the target name follows the reader's rights for the same messa
   token.document.displayName = 50;
   assert.match(await text(), /Bandido:/);
   token.document.displayName = 0;
-  game.user.isGM = true;
+  env.isGM = true;
   assert.match(await text(), /Bandido:/);
 });
 

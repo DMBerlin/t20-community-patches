@@ -8,6 +8,8 @@ import { createFeatureContext, createServiceContext } from "../../scripts/kernel
 import { createServiceRegistry } from "../../scripts/kernel/services.mjs";
 import { createFeatureDirectory } from "../../scripts/kernel/features.mjs";
 import { SERVICES } from "../../scripts/services/index.mjs";
+import { createPublished } from "../../scripts/kernel/publish.mjs";
+import { createSettingListeners } from "../../scripts/kernel/settings.mjs";
 
 const getProperty = (object, key) => key.split(".").reduce((value, part) => value?.[part], object);
 
@@ -37,6 +39,12 @@ const slugify = (text) =>
 
 let ids = 0;
 
+/** The CONST values the features read. */
+const FAKE_CONST = Object.freeze({
+  ACTIVE_EFFECT_SHOW_ICON: Object.freeze({ NEVER: 0, CONDITIONAL: 1, ALWAYS: 2 }),
+  TOKEN_DISPOSITIONS: Object.freeze({ SECRET: -2, HOSTILE: -1, NEUTRAL: 0, FRIENDLY: 1 })
+});
+
 /**
  * @param {object} [overrides]
  * @param {Record<string, unknown>} [overrides.settings]  Initial values of the module settings.
@@ -58,6 +66,15 @@ let ids = 0;
  * @param {Record<string, Function>} [overrides.helpers]  Handlebars helpers.
  * @param {object} [overrides.tokenHud]
  * @param {string} [overrides.userId]
+ * @param {object} [overrides.currentUser]                Value of platform.users.current() (default: {id, isGM}).
+ * @param {object} [overrides.users]                      Replaces any method of platform.users.
+ * @param {object} [overrides.chat]                       Replaces any method of platform.chat.
+ * @param {object} [overrides.ui]                         Replaces any method of platform.ui.
+ * @param {object} [overrides.apps]                       Value of platform.apps (application base classes).
+ * @param {object} [overrides.canvas]                     Replaces any method of platform.canvas.
+ * @param {object} [overrides.constants]                  Value of platform.constants().
+ * @param {object} [overrides.module]                     Replaces any method of platform.module.
+ * @param {string} [overrides.lang]                       Value of platform.i18n.lang() (default "pt-BR").
  */
 export function createFakePlatform(overrides = {}) {
   const store = new Map(Object.entries(overrides.settings ?? {}));
@@ -71,6 +88,8 @@ export function createFakePlatform(overrides = {}) {
   const foreign = new Map(Object.entries(overrides.namespaceSettings ?? {}));
   const foreignEntries = new Map();
   const user = { isGM: overrides.isGM ?? true, isActiveGM: overrides.isActiveGM ?? overrides.isGM ?? true };
+  const chatMessages = [];
+  const lang = overrides.lang ?? "pt-BR";
   const notifier = (level) => (message, options) => notes.push({ level, message, options });
   const logger = (level) => (...args) => logs.push({ level, args });
   const sourceOf =
@@ -111,10 +130,13 @@ export function createFakePlatform(overrides = {}) {
         return value;
       }
     },
-    i18n: overrides.i18n ?? {
+    i18n: {
       localize: (key) => key,
       format: (key, data) => `${key} ${JSON.stringify(data ?? {})}`,
-      has: () => true
+      has: () => true,
+      lang: () => lang,
+      listFormat: (items) => new Intl.ListFormat(lang).format(items),
+      ...overrides.i18n
     },
     notify: { info: notifier("info"), warn: notifier("warn"), error: notifier("error") },
     hooks: {
@@ -134,6 +156,7 @@ export function createFakePlatform(overrides = {}) {
       slugify,
       getRoute: (path) => path,
       debounce: (fn) => fn,
+      parseUuid: (uuid) => ({ id: String(uuid ?? "").split(".").at(-1) || undefined }),
       enrichHTML: async (html) => html
     },
     dice: overrides.dice ?? {},
@@ -144,7 +167,15 @@ export function createFakePlatform(overrides = {}) {
       const entry = overrides.sources?.[label];
       return typeof entry === "function" ? sourceOf(entry()) : (entry ?? null);
     },
-    module: { setApi: (value) => (api = value), api: () => api, systemCompatibility: () => undefined },
+    module: {
+      setApi: (value) => (api = value),
+      api: () => api,
+      systemCompatibility: () => undefined,
+      version: () => "0.0.0-test",
+      coreVersion: () => "14.369",
+      bugs: () => "https://example.test/issues",
+      ...overrides.module
+    },
     config: {
       document: (name) => overrides.config?.[name],
       setControlIcon: (name, value) => (configWrites[`controlIcons.${name}`] = value),
@@ -168,8 +199,37 @@ export function createFakePlatform(overrides = {}) {
     }),
     /** Registered SettingConfig of other namespaces, read by settingsOf(ns).entry(key). */
     foreignEntries,
-    canvas: { tokenHud: () => overrides.tokenHud },
+    canvas: {
+      tokenHud: () => overrides.tokenHud,
+      controlledTokens: () => [],
+      scene: () => undefined,
+      activeCombat: () => undefined,
+      ...overrides.canvas
+    },
     handlebars: { helpers: () => overrides.helpers },
+    constants: () => overrides.constants ?? FAKE_CONST,
+    users: {
+      current: () => overrides.currentUser ?? { id: overrides.userId ?? "user", isGM: user.isGM },
+      activeGM: () => undefined,
+      players: () => [],
+      designated: () => null,
+      whisperRecipients: () => [],
+      ...overrides.users
+    },
+    /** Messages created through platform.chat.create: {data, options}. */
+    chatMessages,
+    chat: {
+      create: async (data, options) => {
+        chatMessages.push({ data, options });
+        return { id: `msg${chatMessages.length}`, ...data };
+      },
+      speaker: (options) => ({ actor: options?.actor?.id, alias: options?.actor?.name }),
+      applyMode: (data, mode) => Object.assign(data, mode ? { messageMode: mode } : {}),
+      updateMessage: () => {},
+      ...overrides.chat
+    },
+    ui: { renderControls: () => {}, application: () => undefined, reloadConfirm: async () => {}, ...overrides.ui },
+    apps: overrides.apps ?? {},
     /** Runs the handlers registered for a hook, as Hooks.callAll. */
     callHook: (name, ...args) => {
       for (const hook of hooks.filter((h) => h.name === name)) hook.fn(...args);
@@ -183,7 +243,14 @@ export function createFakePlatform(overrides = {}) {
  * @returns {import("../../scripts/kernel/feature.mjs").FeatureContext}
  */
 export function createFakeContext(feature, platform = createFakePlatform(), wraps = createWrapRegistry(), kernel = {}) {
-  return createFeatureContext(platform, feature, { wraps, ...kernel });
+  return createFeatureContext(platform, feature, {
+    wraps,
+    publish: createPublished([]).add,
+    settingListeners: createSettingListeners((err) => {
+      throw err;
+    }),
+    ...kernel
+  });
 }
 
 /**
@@ -207,12 +274,25 @@ export function createProbeContext(feature, sources) {
  * @param {object[]} [options.services]
  */
 export function createTestKernel({ platform, wraps = createWrapRegistry(), features = [], status = [], services = SERVICES }) {
+  const published = createPublished([]);
+  const settingListeners = createSettingListeners((err) => {
+    throw err;
+  });
   const registry = createServiceRegistry(services, (service) => createServiceContext(platform, service, { wraps }));
   const directory = createFeatureDirectory({ features, status: () => status, getSetting: (key) => platform.settings.get(key) });
   const contexts = new Map();
   const contextFor = (feature) => {
     if (!contexts.has(feature.id)) {
-      contexts.set(feature.id, createFeatureContext(platform, feature, { wraps, services: registry, features: directory }));
+      contexts.set(
+        feature.id,
+        createFeatureContext(platform, feature, {
+          wraps,
+          services: registry,
+          features: directory,
+          publish: published.add,
+          settingListeners
+        })
+      );
     }
     return contexts.get(feature.id);
   };
@@ -221,6 +301,15 @@ export function createTestKernel({ platform, wraps = createWrapRegistry(), featu
     status,
     contextFor,
     service: (id) => registry.ensure(id),
+    /** Changes a module setting as Foundry would: stores it, then runs the spec's onChange and the listeners. */
+    async changeSetting(key, value) {
+      await platform.settings.set(key, value);
+      const spec = features.flatMap((f) => f.settings ?? []).find((s) => s.key === key);
+      spec?.onChange?.(value);
+      settingListeners.emit(key, value);
+    },
+    /** What the installed features published (api.<name>). */
+    published: () => published.entries(),
     install(feature) {
       for (const id of feature.services ?? []) registry.ensure(id);
       const ctx = contextFor(feature);

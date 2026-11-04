@@ -92,11 +92,6 @@ export function settingsOf(namespace) {
   });
 }
 
-/** @returns {{tokenHud(): object|undefined}} */
-export function createCanvas() {
-  return Object.freeze({ tokenHud: () => globalThis.canvas?.hud?.token });
-}
-
 /** @returns {{helpers(): Record<string, Function>|undefined}} */
 export function createHandlebars() {
   return Object.freeze({ helpers: () => globalThis.Handlebars?.helpers });

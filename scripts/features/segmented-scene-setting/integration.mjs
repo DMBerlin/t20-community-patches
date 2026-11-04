@@ -10,18 +10,6 @@ import {
 } from "./domain.mjs";
 import { createConfigClass } from "./ui.mjs";
 
-/**
- * The feature's context. The limit setting is a static SettingSpec, registered by the kernel right before install()
- * and always after isNeeded(ctx) (resolvePatchState probes every patch it may apply), so both bind the context here
- * for the spec's `type` and `onChange`.
- * @type {import("../../kernel/feature.mjs").FeatureContext|null}
- */
-let bound = null;
-
-function bind(ctx) {
-  bound = ctx;
-}
-
 const systemSettings = (ctx) => ctx.platform.settingsOf(SETTING_NAMESPACE);
 
 function getSetting(ctx) {
@@ -53,27 +41,23 @@ export const LIMIT_SPEC = {
   hint: "T20CP.SegmentedScene.Limit.Hint",
   scope: "world",
   // Built on registration, during "init": the core fields are not available when the module is imported by the tests.
-  get type() {
-    return new bound.platform.core.fields.NumberField({
+  typeOf: (platform) =>
+    new platform.core.fields.NumberField({
       required: true,
       nullable: false,
       integer: true,
       min: 1,
       initial: DEFAULT_LIMIT
-    });
-  },
+    }),
   default: DEFAULT_LIMIT,
-  onChange: () => {
-    if (bound) warnIfOverLimit(bound);
-  },
   centerId: "segmented-scene-limit"
 };
 
 /** @param {import("../../kernel/feature.mjs").FeatureContext} ctx */
 export function install(ctx) {
-  bind(ctx);
   const setting = getSetting(ctx);
   if (!setting) throw new Error(`${SETTING_NAMESPACE}.${SETTING_KEY} is not registered`);
+  ctx.onSettingChange(LIMIT_KEY, () => warnIfOverLimit(ctx));
   if (!needsFix(setting, ctx.platform.core.fields.DataField)) return;
 
   setting.config = false;
@@ -101,7 +85,6 @@ export function install(ctx) {
  * @returns {boolean|undefined}
  */
 export function isNeeded(ctx) {
-  bind(ctx);
   const setting = getSetting(ctx);
   const DataField = ctx.platform.core.fields?.DataField;
   if (!setting || !DataField) return undefined;

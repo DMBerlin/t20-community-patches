@@ -3,10 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
   attackFromRolls,
-  buildManeuverContent,
-  buildResultContent,
   findCanonicalResult,
-  installCombatManeuversRule,
   isMeleeAttackCard,
   maneuverConcealment,
   maneuverOutcome,
@@ -14,23 +11,45 @@ import {
   maneuverState,
   maneuverTest,
   maneuverWeapons,
-  onPassageClick,
-  onResistClick,
   resolveOpposed,
   selectVisibleResults,
   targetNameFor,
   versatileDefault
-} from "../scripts/rules/combat-maneuvers.mjs";
-import { installAttackVsDefenseRule } from "../scripts/rules/attack-vs-defense.mjs";
-import { installConcealmentRule } from "../scripts/rules/concealment-miss-chance.mjs";
-import { installSaveButtonRule } from "../scripts/rules/save-button.mjs";
-import { installSituationalModifiersRule } from "../scripts/rules/situational-modifiers.mjs";
-import { installNonlethalAttackRule } from "../scripts/rules/nonlethal-attack.mjs";
+} from "../scripts/features/combat-maneuvers/domain/index.mjs";
+import combatManeuvers from "../scripts/features/combat-maneuvers/index.mjs";
+import {
+  createRuntime,
+  install as installManeuvers,
+  onPassageClick as passageClick,
+  onResistClick as resistClick
+} from "../scripts/features/combat-maneuvers/integration/index.mjs";
+import {
+  buildManeuverContent as maneuverContent,
+  buildResultContent as resultContent
+} from "../scripts/features/combat-maneuvers/ui/cards.mjs";
+import attackVsDefense from "../scripts/features/attack-vs-defense/index.mjs";
+import concealmentMissChance from "../scripts/features/concealment-miss-chance/index.mjs";
+import saveButton from "../scripts/features/save-button/index.mjs";
+import situationalModifiers from "../scripts/features/situational-modifiers/index.mjs";
+import nonlethalAttack from "../scripts/features/nonlethal-attack/index.mjs";
+import { NONLETHAL_SETTING } from "../scripts/lib/nonlethal.mjs";
 import { USE_PURPOSES } from "../scripts/lib/targets.mjs";
-import { currentUseTargets as uses, currentAttackOutcome as outcome } from "./support/legacy-services.mjs";
+import { createFakePlatform, createTestKernel } from "./support/fake-platform.mjs";
 
-/** The concealment rule's setting, as main.mjs reads it through ctx.features. */
-const concealmentOn = () => game.settings.get(MODULE, "concealmentMissChance") === "on";
+/** The fake Foundry state of the current setup (local to this file, never a global). */
+let game;
+/** Services, context and runtime of the current setup. */
+const current = {};
+const uses = () => current.uses;
+const onResistClick = (card, ev) => resistClick(current.rt, card, ev);
+const onPassageClick = (card) => passageClick(current.rt, card);
+const buildManeuverContent = (data) => maneuverContent(current.ctx, data);
+const buildResultContent = (result) => resultContent(current.ctx, result);
+
+/** Stand-in for the nonlethal damage rule (another lot), with its setting off. */
+const nonlethalDamage = { id: "nonlethal-damage", kind: "rule", system: { id: "tormenta20" }, settings: [{ key: NONLETHAL_SETTING, scope: "world", type: String, default: "off" }], install() {} };
+/** Same order as scripts/features/index.mjs. */
+const RULES = [saveButton, attackVsDefense, situationalModifiers, concealmentMissChance, combatManeuvers, nonlethalDamage, nonlethalAttack];
 
 const MODULE = "t20-community-patches";
 const SIZES = { min: 5, peq: 2, med: 0, gra: -2, eno: -5, col: -10 };
@@ -344,6 +363,7 @@ function setup({ rule = "on", user = "mago", messageMode = "public", extra = {} 
   const seen = [];
   let nextId = 0;
   let clock = 100;
+  const ChatMessage = {};
 
   const makeMessage = (data) => {
     const message = {
@@ -487,31 +507,18 @@ function setup({ rule = "on", user = "mago", messageMode = "public", extra = {} 
   };
 
   globalThis.document = { createElement: (tag) => new FakeElement(tag), createTextNode: (text) => new FakeText(text) };
-  globalThis.Hooks = { on: (name, fn) => (hooks[name] ??= []).push(fn) };
-  globalThis.ui = {
+  const ui = {
     notifications: { warn: (m) => warnings.push(m), error: (m) => warnings.push(`error:${m}`), info() {} },
     chat: { updateMessage: (m) => redraws.push(`chat:${m.id}`) }
   };
-  globalThis.CONFIG = {
-    Item: { documentClass: ItemT20 },
-    ChatMessage: { documentClass: class { async renderHTML() { return null; } } },
-    T20: { sizeModifiers: SIZES }
-  };
-  globalThis.foundry = {
-    utils: { setProperty, fromUuidSync: (uuid) => tokens.get(uuid) ?? actors.get(uuid) ?? null },
-    applications: {
-      api: {
-        DialogV2: {
-          wait: async (config) => {
-            const responder = dialogs.shift();
-            if (!responder) throw new Error("unexpected dialog");
-            return responder(config);
-          }
-        }
-      }
+  const DialogV2 = {
+    wait: async (config) => {
+      const responder = dialogs.shift();
+      if (!responder) throw new Error("unexpected dialog");
+      return responder(config);
     }
   };
-  globalThis.ChatMessage = {
+  Object.assign(ChatMessage, {
     getSpeaker: ({ actor }) => ({ scene: "s", actor: actor.id, token: `t${actor.id}`, alias: actor.name }),
     applyMode(chatData, mode) {
       const gms = Object.values(users).filter((u) => u.isGM).map((u) => u.id);
@@ -527,8 +534,8 @@ function setup({ rule = "on", user = "mago", messageMode = "public", extra = {} 
       for (const fn of hooks.createChatMessage ?? []) fn(message, {}, game.user.id);
       return message;
     }
-  };
-  globalThis.game = {
+  });
+  game = {
     user: users[user],
     users: Object.values(users),
     messages,
@@ -557,6 +564,40 @@ function setup({ rule = "on", user = "mago", messageMode = "public", extra = {} 
 
   const as = (id) => (game.user = users[id]);
 
+  const platform = createFakePlatform({
+    classes: { item: ItemT20, chatMessage: class { async renderHTML() { return null; } } },
+    t20Config: { sizeModifiers: SIZES },
+    dice: { DialogV2 },
+    documents: { fromUuidSync: (uuid) => tokens.get(uuid) ?? actors.get(uuid) ?? null, messages: () => messages },
+    chat: {
+      create: (data) => ChatMessage.create(data),
+      speaker: (options) => ChatMessage.getSpeaker(options),
+      applyMode: (data, mode) => ChatMessage.applyMode(data, mode),
+      updateMessage: (m) => ui.chat.updateMessage(m)
+    },
+    i18n: { localize: game.i18n.localize, format: game.i18n.format, lang: () => game.i18n.lang }
+  });
+  platform.settings.get = (key) => settings[`${MODULE}.${key}`];
+  platform.settingsOf = (ns) => ({ get: (key) => settings[`${ns}.${key}`], set: async () => {} });
+  platform.user.isGM = () => !!game.user.isGM;
+  platform.user.id = () => game.user.id;
+  platform.user.targets = () => game.user.targets;
+  platform.users.current = () => game.user;
+  platform.notify.warn = (m) => ui.notifications.warn(m);
+  platform.notify.error = (m) => ui.notifications.error(m);
+  platform.hooks.on = (name, fn) => (hooks[name] ??= []).push(fn);
+  const kernel = createTestKernel({ platform, features: RULES });
+  current.uses = kernel.service("use-targets");
+  current.ctx = kernel.contextFor(combatManeuvers);
+  current.rt = null;
+  /** Installs the rules in the given order; combat-maneuvers keeps its runtime in `current.rt`. */
+  const install = (...features) => {
+    for (const feature of features) {
+      if (feature !== combatManeuvers) kernel.install(feature);
+      else kernel.install({ ...combatManeuvers, install: (ctx) => installManeuvers(ctx, (current.rt = createRuntime(ctx))) });
+    }
+  };
+
   // Characters and threats of the manual plan.
   const guerreiro = makeActor({ id: "guerreiro", name: "Guerreiro", owners: ["mago"] });
   const lobo = makeActor({ id: "lobo", name: "Lobo" });
@@ -570,7 +611,7 @@ function setup({ rule = "on", user = "mago", messageMode = "public", extra = {} 
   const tOgro = makeToken("togro", ogro, 0);
 
   return {
-    users, hooks, created, writes, redraws, warnings, dialogs, messages, queues, seen, tokens, settings,
+    users, hooks, created, platform, install, ChatMessage, writes, redraws, warnings, dialogs, messages, queues, seen, tokens, settings,
     insert, render, as, ItemT20, guerreiro, lobo, ogro, chicote, arco, mordida, clava, tGuerreiro, tLobo, tOgro
   };
 }
@@ -604,7 +645,7 @@ async function resist(env, B, { weapon, d20 = 10, bonus = 5, versatile = false, 
 
 test("rule off: displayCard is untouched and no button is added", async () => {
   const env = setup({ rule: "off" });
-  installCombatManeuversRule(uses(), concealmentOn);
+  env.install(combatManeuvers);
   game.user.targets = new Set([env.tLobo]);
   const chatData = await env.chicote.roll({ event, createMessage: false });
   assert.equal(chatData.flags[MODULE], undefined);
@@ -615,7 +656,7 @@ test("rule off: displayCard is untouched and no button is added", async () => {
 
 test("rule on, no maneuver declared: the system's attack card is untouched", async () => {
   const env = setup();
-  installCombatManeuversRule(uses(), concealmentOn);
+  env.install(combatManeuvers);
   game.user.targets = new Set([env.tLobo]);
   const shortcut = await env.chicote.roll({ event: { shiftKey: true } });
   const chatData = await env.chicote.roll({ event, createMessage: false });
@@ -637,7 +678,7 @@ test("rule on, no maneuver declared: the system's attack card is untouched", asy
 
 test("maneuver card: test with size and Versátil, no target name in the content", async () => {
   const env = setup();
-  installCombatManeuversRule(uses(), concealmentOn);
+  env.install(combatManeuvers);
   const { B } = await attackAndManeuver(env, { weapon: env.chicote, target: env.tLobo, versatile: true, bonus: 8 });
   const data = B.flags[MODULE].maneuver;
   assert.equal(data.kind, "derrubar");
@@ -656,7 +697,7 @@ test("maneuver card: test with size and Versátil, no target name in the content
 
 test("resist with a weapon: maneuver-resistance purpose, no targets, attack roll only, no writes", async () => {
   const env = setup();
-  installCombatManeuversRule(uses(), concealmentOn);
+  env.install(combatManeuvers);
   const { B } = await attackAndManeuver(env, { weapon: env.chicote, target: env.tLobo, d20: 12, bonus: 7 });
   env.as("gm");
   game.user.targets = new Set([env.tOgro]);
@@ -684,7 +725,7 @@ test("resist with a weapon: maneuver-resistance purpose, no targets, attack roll
 
 test("resist with Luta: rollPericia without a message", async () => {
   const env = setup();
-  installCombatManeuversRule(uses(), concealmentOn);
+  env.install(combatManeuvers);
   const { B } = await attackAndManeuver(env, { weapon: env.chicote, target: env.tOgro, kind: "agarrar" });
   env.as("gm");
   env.queues.set("ogro.luta", [roll(15, 3, "attack")]);
@@ -697,7 +738,7 @@ test("resist with Luta: rollPericia without a message", async () => {
 
 test("a cancelled roll creates nothing and releases the lock", async () => {
   const env = setup();
-  installCombatManeuversRule(uses(), concealmentOn);
+  env.install(combatManeuvers);
   const { B } = await attackAndManeuver(env, { weapon: env.chicote, target: env.tLobo });
   env.as("gm");
   env.queues.set("mordida", [null]);
@@ -714,7 +755,7 @@ test("a cancelled roll creates nothing and releases the lock", async () => {
 
 test("Resistir and Dar passagem share the lock: one result", async () => {
   const env = setup();
-  installCombatManeuversRule(uses(), concealmentOn);
+  env.install(combatManeuvers);
   const { B } = await attackAndManeuver(env, { weapon: env.chicote, target: env.tLobo, kind: "atropelar" });
   env.as("gm");
   assert.deepEqual(env.render(B).buttons().map((b) => b.textContent), ["Resistir", "Dar passagem"]);
@@ -734,7 +775,7 @@ test("Resistir and Dar passagem share the lock: one result", async () => {
 
 test("Dar passagem: result without a test or condition", async () => {
   const env = setup();
-  installCombatManeuversRule(uses(), concealmentOn);
+  env.install(combatManeuvers);
   const { B } = await attackAndManeuver(env, { weapon: env.chicote, target: env.tLobo, kind: "atropelar" });
   env.as("gm");
   const C = await onPassageClick(B);
@@ -745,7 +786,7 @@ test("Dar passagem: result without a test or condition", async () => {
 
 test("a result before the dialog warns; one arriving during the roll creates nothing", async () => {
   const env = setup();
-  installCombatManeuversRule(uses(), concealmentOn);
+  env.install(combatManeuvers);
   const { B } = await attackAndManeuver(env, { weapon: env.chicote, target: env.tLobo });
   env.as("gm");
   const C = await resist(env, B, { weapon: env.mordida });
@@ -765,11 +806,11 @@ test("a result before the dialog warns; one arriving during the roll creates not
 
 test("two results: the oldest is canonical, a late older one takes over, without writes", async () => {
   const env = setup();
-  installCombatManeuversRule(uses(), concealmentOn);
+  env.install(combatManeuvers);
   const { B } = await attackAndManeuver(env, { weapon: env.chicote, target: env.tLobo });
   env.as("gm");
   const C1 = await resist(env, B, { weapon: env.mordida });
-  const C2 = await ChatMessage.create({ user: "gm", content: C1.content, rolls: C1.rolls, flags: C1.flags, timestamp: C1.timestamp + 50 });
+  const C2 = await env.ChatMessage.create({ user: "gm", content: C1.content, rolls: C1.rolls, flags: C1.flags, timestamp: C1.timestamp + 50 });
   assert.ok(env.redraws.includes(`chat:${B.id}`) && env.redraws.includes(`chat:${C1.id}`));
   for (const viewer of ["gm", "mago"]) {
     env.as(viewer);
@@ -777,7 +818,7 @@ test("two results: the oldest is canonical, a late older one takes over, without
     assert.doesNotMatch(env.render(C1).textContent, /substituído/);
     assert.match(env.render(C2).textContent, /Resultado substituído/);
   }
-  const C0 = await ChatMessage.create({ user: "gm", content: C1.content, rolls: C1.rolls, flags: C1.flags, timestamp: C1.timestamp - 50 });
+  const C0 = await env.ChatMessage.create({ user: "gm", content: C1.content, rolls: C1.rolls, flags: C1.flags, timestamp: C1.timestamp - 50 });
   assert.doesNotMatch(env.render(C0).textContent, /substituído/);
   assert.match(env.render(C1).textContent, /Resultado substituído/);
   assert.deepEqual(env.writes, []);
@@ -792,7 +833,7 @@ test("visibility: whispered B is inherited; otherwise the resister's real messag
   };
   for (const [mode, expected] of Object.entries(cases)) {
     const env = setup();
-    installCombatManeuversRule(uses(), concealmentOn);
+    env.install(combatManeuvers);
     const { B } = await attackAndManeuver(env, { weapon: env.chicote, target: env.tLobo });
     env.as("gm");
     env.settings["core.messageMode"] = mode;
@@ -801,7 +842,7 @@ test("visibility: whispered B is inherited; otherwise the resister's real messag
     assert.deepEqual([chatData.whisper ?? [], !!chatData.blind], [expected.whisper, expected.blind], mode);
   }
   const env = setup({ messageMode: "blind" });
-  installCombatManeuversRule(uses(), concealmentOn);
+  env.install(combatManeuvers);
   const { B } = await attackAndManeuver(env, { weapon: env.chicote, target: env.tLobo });
   assert.deepEqual([B.whisper, B.blind], [["gm"], true]);
   env.as("gm");
@@ -812,7 +853,7 @@ test("visibility: whispered B is inherited; otherwise the resister's real messag
 
 test("different readers: each user reads only their own result as canonical", async () => {
   const env = setup({ user: "gm" });
-  installCombatManeuversRule(uses(), concealmentOn);
+  env.install(combatManeuvers);
   const { B } = await attackAndManeuver(env, { weapon: env.mordida, target: env.tGuerreiro });
   env.settings["core.messageMode"] = "gm";
   const C1 = await resist(env, B, { weapon: env.chicote });
@@ -843,7 +884,7 @@ test("different readers: each user reads only their own result as canonical", as
 
 test("result speaker is neutral and the full render never leaks the target's name", async () => {
   const env = setup();
-  installCombatManeuversRule(uses(), concealmentOn);
+  env.install(combatManeuvers);
   const { B } = await attackAndManeuver(env, { weapon: env.chicote, target: env.tLobo });
   env.as("gm");
   const C = await resist(env, B, { weapon: env.mordida });
@@ -858,7 +899,7 @@ test("result speaker is neutral and the full render never leaks the target's nam
 
 test("names: GM, owner and public display modes see it; others see Alvo; deleted token uses the record", async () => {
   const env = setup();
-  installCombatManeuversRule(uses(), concealmentOn);
+  env.install(combatManeuvers);
   const { B } = await attackAndManeuver(env, { weapon: env.chicote, target: env.tLobo });
   env.as("gm");
   const C = await resist(env, B, { weapon: env.mordida });
@@ -913,13 +954,13 @@ test("install orders: the resistance skips #42 and the stubs of #49 and #59 in b
       };
     };
     if (order === "maneuvers-first") {
-      installCombatManeuversRule(uses(), concealmentOn);
-      installAttackVsDefenseRule(uses(), outcome());
+      env.install(combatManeuvers);
+      env.install(attackVsDefense);
       installStubs();
     } else {
       installStubs();
-      installAttackVsDefenseRule(uses(), outcome());
-      installCombatManeuversRule(uses(), concealmentOn);
+      env.install(attackVsDefense);
+      env.install(combatManeuvers);
     }
     const { B } = await attackAndManeuver(env, { weapon: env.chicote, target: env.tLobo });
     assert.ok(B.rolls[0].options[MODULE]?.attackVsDefense, `${order}: #42 compares the attack`);
@@ -968,7 +1009,7 @@ function declare(env, weapon, values, { d20 = 12, bonus = 7 } = {}) {
 
 test("use dialog: Manobra and Arma versátil on eligible melee attacks only", async () => {
   const env = setup();
-  installCombatManeuversRule(uses(), concealmentOn);
+  env.install(combatManeuvers);
   game.user.targets = new Set([env.tLobo]);
   declare(env, env.chicote, {});
   await env.chicote.roll({ event });
@@ -1002,14 +1043,14 @@ test("use dialog: Manobra and Arma versátil on eligible melee attacks only", as
 
 test("use dialog: no field with the rule off nor in the resistance test", async () => {
   const off = setup({ rule: "off" });
-  installCombatManeuversRule(uses(), concealmentOn);
+  off.install(combatManeuvers);
   game.user.targets = new Set([off.tLobo]);
   declare(off, off.chicote, {});
   await off.chicote.roll({ event });
   assert.equal(off.lastDialog.field, null);
 
   const env = setup();
-  installCombatManeuversRule(uses(), concealmentOn);
+  env.install(combatManeuvers);
   declare(env, env.mordida, {});
   env.as("gm");
   await uses().withUsePurpose(USE_PURPOSES.MANEUVER_RESISTANCE, () => env.mordida.roll({ event, createMessage: false }));
@@ -1018,7 +1059,7 @@ test("use dialog: no field with the rule off nor in the resistance test", async 
 
 test("use dialog: without exactly one valid target the field is disabled with the reason", async () => {
   const env = setup();
-  installCombatManeuversRule(uses(), concealmentOn);
+  env.install(combatManeuvers);
   const W = LANG.T20CP.CombatManeuvers.Warn;
   for (const [targets, reason] of [[[], W.NoTarget], [[env.tLobo, env.tOgro], W.ManyTargets], [[env.tGuerreiro], W.SelfTarget]]) {
     game.user.targets = new Set(targets);
@@ -1033,7 +1074,7 @@ test("use dialog: without exactly one valid target the field is disabled with th
 
 test("declared maneuver: one maneuver card with the attack roll, no attack card, no damage roll", async () => {
   const env = setup();
-  installCombatManeuversRule(uses(), concealmentOn);
+  env.install(combatManeuvers);
   game.user.targets = new Set([env.tLobo]);
   declare(env, env.chicote, { t20cpManeuver: "derrubar", t20cpManeuverVersatile: true }, { d20: 12, bonus: 7 });
   const B = await env.chicote.roll({ event });
@@ -1062,7 +1103,7 @@ test("declared maneuver: one maneuver card with the attack roll, no attack card,
 
 test("declared maneuver: roll mode and createMessage: false like the system's card", async () => {
   const env = setup({ messageMode: "blind" });
-  installCombatManeuversRule(uses(), concealmentOn);
+  env.install(combatManeuvers);
   game.user.targets = new Set([env.tGuerreiro]);
   declare(env, env.mordida, { t20cpManeuver: "agarrar", t20cpManeuverVersatile: true });
   const B = await env.mordida.roll({ event });
@@ -1077,7 +1118,7 @@ test("declared maneuver: roll mode and createMessage: false like the system's ca
 
 test("declared maneuver against an invalid target: warning, then the normal attack with damage", async () => {
   const env = setup();
-  installCombatManeuversRule(uses(), concealmentOn);
+  env.install(combatManeuvers);
   const W = LANG.T20CP.CombatManeuvers.Warn;
   for (const [targets, reason] of [[[], W.NoTarget], [[env.tLobo, env.tOgro], W.ManyTargets], [[env.tGuerreiro], W.SelfTarget]]) {
     game.user.targets = new Set(targets);
@@ -1093,7 +1134,7 @@ test("declared maneuver against an invalid target: warning, then the normal atta
 
 test("maneuver and result cards: details collapsed, the title toggles them on this client", async () => {
   const env = setup();
-  installCombatManeuversRule(uses(), concealmentOn);
+  env.install(combatManeuvers);
   game.user.targets = new Set([env.tLobo]);
   declare(env, env.chicote, { t20cpManeuver: "derrubar" });
   const B = await env.chicote.roll({ event });
@@ -1122,11 +1163,7 @@ test("declared maneuver with Investida: the inner rules still run (attack bonus 
   const effects = [];
   Object.assign(env.guerreiro, { isOwner: true, effects, createEmbeddedDocuments: async (_, data) => effects.push(...data) });
   // Same order as scripts/main.mjs.
-  installSaveButtonRule(uses());
-  installAttackVsDefenseRule(uses(), outcome());
-  installSituationalModifiersRule(uses());
-  installCombatManeuversRule(uses(), concealmentOn);
-  installNonlethalAttackRule(uses());
+  env.install(saveButton, attackVsDefense, situationalModifiers, combatManeuvers, nonlethalAttack);
   game.user.targets = new Set([env.tLobo]);
   env.queues.set(env.chicote.id, [[12, 7]]);
   env.chicote.useDialog = () => ({ t20cpManeuver: "derrubar", t20cpSituationalAttack: ["charge"] });
@@ -1142,7 +1179,7 @@ test("declared maneuver with Investida: the inner rules still run (attack bonus 
 
 test("maneuver cards carry a copy of the attack roll and never serialize the live one", async () => {
   const env = setup();
-  installCombatManeuversRule(uses(), concealmentOn);
+  env.install(combatManeuvers);
   class Roll {
     constructor(data) {
       Object.assign(this, data);
@@ -1151,11 +1188,11 @@ test("maneuver cards carry a copy of the attack roll and never serialize the liv
       return { class: "Roll", ...this };
     }
   }
-  const create = ChatMessage.create;
+  const create = env.ChatMessage.create;
   // Like core: the rolls of the data are serialized in place.
-  ChatMessage.create = (data) => {
+  env.ChatMessage.create = (data) => {
     data.rolls?.forEach((r, i, list) => (list[i] = typeof r === "string" ? r : JSON.stringify(r)));
-    return create.call(ChatMessage, data);
+    return create.call(env.ChatMessage, data);
   };
   const live = [];
   const rollAttack = env.ItemT20.prototype.rollAttack;
@@ -1178,8 +1215,7 @@ function withConcealment(env, d10s) {
   env.settings[`${MODULE}.concealmentMissChance`] = "on";
   env.guerreiro.statuses = new Set(["cego"]);
   const rolled = [];
-  globalThis.foundry.dice = {
-    Roll: class {
+  env.platform.dice.Roll = class {
       constructor(formula) {
         this.formula = formula;
       }
@@ -1188,10 +1224,9 @@ function withConcealment(env, d10s) {
         this.total = d10s.shift();
         return this;
       }
-    }
   };
-  installConcealmentRule(uses(), outcome());
-  installCombatManeuversRule(uses(), concealmentOn);
+  env.install(concealmentMissChance);
+  env.install(combatManeuvers);
   return rolled;
 }
 
@@ -1242,7 +1277,7 @@ test("concealment rule off: a declared maneuver ignores the d10", async () => {
 
 test("an old button-made maneuver card still renders and resists", async () => {
   const env = setup();
-  installCombatManeuversRule(uses(), concealmentOn);
+  env.install(combatManeuvers);
   const data = {
     v: 1,
     kind: "derrubar",

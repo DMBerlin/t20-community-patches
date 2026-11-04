@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import manaQueueRule from "../scripts/rules/mana-queue.mjs";
+import manaQueueRule from "../scripts/features/mana-queue/index.mjs";
 import { createFakePlatform, createTestKernel } from "./support/fake-platform.mjs";
 
 /**

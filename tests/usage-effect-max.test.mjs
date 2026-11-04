@@ -1,17 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { buildDefaults, nameKey, resolveMaxFormula, sourceKey } from "../scripts/lib/usage-limits.mjs";
-import {
-  evaluateMax,
-  findViolations,
-  installUsageEffectMaxRule,
-  mergeLimits
-} from "../scripts/rules/usage-effect-max.mjs";
+import { evaluateMax, findViolations, mergeLimits } from "../scripts/features/usage-effect-max/domain.mjs";
+import usageEffectMax from "../scripts/features/usage-effect-max/index.mjs";
 import { pseudoItemEffects, skipsDialog } from "../scripts/lib/usage-effects.mjs";
-import { createPlatform } from "../scripts/platform/foundry.mjs";
-import { createFeatureContext } from "../scripts/kernel/context.mjs";
-import { createWrapRegistry } from "../scripts/kernel/wrap.mjs";
-import { createTestKernel } from "./support/fake-platform.mjs";
+import { createFakePlatform, createTestKernel } from "./support/fake-platform.mjs";
 
 const INSPIRACAO_SOURCE = "Compendium.tormenta20.poderes.Item.Uv6GW8R54wUtv3sm";
 const INSPIRACAO_EFFECT = "gpuEqXYdlZr1nrNK";
@@ -114,13 +107,11 @@ test("skipsDialog follows the system's UsageConfig and Shift rule", () => {
   assert.equal(skipsDialog({ usageDefault: true, shiftKey: false, hasEffectsOrRolls: false }), true);
 });
 
-/* Integration with fake Foundry globals: the shared guard wraps submit and the rule validates the dialog form. */
+/* Integration on a fake platform: the shared guard wraps submit and the rule validates the dialog form. */
 
 function setupFoundry({ patches = [] } = {}) {
-  const settings = { mode: "block", usage: "default" };
   const warnings = [];
   const consoleWarnings = [];
-  const hooks = {};
   class Element {
     querySelector(selector) {
       return selector === "form" ? this.form : null;
@@ -179,46 +170,34 @@ function setupFoundry({ patches = [] } = {}) {
       return this;
     }
   }
-  Object.assign(globalThis, {
-    HTMLElement: Element,
-    tormenta20: { applications: { AbilityUseDialog } },
-    CONFIG: { Item: { documentClass: ItemT20 }, Actor: { documentClass: ActorT20 } },
-    game: {
-      settings: { get: (scope) => (scope === "tormenta20" ? settings.usage : settings.mode) },
-      i18n: { localize: (key) => key, format: (key, data) => `${key}${JSON.stringify(data)}` }
-    },
-    ui: { notifications: { warn: (msg) => warnings.push(msg) } },
-    Hooks: { on: (name, fn) => (hooks[name] = fn) },
-    foundry: {
-      dice: { Roll: FakeRoll },
-      applications: {
-        ux: {
-          FormDataExtended: class {
-            constructor(form) {
-              this.object = form.formData;
-            }
-          }
-        }
-      },
-      utils: {
-        getProperty: (obj, path) => path.split(".").reduce((o, k) => o?.[k], obj),
-        expandObject: (flat) => {
-          const out = {};
-          for (const [path, value] of Object.entries(flat)) {
-            const keys = path.split(".");
-            const last = keys.pop();
-            keys.reduce((o, k) => (o[k] ??= {}), out)[last] = value;
-          }
-          return out;
-        }
-      }
-    }
+  const platform = createFakePlatform({
+    settings: { usageEffectMaxRule: "block" },
+    namespaceSettings: { "tormenta20.UsageConfig": "default" },
+    t20: { applications: { AbilityUseDialog } },
+    classes: { item: ItemT20, actor: ActorT20 },
+    dice: { Roll: FakeRoll },
+    forms: { data: (form) => form.formData },
+    i18n: { format: (key, data) => `${key}${JSON.stringify(data)}` }
   });
-  const originalWarn = console.warn;
-  console.warn = (msg) => consoleWarnings.push(msg);
-  // Migrated patches install through the real platform, which reads the fake globals above (#86).
-  for (const patch of patches) patch.install(createFeatureContext(createPlatform(), patch, { wraps: createWrapRegistry() }));
-  installUsageEffectMaxRule(createTestKernel({ platform: createPlatform() }).service("use-dialog-guard"));
+  platform.notify.warn = (msg) => warnings.push(msg);
+  platform.log.warn = (...args) => consoleWarnings.push(args.join(" "));
+  const kernel = createTestKernel({ platform, features: [...patches, usageEffectMax] });
+  for (const patch of patches) kernel.install(patch);
+  kernel.install(usageEffectMax);
+  const settings = {
+    get mode() {
+      return platform.settings.get("usageEffectMaxRule");
+    },
+    set mode(value) {
+      platform.settings.set("usageEffectMaxRule", value);
+    },
+    get usage() {
+      return platform.settingsOf("tormenta20").get("UsageConfig");
+    },
+    set usage(value) {
+      platform.settingsOf("tormenta20").set("UsageConfig", value);
+    }
+  };
 
   const actor = (level) => ({ name: "Bardo", getRollData: () => ({ nvl: { bardo: level } }) });
   const owner = (source, name = "Inspiração") => ({ documentName: "Item", name, _stats: { compendiumSource: source } });
@@ -235,164 +214,152 @@ function setupFoundry({ patches = [] } = {}) {
     const dialog = new AbilityUseDialog(it, { [`aprs.${INSPIRACAO_EFFECT}.aplica`]: aplica });
     return { result: dialog.submit(), submitted: dialog.submitted };
   };
-  return { settings, warnings, consoleWarnings, hooks, ItemT20, ActorT20, actor, effect, item, use, restore: () => (console.warn = originalWarn) };
+  return { settings, warnings, consoleWarnings, ItemT20, ActorT20, actor, effect, item, use };
 }
 
 test("dialog: block keeps it open above the maximum, warn goes on, off ignores; flags override the default", () => {
-  const { settings, warnings, consoleWarnings, ItemT20, actor, effect, item, use, restore } = setupFoundry();
-  try {
-    assert.deepEqual(use(item(1), 0), { result: "submitted", submitted: 1 });
-    assert.deepEqual(use(item(1), 1), { result: undefined, submitted: 0 });
-    assert.match(warnings.at(-1), /Exceeded.*"requested":1,"max":0.*T20CP\.UsageEffectMax\.Blocked/);
+  const { settings, warnings, consoleWarnings, ItemT20, actor, effect, item, use } = setupFoundry();
+  assert.deepEqual(use(item(1), 0), { result: "submitted", submitted: 1 });
+  assert.deepEqual(use(item(1), 1), { result: undefined, submitted: 0 });
+  assert.match(warnings.at(-1), /Exceeded.*"requested":1,"max":0.*T20CP\.UsageEffectMax\.Blocked/);
 
-    assert.equal(use(item(5), 1).submitted, 1);
-    assert.equal(use(item(5), 2).submitted, 0);
-    assert.equal(use(item(17), 4).submitted, 1);
-    assert.equal(use(item(17), 5).submitted, 0);
+  assert.equal(use(item(5), 1).submitted, 1);
+  assert.equal(use(item(5), 2).submitted, 0);
+  assert.equal(use(item(17), 4).submitted, 1);
+  assert.equal(use(item(17), 5).submitted, 0);
 
-    // Item without compendium origin: default by names.
-    assert.equal(use(item(1, effect({ source: undefined })), 1).submitted, 0);
-    // Flags: "none" removes the limit, "2" overrides the default.
-    assert.equal(use(item(1, effect({ flag: "none" })), 4).submitted, 1);
-    assert.equal(use(item(1, effect({ flag: "2" })), 2).submitted, 1);
-    assert.equal(use(item(1, effect({ flag: "2" })), 3).submitted, 0);
+  // Item without compendium origin: default by names.
+  assert.equal(use(item(1, effect({ source: undefined })), 1).submitted, 0);
+  // Flags: "none" removes the limit, "2" overrides the default.
+  assert.equal(use(item(1, effect({ flag: "none" })), 4).submitted, 1);
+  assert.equal(use(item(1, effect({ flag: "2" })), 2).submitted, 1);
+  assert.equal(use(item(1, effect({ flag: "2" })), 3).submitted, 0);
 
-    // Invalid formulas never block and warn once in the console.
-    warnings.length = 0;
-    assert.equal(use(item(1, effect({ flag: "1d4" })), 3).submitted, 1);
-    assert.equal(use(item(1, effect({ flag: "1d4" })), 3).submitted, 1);
-    assert.equal(use(item(1, effect({ flag: "abc" })), 3).submitted, 1);
-    assert.equal(warnings.length, 0);
-    assert.equal(consoleWarnings.filter((m) => m.includes('"1d4"')).length, 1);
-    assert.equal(consoleWarnings.filter((m) => m.includes('"abc"')).length, 1);
+  // Invalid formulas never block and warn once in the console.
+  warnings.length = 0;
+  assert.equal(use(item(1, effect({ flag: "1d4" })), 3).submitted, 1);
+  assert.equal(use(item(1, effect({ flag: "1d4" })), 3).submitted, 1);
+  assert.equal(use(item(1, effect({ flag: "abc" })), 3).submitted, 1);
+  assert.equal(warnings.length, 0);
+  assert.equal(consoleWarnings.filter((m) => m.includes('"1d4"')).length, 1);
+  assert.equal(consoleWarnings.filter((m) => m.includes('"abc"')).length, 1);
 
-    settings.mode = "warn";
-    assert.equal(use(item(1), 1).submitted, 1);
-    assert.match(warnings.at(-1), /Exceeded/);
-    assert.doesNotMatch(warnings.at(-1), /Blocked/);
+  settings.mode = "warn";
+  assert.equal(use(item(1), 1).submitted, 1);
+  assert.match(warnings.at(-1), /Exceeded/);
+  assert.doesNotMatch(warnings.at(-1), /Blocked/);
 
-    warnings.length = 0;
-    settings.mode = "off";
-    assert.equal(use(item(1), 3).submitted, 1);
-    assert.equal(warnings.length, 0);
+  warnings.length = 0;
+  settings.mode = "off";
+  assert.equal(use(item(1), 3).submitted, 1);
+  assert.equal(warnings.length, 0);
 
-    // Dialog-less rolls: never blocked, warned only when an "Aplicar Sempre" effect has maximum 0.
-    settings.mode = "block";
-    const rolled = (level, automatic, shiftKey) => {
-      const doc = Object.assign(new ItemT20(), {
-        name: "Inspiração",
-        actor: actor(level),
-        system: { rolls: [] },
-        _allApplicableOnUseEffects: () => [effect({ automatic })]
-      });
-      return doc.roll({ event: { shiftKey } });
-    };
-    assert.equal(rolled(1, true, true), "rolled");
-    assert.match(warnings.at(-1), /Exceeded.*"max":0/);
-    warnings.length = 0;
-    assert.equal(rolled(1, true, false), "rolled");
-    assert.equal(rolled(1, false, true), "rolled");
-    assert.equal(rolled(5, true, true), "rolled");
-    assert.equal(warnings.length, 0);
+  // Dialog-less rolls: never blocked, warned only when an "Aplicar Sempre" effect has maximum 0.
+  settings.mode = "block";
+  const rolled = (level, automatic, shiftKey) => {
+    const doc = Object.assign(new ItemT20(), {
+      name: "Inspiração",
+      actor: actor(level),
+      system: { rolls: [] },
+      _allApplicableOnUseEffects: () => [effect({ automatic })]
+    });
+    return doc.roll({ event: { shiftKey } });
+  };
+  assert.equal(rolled(1, true, true), "rolled");
+  assert.match(warnings.at(-1), /Exceeded.*"max":0/);
+  warnings.length = 0;
+  assert.equal(rolled(1, true, false), "rolled");
+  assert.equal(rolled(1, false, true), "rolled");
+  assert.equal(rolled(5, true, true), "rolled");
+  assert.equal(warnings.length, 0);
 
-    // Same id on two items: the lowest maximum is checked whatever the order.
-    const twoOwners = (first, second) =>
-      Object.assign(new ItemT20(), {
-        name: "Inspiração",
-        actor: actor(1),
-        system: { rolls: [] },
-        _allApplicableOnUseEffects: () => [
-          effect({ automatic: true, flag: first }),
-          effect({ automatic: true, flag: second, source: "Compendium.x.y.Item.z" })
-        ]
-      }).roll({ event: { shiftKey: true } });
-    twoOwners("0", "2");
-    twoOwners("2", "0");
-    assert.equal(warnings.length, 2);
-  } finally {
-    restore();
-  }
+  // Same id on two items: the lowest maximum is checked whatever the order.
+  const twoOwners = (first, second) =>
+    Object.assign(new ItemT20(), {
+      name: "Inspiração",
+      actor: actor(1),
+      system: { rolls: [] },
+      _allApplicableOnUseEffects: () => [
+        effect({ automatic: true, flag: first }),
+        effect({ automatic: true, flag: second, source: "Compendium.x.y.Item.z" })
+      ]
+    }).roll({ event: { shiftKey: true } });
+  twoOwners("0", "2");
+  twoOwners("2", "0");
+  assert.equal(warnings.length, 2);
 });
 
 test("skill and attribute rolls without the dialog warn at maximum 0; with the dialog or other modes, nothing", async () => {
-  const { settings, warnings, ActorT20, effect, restore } = setupFoundry();
-  try {
-    const skillEffect = (id, extra = {}) =>
-      Object.assign(effect({ automatic: true, flag: "0", name: "Foco" }), {
-        id,
-        documentName: "ActiveEffect",
-        system: { onuse: true, abilityUse: { automatic: true, types: new Set(["skill", "ability"]), names: new Set() } },
-        ...extra
-      });
-    const actor = Object.assign(new ActorT20(), {
-      name: "Guerreiro",
-      system: { pericias: { luta: { label: "Luta" } }, atributos: { for: { name: "Força" } } },
-      getRollData: () => ({}),
-      entries: [["effects", skillEffect("auto")]]
+  const { settings, warnings, ActorT20, effect } = setupFoundry();
+  const skillEffect = (id, extra = {}) =>
+    Object.assign(effect({ automatic: true, flag: "0", name: "Foco" }), {
+      id,
+      documentName: "ActiveEffect",
+      system: { onuse: true, abilityUse: { automatic: true, types: new Set(["skill", "ability"]), names: new Set() } },
+      ...extra
     });
-    assert.equal(await actor.rollPericia("luta", { event: { shiftKey: true } }), "pericia:luta:true");
-    assert.match(warnings.at(-1), /Exceeded.*"item":"Luta".*"max":0/);
-    assert.equal(await actor.rollAtributo("for", { event: { shiftKey: true } }), "atributo:for");
-    assert.match(warnings.at(-1), /"item":"Força"/);
-    warnings.length = 0;
-    await actor.rollPericia("luta", { event: { shiftKey: false } });
-    await actor.rollPericia("luta");
-    assert.equal(warnings.length, 0);
-    settings.usage = "shift";
-    await actor.rollPericia("luta");
-    assert.equal(warnings.length, 1);
+  const actor = Object.assign(new ActorT20(), {
+    name: "Guerreiro",
+    system: { pericias: { luta: { label: "Luta" } }, atributos: { for: { name: "Força" } } },
+    getRollData: () => ({}),
+    entries: [["effects", skillEffect("auto")]]
+  });
+  assert.equal(await actor.rollPericia("luta", { event: { shiftKey: true } }), "pericia:luta:true");
+  assert.match(warnings.at(-1), /Exceeded.*"item":"Luta".*"max":0/);
+  assert.equal(await actor.rollAtributo("for", { event: { shiftKey: true } }), "atributo:for");
+  assert.match(warnings.at(-1), /"item":"Força"/);
+  warnings.length = 0;
+  await actor.rollPericia("luta", { event: { shiftKey: false } });
+  await actor.rollPericia("luta");
+  assert.equal(warnings.length, 0);
+  settings.usage = "shift";
+  await actor.rollPericia("luta");
+  assert.equal(warnings.length, 1);
 
-    // A non-automatic effect sharing the id of an automatic one is applied too, so its maximum counts.
-    const pair = (first, second) => {
-      actor.entries = [
-        ["effects", skillEffect("same", { flags: { "t20-community-patches": { maxApplications: first.max } } })],
-        ["items.effects", skillEffect("same", { flags: { "t20-community-patches": { maxApplications: second.max } } })]
-      ];
-      actor.entries[first.automatic ? 1 : 0][1].system.abilityUse.automatic = false;
-      return actor.rollPericia("luta");
-    };
-    warnings.length = 0;
-    await pair({ max: "2", automatic: true }, { max: "0", automatic: false });
-    await pair({ max: "0", automatic: false }, { max: "2", automatic: true });
-    assert.equal(warnings.length, 2);
+  // A non-automatic effect sharing the id of an automatic one is applied too, so its maximum counts.
+  const pair = (first, second) => {
+    actor.entries = [
+      ["effects", skillEffect("same", { flags: { "t20-community-patches": { maxApplications: first.max } } })],
+      ["items.effects", skillEffect("same", { flags: { "t20-community-patches": { maxApplications: second.max } } })]
+    ];
+    actor.entries[first.automatic ? 1 : 0][1].system.abilityUse.automatic = false;
+    return actor.rollPericia("luta");
+  };
+  warnings.length = 0;
+  await pair({ max: "2", automatic: true }, { max: "0", automatic: false });
+  await pair({ max: "0", automatic: false }, { max: "2", automatic: true });
+  assert.equal(warnings.length, 2);
 
-    settings.mode = "off";
-    await actor.rollPericia("luta");
-    assert.equal(warnings.length, 2);
-  } finally {
-    restore();
-  }
+  settings.mode = "off";
+  await actor.rollPericia("luta");
+  assert.equal(warnings.length, 2);
 });
 
 test("skill rolls only check the effects the system collects (suppressed-usage-effects applied)", async () => {
   const { default: suppressed } = await import("../scripts/features/suppressed-usage-effects/index.mjs");
-  const { warnings, ActorT20, effect, restore } = setupFoundry({ patches: [suppressed] });
-  try {
-    const held = (equipped) => ({
-      documentName: "Item",
-      areEffectsSuppressed: !equipped,
-      name: "Escudo"
+  const { warnings, ActorT20, effect } = setupFoundry({ patches: [suppressed] });
+  const held = (equipped) => ({
+    documentName: "Item",
+    areEffectsSuppressed: !equipped,
+    name: "Escudo"
+  });
+  const onEquipment = (equipped) =>
+    Object.assign(effect({ automatic: true, flag: "0", name: "Foco" }), {
+      documentName: "ActiveEffect",
+      parent: held(equipped),
+      system: { onuse: true, abilityUse: { automatic: true, types: new Set(["skill", "ability"]), names: new Set() } }
     });
-    const onEquipment = (equipped) =>
-      Object.assign(effect({ automatic: true, flag: "0", name: "Foco" }), {
-        documentName: "ActiveEffect",
-        parent: held(equipped),
-        system: { onuse: true, abilityUse: { automatic: true, types: new Set(["skill", "ability"]), names: new Set() } }
-      });
-    const actor = Object.assign(new ActorT20(), {
-      name: "Guerreiro",
-      system: { pericias: { luta: { label: "Luta" } }, atributos: { for: { name: "Força" } } },
-      getRollData: () => ({}),
-      entries: [["items.effects", onEquipment(false)]]
-    });
-    await actor.rollPericia("luta", { event: { shiftKey: true } });
-    await actor.rollAtributo("for", { event: { shiftKey: true } });
-    assert.deepEqual(actor.collected, []);
-    assert.equal(warnings.length, 0);
-    actor.entries = [["items.effects", onEquipment(true)]];
-    await actor.rollPericia("luta", { event: { shiftKey: true } });
-    assert.equal(warnings.length, 1);
-  } finally {
-    restore();
-  }
+  const actor = Object.assign(new ActorT20(), {
+    name: "Guerreiro",
+    system: { pericias: { luta: { label: "Luta" } }, atributos: { for: { name: "Força" } } },
+    getRollData: () => ({}),
+    entries: [["items.effects", onEquipment(false)]]
+  });
+  await actor.rollPericia("luta", { event: { shiftKey: true } });
+  await actor.rollAtributo("for", { event: { shiftKey: true } });
+  assert.deepEqual(actor.collected, []);
+  assert.equal(warnings.length, 0);
+  actor.entries = [["items.effects", onEquipment(true)]];
+  await actor.rollPericia("luta", { event: { shiftKey: true } });
+  assert.equal(warnings.length, 1);
 });

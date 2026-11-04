@@ -6,7 +6,8 @@
 import { MODULE_ID } from "../lib/module.mjs";
 import { unwrap } from "../lib/source.mjs";
 import { findClassMember, parseMethodLabel } from "../lib/method-label.mjs";
-import { createCanvas, createConfig, createCore, createHandlebars, settingsOf } from "./ports.mjs";
+import { createConfig, createCore, createHandlebars, settingsOf } from "./ports.mjs";
+import { createApps, createChat, createModuleInfo, createScene, createUi, createUsers } from "./rule-ports.mjs";
 
 /**
  * @typedef {object} SystemClasses   Document classes registered by the system (CONFIG.<Doc>.documentClass).
@@ -27,7 +28,8 @@ import { createCanvas, createConfig, createCore, createHandlebars, settingsOf } 
  * @property {() => object|unknown[]|undefined} statusEffects  CONFIG.statusEffects
  * @property {{register(key: string, spec: object): void, registerMenu(key: string, spec: object): void,
  *   get(key: string): unknown, set(key: string, value: unknown): Promise<unknown>}} settings  Keys of this module.
- * @property {{localize(key: string): string, format(key: string, data?: object): string, has(key: string): boolean}} i18n
+ * @property {{localize(key: string): string, format(key: string, data?: object): string, has(key: string): boolean,
+ *   lang(): string, listFormat(items: string[]): string}} i18n
  * @property {{info(msg: string, opts?: object), warn(msg: string, opts?: object), error(msg: string, opts?: object)}} notify
  * @property {{on(name: string, fn: Function): number, once(name: string, fn: Function): number,
  *   off(name: string, id: number|Function): void}} hooks
@@ -37,7 +39,7 @@ import { createCanvas, createConfig, createCore, createHandlebars, settingsOf } 
  *   actors(): object, messages(): object, combats(): object, packs(): object, scenes(): object}} documents
  * @property {{getProperty: Function, setProperty: Function, hasProperty: Function, deepClone: Function,
  *   randomID: Function, escapeHTML: Function, expandObject: Function, slugify(text: string): string,
- *   getRoute(path: string): string, debounce(fn: Function, ms: number): Function,
+ *   getRoute(path: string): string, debounce(fn: Function, ms: number): Function, parseUuid(uuid: string): object,
  *   enrichHTML(html: string, options?: object): Promise<string>}} utils
  * @property {{Roll: Function, ChatMessage: Function, DialogV2: object}} dice
  * @property {{data(form: HTMLFormElement): object}} forms  FormDataExtended#object of a form.
@@ -46,12 +48,18 @@ import { createCanvas, createConfig, createCore, createHandlebars, settingsOf } 
  * @property {(label: string) => string|null} sourceOfMethod  "ItemT20#rollDamage" → source of the system's function
  *   (scripts/lib/method-label.mjs), under the module's wrappers; null when not found. The static audit (#90) answers
  *   the same labels from the bundle's text.
- * @property {{setApi(api: object): void, systemCompatibility(): {minimum?: string, verified?: string}|undefined}} module
+ * @property {{setApi(api: object): void, systemCompatibility(): {minimum?: string, verified?: string}|undefined}
+ *   & import("./rule-ports.mjs").ModuleInfo} module
  * @property {import("./ports.mjs").ConfigPort} config
  * @property {import("./ports.mjs").CorePort} core
  * @property {(namespace: string) => import("./ports.mjs").NamespaceSettings} settingsOf  Another namespace's settings.
- * @property {{tokenHud(): object|undefined}} canvas
+ * @property {import("./rule-ports.mjs").ScenePort} canvas
  * @property {{helpers(): Record<string, Function>|undefined}} handlebars
+ * @property {() => object} constants  CONST
+ * @property {import("./rule-ports.mjs").UsersPort} users
+ * @property {import("./rule-ports.mjs").ChatPort} chat
+ * @property {import("./rule-ports.mjs").UiPort} ui
+ * @property {import("./rule-ports.mjs").AppsPort} apps
  */
 
 /**
@@ -176,6 +184,7 @@ function createUtils() {
     slugify: (text) => String(text).slugify(),
     getRoute: (path) => foundry.utils.getRoute(path),
     debounce: (fn, ms) => foundry.utils.debounce(fn, ms),
+    parseUuid: (uuid) => foundry.utils.parseUuid(uuid),
     enrichHTML: (html, options) => foundry.applications.ux.TextEditor.implementation.enrichHTML(html, options)
   });
 }
@@ -194,6 +203,7 @@ function createDocuments() {
 
 function createModule() {
   return Object.freeze({
+    ...createModuleInfo(),
     setApi: (api) => {
       game.modules.get(MODULE_ID).api = api;
     },
@@ -247,7 +257,9 @@ export function createPlatform() {
     i18n: Object.freeze({
       localize: (key) => game.i18n.localize(key),
       format: (key, data) => game.i18n.format(key, data),
-      has: (key) => game.i18n.has(key)
+      has: (key) => game.i18n.has(key),
+      lang: () => game.i18n.lang,
+      listFormat: (items) => game.i18n.getListFormatter().format(items)
     }),
     notify: Object.freeze({
       info: (message, options) => ui.notifications.info(message, options),
@@ -277,7 +289,12 @@ export function createPlatform() {
     config: createConfig(),
     core: createCore(),
     settingsOf,
-    canvas: createCanvas(),
-    handlebars: createHandlebars()
+    canvas: createScene(),
+    handlebars: createHandlebars(),
+    constants: () => globalThis.CONST,
+    users: createUsers(),
+    chat: createChat(),
+    ui: createUi(),
+    apps: createApps()
   });
 }

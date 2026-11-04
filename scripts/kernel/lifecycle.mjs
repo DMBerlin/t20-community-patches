@@ -2,21 +2,21 @@
  * Central lifecycle of the features (#85): the only place that installs patches and rules, and the only error
  * boundary between them. Pure: everything comes in through parameters, so it runs in Node tests.
  */
-import { APPLY_STATES, resolvePatchState } from "../registry.mjs";
+import { APPLY_STATES, resolvePatchState } from "./diagnosis.mjs";
 
 /**
  * @typedef {object} StatusEntry
  * @property {string} id
  * @property {"patch"|"rule"} kind
  * @property {string} group
- * @property {import("../registry.mjs").PatchMode} [mode]   Patches only.
- * @property {import("../registry.mjs").PatchState|"installed"} state  Rules: "installed", "incompatible" or "error".
- * @property {import("../registry.mjs").Diagnosis} [diagnosis]
+ * @property {import("./diagnosis.mjs").PatchMode} [mode]   Patches only.
+ * @property {import("./diagnosis.mjs").PatchState|"installed"} state  Rules: "installed", "incompatible" or "error".
+ * @property {import("./diagnosis.mjs").Diagnosis} [diagnosis]
  * @property {string} [reason]
  * @property {boolean} [changed]  Marks the patches cited in a notification on this load.
  */
 
-/** @param {import("../registry.mjs").Diagnosis|undefined} diagnosis */
+/** @param {import("./diagnosis.mjs").Diagnosis|undefined} diagnosis */
 export function describeDiagnosis(diagnosis) {
   if (!diagnosis) return "";
   return `; bug ${diagnosis.bug}/${diagnosis.confidence}${diagnosis.evidence ? `: ${diagnosis.evidence}` : ""}`;
@@ -107,7 +107,7 @@ function bootRule(feature, deps, failed) {
  * rule may read another's setting. Patches register theirs only when applied, right before install().
  * @param {object} deps
  * @param {import("./feature.mjs").Feature[]} deps.features
- * @param {(feature: import("./feature.mjs").Feature) => import("../registry.mjs").PatchMode} deps.modeOf
+ * @param {(feature: import("./feature.mjs").Feature) => import("./diagnosis.mjs").PatchMode} deps.modeOf
  * @param {{id: string, version: string}} deps.system
  * @param {(feature: import("./feature.mjs").Feature) => import("./feature.mjs").FeatureContext} deps.contextFor
  * @param {(spec: import("./feature.mjs").SettingSpec) => void} deps.registerSetting

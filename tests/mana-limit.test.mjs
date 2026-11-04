@@ -7,9 +7,9 @@ import {
   MANA_LIMIT_SETTING,
   manaLimitSource,
   resolveManaLimitFormula
-} from "../scripts/rules/mana-limit.mjs";
+} from "../scripts/features/mana-limit/domain.mjs";
 import { runValidators } from "../scripts/services/use-dialog-guard.mjs";
-import manaLimit from "../scripts/rules/mana-limit.mjs";
+import manaLimit from "../scripts/features/mana-limit/index.mjs";
 import { createFakePlatform, createTestKernel } from "./support/fake-platform.mjs";
 
 const slugify = (text) => String(text).trim().toLowerCase().replace(/\s+/g, "-");

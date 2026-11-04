@@ -5,7 +5,6 @@ import {
   KNOWN_SOURCES,
   armorStatus,
   diagnoseSource,
-  installNonProficiencyRule,
   itemArmorPenalty,
   keyAbility,
   matchesName,
@@ -18,10 +17,10 @@ import {
   unresolvedChoices,
   weaponRequirements,
   weaponStatus
-} from "../scripts/rules/non-proficiency-penalties.mjs";
-import { APPLY_STATES } from "../scripts/registry.mjs";
+} from "../scripts/features/non-proficiency/domain/index.mjs";
+import nonProficiency from "../scripts/features/non-proficiency/index.mjs";
 import { computePenaltyAdjustments } from "../scripts/lib/armor-penalty.mjs";
-import { MODULE_ID } from "../scripts/lib/module.mjs";
+import { createFakePlatform, createTestKernel } from "./support/fake-platform.mjs";
 import { addTooltipLine } from "../scripts/lib/tooltip.mjs";
 import { CreatureData165, Item165 } from "./fixtures/non-proficiency-1.6.5.mjs";
 import { Item166 } from "./fixtures/non-proficiency-1.6.6.mjs";
@@ -250,7 +249,7 @@ test("fingerprints: the real 1.6.5 methods are recognized; partial fixes, helper
 });
 
 /* -------------------------------------------- */
-/*  Integration with Foundry mocks              */
+/*  Integration on a fake platform              */
 /* -------------------------------------------- */
 
 /** Same markup as the system's fieldBonuses (T20:4429-4462). */
@@ -293,10 +292,10 @@ const effect = (parent, { name = "Efeito", value = 1, identifier, phase = "initi
   shouldApplyChange: (change, options) => change.phase === options?.phase
 });
 
-/** Builds the module environment, installs the rule once per call and returns the patched methods. */
-function setup({ rule = "on", reduction = "applied", slots = false, gm = true, breakdown } = {}) {
-  const hooks = {};
-  const notifications = [];
+const NO_BREAKDOWN = { appliedChanges: { contribute: () => {}, changes: () => null }, isBreakdownActive: () => false };
+
+/** Builds a fake platform, installs the rule once per call (its own state) and returns the patched classes. */
+function setup({ rule = "on", reduction = "applied", slots = false, gm = true, breakdown = NO_BREAKDOWN } = {}) {
   const calls = { attack: 0, skill: 0 };
   class Base {
     prepareSkill(skillId, { skillData } = {}) {
@@ -311,39 +310,46 @@ function setup({ rule = "on", reduction = "applied", slots = false, gm = true, b
       return this._attack === undefined ? { rollData: {}, parts: ["@skill"] } : this._attack;
     }
   }
-  globalThis.CONFIG = {
-    Item: { documentClass: Item },
-    Actor: { dataModels: { character: Character } },
-    T20: { pericias: { luta: { abl: "for" }, pont: { abl: "des" }, atle: { abl: "for" }, acro: { abl: "des" }, vont: { abl: "sab" } } }
-  };
-  const settings = { [`${MODULE_ID}.nonProficiencyRule`]: rule, "tormenta20.equipmentSlots": slots };
-  globalThis.game = {
-    settings: { get: (scope, key) => settings[`${scope}.${key}`] },
-    system: { version: "1.6.5" },
-    user: { isGM: gm },
-    i18n: { format: (key, data) => `${key} ${JSON.stringify(data)}`, localize: (key) => key }
-  };
-  globalThis.foundry = { documents: { Item: FakeItem }, utils: { fromUuidSync: () => null } };
-  globalThis.Hooks = {
-    on: (name, fn) => (hooks[name] ??= []).push(fn),
-    once: (name, fn) => (hooks[name] ??= []).push(fn)
-  };
-  globalThis.ui = { notifications: { warn: (message) => notifications.push(message) } };
   const helpers = { fieldBonuses: (path) => systemTooltip([["Força", 1]], path) };
-  globalThis.Handlebars = { helpers, registerHelper: (name, fn) => (helpers[name] = fn) };
-  const warnings = [];
-  const warn = console.warn;
-  console.warn = (message) => warnings.push(String(message));
-  try {
-    installNonProficiencyRule(() => APPLY_STATES.has(reduction), breakdown);
-  } finally {
-    console.warn = warn;
-  }
-  return { Item, Character, hooks, notifications, calls, warnings, helpers };
-}
-
-function teardown() {
-  for (const key of ["CONFIG", "game", "foundry", "Hooks", "ui", "Handlebars"]) delete globalThis[key];
+  const docs = { fromUuidSync: () => null, actors: () => docs.actorList, scenes: () => [], actorList: undefined };
+  const platform = createFakePlatform({
+    settings: { nonProficiencyRule: rule },
+    namespaceSettings: { "tormenta20.equipmentSlots": slots },
+    system: { id: "tormenta20", version: "1.6.5", title: "Tormenta20" },
+    isGM: gm,
+    classes: { item: Item },
+    config: { Actor: { dataModels: { character: Character } } },
+    t20Config: { pericias: { luta: { abl: "for" }, pont: { abl: "des" }, atle: { abl: "for" }, acro: { abl: "des" }, vont: { abl: "sab" } } },
+    core: { Item: FakeItem },
+    documents: docs,
+    helpers
+  });
+  const breakdownEntry = { id: "field-bonuses-breakdown", kind: "patch", state: "applied" };
+  const status = [{ id: "armor-penalty-reduction", kind: "patch", state: reduction }, breakdownEntry];
+  const appliedChanges = { id: "applied-changes", install: () => breakdown.appliedChanges };
+  const kernel = createTestKernel({ platform, features: [nonProficiency], status, services: [appliedChanges] });
+  const isBreakdownActive = () => breakdown.isBreakdownActive();
+  Object.defineProperty(breakdownEntry, "state", { get: () => (isBreakdownActive() ? "applied" : "disabled") });
+  kernel.install(nonProficiency);
+  const hooks = {};
+  for (const { name, fn } of platform.hookCalls) (hooks[name] ??= []).push(fn);
+  return {
+    Item,
+    Character,
+    hooks,
+    calls,
+    helpers,
+    platform,
+    kernel,
+    docs,
+    setRule: (value) => platform.settings.set("nonProficiencyRule", value),
+    get notifications() {
+      return platform.notes.filter((n) => n.level === "warn").map((n) => n.message);
+    },
+    get warnings() {
+      return platform.logs.filter((l) => l.level === "warn").map((l) => l.args.join(" "));
+    }
+  };
 }
 
 /** A character (or threat) with the given class, equipped armor and effects. */
@@ -377,89 +383,69 @@ function skills(env, actor, ids = ["luta", "pont", "atle", "acro", "vont"], { pe
 
 test("attack: -5 only for a character's weapon without proficiency, with the rule on", () => {
   const env = setup();
-  try {
-    const actor = makeActor();
-    const weapon = (system, owner = actor, extra = {}) => {
-      const item = Object.assign(Object.create(env.Item.prototype), { type: "arma", name: "Espada longa", isOwned: true, actor: owner, system, ...extra });
-      return item.getAttackToHit();
-    };
-    assert.deepEqual(weapon({ proficiencia: "marcial", proposito: "corpo-a-corpo" }).parts, ["@skill", "-5"]);
-    assert.deepEqual(weapon({ proficiencia: "simples" }).parts, ["@skill"]);
-    assert.deepEqual(weapon({ proficiencia: "marcial" }, makeActor({ type: "npc" })).parts, ["@skill"]);
-    assert.deepEqual(weapon({ proficiencia: "marcial" }, actor, { type: "equipamento" }).parts, ["@skill"]);
-    assert.equal(weapon({ proficiencia: "marcial" }, actor, { _attack: null }), null);
-    const pending = makeActor({ className: "Treinador" });
-    assert.deepEqual(weapon({ proficiencia: "marcial" }, pending).parts, ["@skill"]);
-    game.settings.get = (scope, key) => (key === "nonProficiencyRule" ? "off" : false);
-    assert.deepEqual(weapon({ proficiencia: "marcial" }).parts, ["@skill"]);
-  } finally {
-    teardown();
-  }
+  const actor = makeActor();
+  const weapon = (system, owner = actor, extra = {}) => {
+    const item = Object.assign(Object.create(env.Item.prototype), { type: "arma", name: "Espada longa", isOwned: true, actor: owner, system, ...extra });
+    return item.getAttackToHit();
+  };
+  assert.deepEqual(weapon({ proficiencia: "marcial", proposito: "corpo-a-corpo" }).parts, ["@skill", "-5"]);
+  assert.deepEqual(weapon({ proficiencia: "simples" }).parts, ["@skill"]);
+  assert.deepEqual(weapon({ proficiencia: "marcial" }, makeActor({ type: "npc" })).parts, ["@skill"]);
+  assert.deepEqual(weapon({ proficiencia: "marcial" }, actor, { type: "equipamento" }).parts, ["@skill"]);
+  assert.equal(weapon({ proficiencia: "marcial" }, actor, { _attack: null }), null);
+  const pending = makeActor({ className: "Treinador" });
+  assert.deepEqual(weapon({ proficiencia: "marcial" }, pending).parts, ["@skill"]);
+  env.setRule("off");
+  assert.deepEqual(weapon({ proficiencia: "marcial" }).parts, ["@skill"]);
 });
 
 test("attack: an adaptable exotic weapon wielded with two hands accepts martial (equipado 2 or slot 12)", () => {
   for (const [slots, system] of [[false, { equipado: 2 }], [true, { equipado2: { slot: "12" } }]]) {
     const env = setup({ slots });
-    try {
-      const actor = makeActor({ className: "Guerreiro" });
-      const katana = (hands) =>
-        Object.assign(Object.create(env.Item.prototype), {
-          type: "arma",
-          name: "Katana",
-          isOwned: true,
-          actor,
-          system: { proficiencia: "exotica", proposito: "corpo-a-corpo", propriedades: { ada: true }, ...hands }
-        }).getAttackToHit().parts;
-      assert.deepEqual(katana(system), ["@skill"]);
-      assert.deepEqual(katana({}), ["@skill", "-5"]);
-    } finally {
-      teardown();
-    }
+    const actor = makeActor({ className: "Guerreiro" });
+    const katana = (hands) =>
+      Object.assign(Object.create(env.Item.prototype), {
+        type: "arma",
+        name: "Katana",
+        isOwned: true,
+        actor,
+        system: { proficiencia: "exotica", proposito: "corpo-a-corpo", propriedades: { ada: true }, ...hands }
+      }).getAttackToHit().parts;
+    assert.deepEqual(katana(system), ["@skill"]);
+    assert.deepEqual(katana({}), ["@skill", "-5"]);
   }
 });
 
 test("skills: the armor penalty reaches Str/Dex skills by the book's key ability, once per preparation", () => {
   const env = setup();
-  try {
-    const actor = makeActor({ armor: [{ name: "Cota de malha", tipo: "pesada", penalty: -2 }] });
-    const values = skills(env, actor, undefined, { pericias: { luta: { atributo: "sab" } } });
-    assert.deepEqual(values, { luta: 8, pont: 8, atle: 8, acro: 10, vont: 10 });
-    assert.equal(actor.effectCalls, 1);
-    const custom = skills(env, actor, ["_pc1", "_pc2"], { pericias: { _pc1: { atributo: "des" }, _pc2: { atributo: "int" } } });
-    assert.deepEqual(custom, { _pc1: 8, _pc2: 10 });
-    const guerreiro = makeActor({ className: "Guerreiro", armor: [{ name: "Cota de malha", tipo: "pesada", penalty: -2 }] });
-    assert.deepEqual(skills(env, guerreiro, ["atle"]), { atle: 10 });
-    const threat = makeActor({ type: "npc", armor: [{ name: "Cota de malha", tipo: "pesada", penalty: -2 }] });
-    assert.deepEqual(skills(env, threat, ["atle"]), { atle: 10 });
-  } finally {
-    teardown();
-  }
+  const actor = makeActor({ armor: [{ name: "Cota de malha", tipo: "pesada", penalty: -2 }] });
+  const values = skills(env, actor, undefined, { pericias: { luta: { atributo: "sab" } } });
+  assert.deepEqual(values, { luta: 8, pont: 8, atle: 8, acro: 10, vont: 10 });
+  assert.equal(actor.effectCalls, 1);
+  const custom = skills(env, actor, ["_pc1", "_pc2"], { pericias: { _pc1: { atributo: "des" }, _pc2: { atributo: "int" } } });
+  assert.deepEqual(custom, { _pc1: 8, _pc2: 10 });
+  const guerreiro = makeActor({ className: "Guerreiro", armor: [{ name: "Cota de malha", tipo: "pesada", penalty: -2 }] });
+  assert.deepEqual(skills(env, guerreiro, ["atle"]), { atle: 10 });
+  const threat = makeActor({ type: "npc", armor: [{ name: "Cota de malha", tipo: "pesada", penalty: -2 }] });
+  assert.deepEqual(skills(env, threat, ["atle"]), { atle: 10 });
 });
 
 test("skills: a condition penalty already in the skill and the armor penalty both apply", () => {
   const env = setup();
-  try {
-    const actor = makeActor({ armor: [{ name: "Cota de malha", tipo: "pesada", penalty: -2 }] });
-    const data = Object.setPrototypeOf({ parent: actor, pericias: {} }, env.Character.prototype);
-    const blind = { value: 10 - 5, condi: -5, pda: false };
-    assert.equal(data.prepareSkill("atle", { skillData: blind, rollData: {} }).value, 3);
-  } finally {
-    teardown();
-  }
+  const actor = makeActor({ armor: [{ name: "Cota de malha", tipo: "pesada", penalty: -2 }] });
+  const data = Object.setPrototypeOf({ parent: actor, pericias: {} }, env.Character.prototype);
+  const blind = { value: 10 - 5, condi: -5, pda: false };
+  assert.equal(data.prepareSkill("atle", { skillData: blind, rollData: {} }).value, 3);
 });
 
 test("skills: shield and armor add up; light armor never penalizes", () => {
   const env = setup();
-  try {
-    const both = makeActor({ armor: [{ name: "Cota de malha", tipo: "pesada", penalty: -2 }, { name: "Escudo pesado", tipo: "escudo", penalty: -2 }] });
-    assert.deepEqual(skills(env, both, ["atle"]), { atle: 6 });
-    both.system.tracos = traits({ armaduras: ["pes"] });
-    assert.deepEqual(skills(env, both, ["atle"]), { atle: 8 });
-    const light = makeActor({ armor: [{ name: "Couraça", tipo: "leve", penalty: -1 }] });
-    assert.deepEqual(skills(env, light, ["atle"]), { atle: 10 });
-  } finally {
-    teardown();
-  }
+  const both = makeActor({ armor: [{ name: "Cota de malha", tipo: "pesada", penalty: -2 }, { name: "Escudo pesado", tipo: "escudo", penalty: -2 }] });
+  assert.deepEqual(skills(env, both, ["atle"]), { atle: 6 });
+  both.system.tracos = traits({ armaduras: ["pes"] });
+  assert.deepEqual(skills(env, both, ["atle"]), { atle: 8 });
+  const light = makeActor({ armor: [{ name: "Couraça", tipo: "leve", penalty: -1 }] });
+  assert.deepEqual(skills(env, light, ["atle"]), { atle: 10 });
 });
 
 test("item penalty: Reforçada always, Ajustada only with #19 applied, Sobrecarregado never", () => {
@@ -476,11 +462,7 @@ test("item penalty: Reforçada always, Ajustada only with #19 applied, Sobrecarr
     ["applied", (items) => [effect(items[0], { name: "Sob medida", identifier: "undermeasure", value: 2 })], 10]
   ]) {
     const env = setup({ reduction });
-    try {
-      assert.deepEqual(skills(env, makeActor({ armor: cota, effects }), ["atle"]), { atle: expected }, `${reduction} ${expected}`);
-    } finally {
-      teardown();
-    }
+    assert.deepEqual(skills(env, makeActor({ armor: cota, effects }), ["atle"]), { atle: expected }, `${reduction} ${expected}`);
   }
 });
 
@@ -491,6 +473,7 @@ test("sheet marker: names from user data reach the tooltip as literal text, neve
       this.tagName = tag;
       this.dataset = {};
       this.children = [];
+      this.ownerDocument = { createElement: (name) => new FakeElement(name) };
     }
     append(...nodes) {
       this.children.push(...nodes);
@@ -499,93 +482,73 @@ test("sheet marker: names from user data reach the tooltip as literal text, neve
       return null;
     }
   }
-  globalThis.HTMLElement = FakeElement;
-  globalThis.document = { createElement: (tag) => new FakeElement(tag) };
-  try {
-    const actor = makeActor({ className: "<strong>Treinador</strong>" });
-    const weapon = Object.assign(Object.create(env.Item.prototype), {
-      id: "w1", type: "arma", name: "Espada longa", isOwned: true, actor, system: { proficiencia: "marcial" }
-    });
-    actor.items.set(weapon.id, weapon);
-    const label = new FakeElement("label");
-    const li = new FakeElement("li");
-    li.dataset.itemId = weapon.id;
-    li.querySelector = () => label;
-    const root = new FakeElement("div");
-    root.querySelectorAll = () => [li];
-    env.hooks.renderActorSheetT20.at(-1)({ actor }, root);
-    const icon = label.children.at(-1);
-    assert.match(icon.className, /fa-circle-question t20cp-nonprof/);
-    assert.equal(icon.dataset.tooltip, undefined);
-    assert.equal(icon.dataset.tooltipHtml, undefined);
-    assert.match(icon.dataset.tooltipText, /<strong>Treinador<\/strong>/);
-  } finally {
-    delete globalThis.HTMLElement;
-    delete globalThis.document;
-    teardown();
-  }
+  const actor = makeActor({ className: "<strong>Treinador</strong>" });
+  const weapon = Object.assign(Object.create(env.Item.prototype), {
+    id: "w1", type: "arma", name: "Espada longa", isOwned: true, actor, system: { proficiencia: "marcial" }
+  });
+  actor.items.set(weapon.id, weapon);
+  const label = new FakeElement("label");
+  const li = new FakeElement("li");
+  li.dataset.itemId = weapon.id;
+  li.querySelector = () => label;
+  const root = new FakeElement("div");
+  root.querySelectorAll = () => [li];
+  env.hooks.renderActorSheetT20.at(-1)({ actor }, root);
+  const icon = label.children.at(-1);
+  assert.match(icon.className, /fa-circle-question t20cp-nonprof/);
+  assert.equal(icon.dataset.tooltip, undefined);
+  assert.equal(icon.dataset.tooltipHtml, undefined);
+  assert.match(icon.dataset.tooltipText, /<strong>Treinador<\/strong>/);
 });
 
 test("skill breakdown: the system's tooltip shows the armor penalty and the prepared total, only for skills that got it", () => {
   const env = setup();
-  try {
-    const actor = makeActor({ armor: [{ name: "Armadura completa", tipo: "pesada", penalty: -5 }] });
-    const data = { parent: actor, pericias: {}, tracos: actor.system.tracos };
-    Object.setPrototypeOf(data, env.Character.prototype);
-    actor.system = data;
-    const rollData = {};
-    const values = {};
-    for (const id of ["luta", "acro", "vont"]) values[id] = data.prepareSkill(id, { skillData: { value: 1, pda: id === "acro" }, rollData }).value;
-    game.actors = { get: (id) => (id === "a1" ? actor : undefined) };
-    const tip = (key) => tooltipLines(env.helpers.fieldBonuses(`system.pericias.${key}.bonus`, { data: { root: { actor: { _id: "a1" } } } }));
-    assert.deepEqual(values, { luta: -4, acro: 1, vont: 1 });
-    assert.deepEqual(tip("luta"), ["Força +1", "T20CP.NonProficiency.TooltipLabel -5", "Total -4"]);
-    assert.deepEqual(tip("acro"), ["Força +1", "Total +1"]);
-    assert.deepEqual(tip("vont"), ["Força +1", "Total +1"]);
-    assert.deepEqual(tooltipLines(env.helpers.fieldBonuses("system.attributes.defesa.bonus", { data: { root: { actor: { _id: "a1" } } } })), ["Força +1", "Total +1"]);
-    // Unlinked token: same _id as a base actor without armor; the line follows the sheet's own (synthetic) actor.
-    const base = makeActor();
-    const baseData = Object.setPrototypeOf({ parent: base, pericias: {}, tracos: base.system.tracos }, env.Character.prototype);
-    base.system = baseData;
-    baseData.prepareSkill("luta", { skillData: { value: 1 }, rollData: {} });
-    game.actors = { get: (id) => (id === "a1" ? base : undefined) };
-    const tokenTip = (root) => tooltipLines(env.helpers.fieldBonuses("system.pericias.luta.bonus", { data: { root } }));
-    assert.deepEqual(tokenTip({ actor: actor, uuid: "Scene.s.Token.t.Actor.a1" }), ["Força +1", "T20CP.NonProficiency.TooltipLabel -5", "Total -4"]);
-    foundry.utils.fromUuidSync = (uuid) => (uuid === "Scene.s.Token.t.Actor.a1" ? actor : null);
-    assert.deepEqual(tokenTip({ actor: { _id: "a1" }, uuid: "Scene.s.Token.t.Actor.a1" }), ["Força +1", "T20CP.NonProficiency.TooltipLabel -5", "Total -4"]);
-    game.settings.get = (scope, key) => (key === "nonProficiencyRule" ? "off" : false);
-    assert.deepEqual(tip("luta"), ["Força +1", "Total +1"]);
-  } finally {
-    teardown();
-  }
+  const actor = makeActor({ armor: [{ name: "Armadura completa", tipo: "pesada", penalty: -5 }] });
+  const data = { parent: actor, pericias: {}, tracos: actor.system.tracos };
+  Object.setPrototypeOf(data, env.Character.prototype);
+  actor.system = data;
+  const rollData = {};
+  const values = {};
+  for (const id of ["luta", "acro", "vont"]) values[id] = data.prepareSkill(id, { skillData: { value: 1, pda: id === "acro" }, rollData }).value;
+  env.docs.actorList = { get: (id) => (id === "a1" ? actor : undefined) };
+  const tip = (key) => tooltipLines(env.helpers.fieldBonuses(`system.pericias.${key}.bonus`, { data: { root: { actor: { _id: "a1" } } } }));
+  assert.deepEqual(values, { luta: -4, acro: 1, vont: 1 });
+  assert.deepEqual(tip("luta"), ["Força +1", "T20CP.NonProficiency.TooltipLabel -5", "Total -4"]);
+  assert.deepEqual(tip("acro"), ["Força +1", "Total +1"]);
+  assert.deepEqual(tip("vont"), ["Força +1", "Total +1"]);
+  assert.deepEqual(tooltipLines(env.helpers.fieldBonuses("system.attributes.defesa.bonus", { data: { root: { actor: { _id: "a1" } } } })), ["Força +1", "Total +1"]);
+  // Unlinked token: same _id as a base actor without armor; the line follows the sheet's own (synthetic) actor.
+  const base = makeActor();
+  const baseData = Object.setPrototypeOf({ parent: base, pericias: {}, tracos: base.system.tracos }, env.Character.prototype);
+  base.system = baseData;
+  baseData.prepareSkill("luta", { skillData: { value: 1 }, rollData: {} });
+  env.docs.actorList = { get: (id) => (id === "a1" ? base : undefined) };
+  const tokenTip = (root) => tooltipLines(env.helpers.fieldBonuses("system.pericias.luta.bonus", { data: { root } }));
+  assert.deepEqual(tokenTip({ actor: actor, uuid: "Scene.s.Token.t.Actor.a1" }), ["Força +1", "T20CP.NonProficiency.TooltipLabel -5", "Total -4"]);
+  env.docs.fromUuidSync = (uuid) => (uuid === "Scene.s.Token.t.Actor.a1" ? actor : null);
+  assert.deepEqual(tokenTip({ actor: { _id: "a1" }, uuid: "Scene.s.Token.t.Actor.a1" }), ["Força +1", "T20CP.NonProficiency.TooltipLabel -5", "Total -4"]);
+  env.setRule("off");
+  assert.deepEqual(tip("luta"), ["Força +1", "Total +1"]);
 });
 
 test("rule off: wrappers return the original values", () => {
   const env = setup({ rule: "off" });
-  try {
-    const actor = makeActor({ armor: [{ name: "Cota de malha", tipo: "pesada", penalty: -2 }] });
-    assert.deepEqual(skills(env, actor, ["atle"]), { atle: 10 });
-    assert.equal(actor.effectCalls, 0);
-  } finally {
-    teardown();
-  }
+  const actor = makeActor({ armor: [{ name: "Cota de malha", tipo: "pesada", penalty: -2 }] });
+  assert.deepEqual(skills(env, actor, ["atle"]), { atle: 10 });
+  assert.equal(actor.effectCalls, 0);
 });
 
 test("unrecognized system code: still installed, console warning and a GM notification when the rule is on", () => {
   const env = setup();
-  try {
-    assert.equal(env.warnings.length, 2);
-    assert.match(env.warnings[0], /getAttackToHit not recognized/);
-    assert.ok(env.hooks.ready?.length);
-    env.hooks.ready.at(-1)();
-    assert.equal(env.notifications.length, 1);
-    assert.match(env.notifications[0], /getAttackToHit, prepareSkill/);
-    const actor = makeActor();
-    const item = Object.assign(Object.create(env.Item.prototype), { type: "arma", name: "Espada longa", isOwned: true, actor, system: { proficiencia: "marcial" } });
-    assert.deepEqual(item.getAttackToHit().parts, ["@skill", "-5"]);
-  } finally {
-    teardown();
-  }
+  assert.equal(env.warnings.length, 2);
+  assert.match(env.warnings[0], /getAttackToHit not recognized/);
+  assert.ok(env.hooks.ready?.length);
+  env.hooks.ready.at(-1)();
+  assert.equal(env.notifications.length, 1);
+  assert.match(env.notifications[0], /getAttackToHit, prepareSkill/);
+  const actor = makeActor();
+  const item = Object.assign(Object.create(env.Item.prototype), { type: "arma", name: "Espada longa", isOwned: true, actor, system: { proficiencia: "marcial" } });
+  assert.deepEqual(item.getAttackToHit().parts, ["@skill", "-5"]);
 });
 
 test("skill breakdown with field-bonuses-breakdown: the penalty is contributed; the line is left to it once the actor is recorded", () => {
@@ -597,21 +560,42 @@ test("skill breakdown with field-bonuses-breakdown: the penalty is contributed; 
     isBreakdownActive: () => active
   };
   const env = setup({ breakdown });
-  try {
-    const actor = makeActor({ armor: [{ name: "Armadura completa", tipo: "pesada", penalty: -5 }] });
-    const data = Object.setPrototypeOf({ parent: actor, pericias: {}, tracos: actor.system.tracos }, env.Character.prototype);
-    actor.system = data;
-    data.prepareSkill("luta", { skillData: { value: 1 }, rollData: {} });
-    assert.deepEqual(contributed, [
-      ["system.pericias.luta.bonus", { label: "T20CP.NonProficiency.TooltipLabel", value: -5, owner: "non-proficiency" }]
-    ]);
-    const tip = () => tooltipLines(env.helpers.fieldBonuses("system.pericias.luta.bonus", { data: { root: { actor } } }));
-    assert.deepEqual(tip(), ["Força +1", "T20CP.NonProficiency.TooltipLabel -5", "Total -4"], "not recorded yet: the rule draws it");
-    recorded.add(actor);
-    assert.deepEqual(tip(), ["Força +1", "Total +1"]);
-    active = false;
-    assert.deepEqual(tip(), ["Força +1", "T20CP.NonProficiency.TooltipLabel -5", "Total -4"]);
-  } finally {
-    teardown();
-  }
+  const actor = makeActor({ armor: [{ name: "Armadura completa", tipo: "pesada", penalty: -5 }] });
+  const data = Object.setPrototypeOf({ parent: actor, pericias: {}, tracos: actor.system.tracos }, env.Character.prototype);
+  actor.system = data;
+  data.prepareSkill("luta", { skillData: { value: 1 }, rollData: {} });
+  assert.deepEqual(contributed, [
+    ["system.pericias.luta.bonus", { label: "T20CP.NonProficiency.TooltipLabel", value: -5, owner: "non-proficiency" }]
+  ]);
+  const tip = () => tooltipLines(env.helpers.fieldBonuses("system.pericias.luta.bonus", { data: { root: { actor } } }));
+  assert.deepEqual(tip(), ["Força +1", "T20CP.NonProficiency.TooltipLabel -5", "Total -4"], "not recorded yet: the rule draws it");
+  recorded.add(actor);
+  assert.deepEqual(tip(), ["Força +1", "Total +1"]);
+  active = false;
+  assert.deepEqual(tip(), ["Força +1", "T20CP.NonProficiency.TooltipLabel -5", "Total -4"]);
+});
+
+test("setting change: actors are prepared again and the unrecognized-code warning is repeated", async () => {
+  const env = setup({ rule: "off" });
+  const resets = [];
+  const actor = { name: "A", reset: () => resets.push("A"), sheet: { rendered: true, render: () => resets.push("render") } };
+  env.docs.actorList = [actor];
+  await env.kernel.changeSetting("nonProficiencyRule", "on");
+  assert.deepEqual(resets, ["A", "render"]);
+  assert.equal(env.notifications.length, 1);
+});
+
+test("state: two installs keep their own skill penalties and warnings", () => {
+  const first = setup();
+  const second = setup();
+  const actor = makeActor({ armor: [{ name: "Armadura completa", tipo: "pesada", penalty: -5 }] });
+  const data = Object.setPrototypeOf({ parent: actor, pericias: {}, tracos: actor.system.tracos }, first.Character.prototype);
+  actor.system = data;
+  data.prepareSkill("luta", { skillData: { value: 1 }, rollData: {} });
+  const tip = (env) => tooltipLines(env.helpers.fieldBonuses("system.pericias.luta.bonus", { data: { root: { actor } } }));
+  assert.deepEqual(tip(first), ["Força +1", "T20CP.NonProficiency.TooltipLabel -5", "Total -4"]);
+  assert.deepEqual(tip(second), ["Força +1", "Total +1"]);
+  first.hooks.ready.at(-1)();
+  assert.equal(first.notifications.length, 1);
+  assert.equal(second.notifications.length, 0);
 });

@@ -3,15 +3,18 @@ import assert from "node:assert/strict";
 import {
   buildStatusEffectData,
   childStatusesOf,
-  coversActor,
   createKeyedQueue,
   createPvTracker,
   isOrphanChild,
   orphansOf,
   planDyingStates
-} from "../scripts/rules/dying-states.mjs";
+} from "../scripts/features/dying-states/domain.mjs";
+import { coversActor } from "../scripts/features/dying-states/integration.mjs";
+import dyingStates from "../scripts/features/dying-states/index.mjs";
+import nonlethalDamage from "../scripts/features/nonlethal-damage/index.mjs";
 import { isTracked } from "../scripts/lib/dying-states.mjs";
 import { lethalSnapshot } from "../scripts/lib/nonlethal.mjs";
+import { createFakeContext, createFakePlatform, createTestKernel } from "./support/fake-platform.mjs";
 
 const MODULE = "t20-community-patches";
 const plan = (state) => planDyingStates({ max: 8, statuses: new Set(), owned: {}, ...state });
@@ -31,18 +34,13 @@ test("isTracked follows the mode", () => {
 });
 
 test("coversActor reads the setting and is false without it", () => {
-  const previous = globalThis.game;
-  try {
-    globalThis.game = { settings: { get() { throw new Error("not registered"); } } };
-    assert.equal(coversActor({ type: "character" }), false);
-    globalThis.game = { settings: { get: () => "characters" } };
-    assert.equal(coversActor({ type: "character" }), true);
-    assert.equal(coversActor({ type: "npc" }), false);
-    globalThis.game = { settings: { get: () => "all" } };
-    for (const type of ["character", "npc", "simple"]) assert.equal(coversActor({ type }), true);
-  } finally {
-    globalThis.game = previous;
-  }
+  const ctxWith = (settings) => createFakeContext(dyingStates, createFakePlatform({ settings }));
+  assert.equal(coversActor(ctxWith({}), { type: "character" }), false);
+  const characters = ctxWith({ dyingStatesRule: "characters" });
+  assert.equal(coversActor(characters, { type: "character" }), true);
+  assert.equal(coversActor(characters, { type: "npc" }), false);
+  const all = ctxWith({ dyingStatesRule: "all" });
+  for (const type of ["character", "npc", "simple"]) assert.equal(coversActor(all, { type }), true);
 });
 
 test("planDyingStates: falling, bleeding again and stabilizing", () => {
@@ -244,7 +242,6 @@ class ClientActor {
     return user.isGM || this.owners.includes(user.id);
   }
   update(changes, options = {}) {
-    this.client.activate();
     this.client.call("preUpdateActor", this, changes, options, this.client.user.id);
     return this.client.server.submit({ type: "update", actorId: this.id, changes, options, userId: this.client.user.id });
   }
@@ -263,33 +260,19 @@ class Client {
     this.server = server;
     this.user = user;
     this.childDelay = childDelay;
-    this.hooks = {};
     this.actors = new Map();
     this.users = null;
-    this.warnings = [];
+    this.platform = clientPlatform(this);
   }
   get usersView() {
     return this.users ?? this.server.users;
   }
-  activate() {
-    const users = this.usersView;
-    globalThis.game.user = this.user;
-    globalThis.game.users = {
-      getDesignatedUser(condition) {
-        const qualifying = users.filter(condition);
-        if (!qualifying.length) return null;
-        return qualifying.reduce((best, u) => ((u.role - best.role) || (u.id < best.id ? 1 : -1)) > 0 ? u : best);
-      }
-    };
-    globalThis.Hooks = { on: (name, fn) => (this.hooks[name] ??= []).push(fn) };
-  }
   call(name, ...args) {
-    for (const fn of this.hooks[name] ?? []) fn(...args);
+    this.platform.callHook(name, ...args);
   }
+  /** Each client installs the rule on its own platform, as each browser does. */
   async load() {
-    this.activate();
-    const mod = await import(`../scripts/rules/dying-states.mjs?client=${this.user.id}-${Math.random()}`);
-    mod.installDyingStatesRule(() => settings.get("nonlethalDamageRule") === "on");
+    createTestKernel({ platform: this.platform, features: [dyingStates, nonlethalDamage] }).install(dyingStates);
   }
   actor(id) {
     return this.actors.get(id);
@@ -359,7 +342,6 @@ class Server {
       for (const client of [...this.clients]) {
         const doc = client.actor(op.actorId);
         for (const [path, value] of Object.entries(op.changes)) setPath(doc, path, value);
-        client.activate();
         client.call("updateActor", doc, structuredClone(op.changes), structuredClone(op.options), op.userId);
       }
     } else if (op.type === "create") {
@@ -369,7 +351,6 @@ class Server {
         const doc = client.actor(op.actorId);
         const effects = created.map((e) => new ClientEffect(e, doc));
         for (const e of effects) doc.effects.set(e.id, e);
-        client.activate();
         for (const e of effects) {
           client.systemOnCreate(e, op.userId);
           client.call("createActiveEffect", e, {}, op.userId);
@@ -382,7 +363,6 @@ class Server {
         const doc = client.actor(op.actorId);
         const effects = ids.map((id) => doc.effects.get(id)).filter(Boolean);
         for (const e of effects) doc.effects.delete(e.id);
-        client.activate();
         for (const e of effects) {
           client.systemOnDelete(e, op.userId);
           client.call("deleteActiveEffect", e, {}, op.userId);
@@ -411,35 +391,49 @@ function setPath(obj, path, value) {
   node[parts.at(-1)] = value;
 }
 
+/** World state every client reads: the module settings and CONFIG.statusEffects. */
 const settings = new Map();
-function installGlobals() {
+const worldConfig = { statusEffects: STATUS_EFFECTS };
+const FakeActiveEffect = {
+  async fromStatusEffect(id) {
+    return { toObject: () => ({ name: id, statuses: [id], duration: { expiry: "sceneEnd" }, showIcon: 1, flags: {} }) };
+  }
+};
+
+/** The platform of one client: its user, the world settings and the core's designated user over its view of the users. */
+function clientPlatform(client) {
+  const platform = createFakePlatform({
+    userId: client.user.id,
+    classes: { activeEffect: FakeActiveEffect },
+    users: {
+      designated(condition) {
+        const qualifying = client.usersView.filter(condition);
+        if (!qualifying.length) return null;
+        return qualifying.reduce((best, u) => ((u.role - best.role) || (u.id < best.id ? 1 : -1)) > 0 ? u : best);
+      }
+    }
+  });
+  platform.statusEffects = () => worldConfig.statusEffects;
+  platform.settings = {
+    register: () => {},
+    get(key) {
+      if (!settings.has(key)) throw new Error(`not registered: ${key}`);
+      return settings.get(key);
+    },
+    set: async (key, value) => settings.set(key, value)
+  };
+  return platform;
+}
+
+function resetWorld() {
   settings.clear();
   settings.set("dyingStatesRule", "characters");
   settings.set("nonlethalDamageRule", "off");
-  globalThis.game = {
-    settings: {
-      get(module, key) {
-        assert.equal(module, MODULE);
-        if (!settings.has(key)) throw new Error(`not registered: ${key}`);
-        return settings.get(key);
-      }
-    }
-  };
-  globalThis.CONST = { ACTIVE_EFFECT_SHOW_ICON: { ALWAYS: 2 } };
-  globalThis.CONFIG = {
-    statusEffects: STATUS_EFFECTS,
-    ActiveEffect: {
-      documentClass: {
-        async fromStatusEffect(id) {
-          return { toObject: () => ({ name: id, statuses: [id], duration: { expiry: "sceneEnd" }, showIcon: 1, flags: {} }) };
-        }
-      }
-    }
-  };
+  worldConfig.statusEffects = STATUS_EFFECTS;
 }
 
 async function world({ gm = true, value = 3, max = 20, ic = [], childDelay = 0, playerChildDelay = childDelay } = {}) {
-  installGlobals();
+  resetWorld();
   const server = new Server();
   const gmUser = { id: "gm0000", role: 4, isGM: true, active: gm };
   const player = { id: "pl0000", role: 1, isGM: false, active: true };
@@ -672,20 +666,14 @@ test("integration: a suppressed Sangrando is not created again on each hit", asy
 
 test("integration: a status missing from CONFIG.statusEffects is skipped with one warning", async () => {
   const { server, gm } = await world();
-  CONFIG.statusEffects = { ...STATUS_EFFECTS };
-  delete CONFIG.statusEffects.sangrando;
-  const warn = console.warn;
-  const warnings = [];
-  console.warn = (...args) => warnings.push(args.join(" "));
-  try {
-    await setHp(gm, -1);
-    await server.settle();
-    await setHp(gm, 2);
-    await setHp(gm, -1);
-    await server.settle();
-  } finally {
-    console.warn = warn;
-  }
+  worldConfig.statusEffects = { ...STATUS_EFFECTS };
+  delete worldConfig.statusEffects.sangrando;
+  await setHp(gm, -1);
+  await server.settle();
+  await setHp(gm, 2);
+  await setHp(gm, -1);
+  await server.settle();
+  const warnings = server.clients.flatMap((c) => c.platform.logs.filter((l) => l.level === "warn").map((l) => l.args.join(" ")));
   assert.equal(server.statuses("oberon").sangrando, undefined);
   assert.equal(server.statuses("oberon").inconsciente, 1);
   assert.equal(warnings.filter((w) => w.includes("sangrando")).length, 1);

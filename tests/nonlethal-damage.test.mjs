@@ -12,47 +12,34 @@ import {
   touchesLethalHp
 } from "../scripts/lib/nonlethal.mjs";
 import {
+  createPreparedFloors,
   isExplicitNonlethalEdit,
   hpForNonlethalEdit,
   nonlethalForUpdate,
-  onCaptureClick,
-  onPreUpdateActor,
   pickDamageRoll,
-  restorePreparedMin,
   recognizesDamageMethod,
   resolveHpUpdate,
-  ruleEnabled,
-  syncChatToggles,
   widenedMin,
-  widenPreparedMin,
   withNonlethalCall
-} from "../scripts/rules/nonlethal-damage.mjs";
+} from "../scripts/features/nonlethal-damage/domain/index.mjs";
+import { createState, onPreUpdateActor as onPreUpdate } from "../scripts/features/nonlethal-damage/integration.mjs";
+import { onCaptureClick as onCapture, syncChatToggles } from "../scripts/features/nonlethal-damage/ui.mjs";
+import nonlethalDamage from "../scripts/features/nonlethal-damage/index.mjs";
+import { createFakeContext, createFakePlatform, createTestKernel } from "./support/fake-platform.mjs";
+import { createWrapRegistry } from "../scripts/kernel/wrap.mjs";
 
 const MODULE = "t20-community-patches";
 
 Math.clamp ??= (v, min, max) => Math.min(Math.max(v, min), max);
 
-let setting = "off";
-globalThis.game = {
-  settings: {
-    get(module, key) {
-      if (setting instanceof Error) throw setting;
-      assert.equal(module, MODULE);
-      assert.equal(key, "nonlethalDamageRule");
-      return setting;
-    }
-  },
-  i18n: { localize: (k) => k, format: (k) => k }
-};
-const withSetting = (value, fn) => {
-  const previous = setting;
-  setting = value;
-  try {
-    return fn();
-  } finally {
-    setting = previous;
-  }
-};
+/** The state of one installation, over a fake platform with the rule in `setting` (undefined: not registered). */
+function setup(setting, overrides = {}) {
+  const platform = createFakePlatform({ settings: setting === undefined ? {} : { nonlethalDamageRule: setting }, ...overrides });
+  const state = createState(createFakeContext(nonlethalDamage, platform));
+  return { platform, state };
+}
+const ruleEnabled = (setting) => setup(setting).state.enabled();
+const withSetting = (value, fn) => fn(setup(value));
 
 /* -------------------------------------------- */
 /*  Contract                                    */
@@ -79,9 +66,9 @@ test("nonlethalOf reads the flag as an integer >= 0", () => {
 });
 
 test("ruleEnabled: only 'on'; false when the setting is not registered", () => {
-  assert.equal(withSetting("on", ruleEnabled), true);
-  assert.equal(withSetting("off", ruleEnabled), false);
-  assert.equal(withSetting(new Error("not registered"), ruleEnabled), false);
+  assert.equal(ruleEnabled("on"), true);
+  assert.equal(ruleEnabled("off"), false);
+  assert.equal(ruleEnabled(undefined), false);
 });
 
 test("lethalHp and widenedMin", () => {
@@ -265,14 +252,19 @@ test("withNonlethalCall: options, pv.min and this", async () => {
 });
 
 test("the system's applyDamage called with the Proxy is not cut by the floor", async () => {
+  // The verbatim system code reads the Hooks global.
   globalThis.Hooks = { call: () => true };
-  const applyDamage = new Function(`return ({ ${SYSTEM_APPLY_DAMAGE} }).applyDamage;`)();
-  const { actor, calls } = fakeActor();
-  await applyDamage.call(withNonlethalCall(actor), 20, 1, true);
-  assert.equal(calls[0].data["system.attributes.pv.value"], -10);
-  assert.equal(calls[0].options[MODULE].nonlethal, true);
-  await applyDamage.call(actor, 20, 1, true);
-  assert.equal(calls[1].data["system.attributes.pv.value"], -5);
+  try {
+    const applyDamage = new Function(`return ({ ${SYSTEM_APPLY_DAMAGE} }).applyDamage;`)();
+    const { actor, calls } = fakeActor();
+    await applyDamage.call(withNonlethalCall(actor), 20, 1, true);
+    assert.equal(calls[0].data["system.attributes.pv.value"], -10);
+    assert.equal(calls[0].options[MODULE].nonlethal, true);
+    await applyDamage.call(actor, 20, 1, true);
+    assert.equal(calls[1].data["system.attributes.pv.value"], -5);
+  } finally {
+    delete globalThis.Hooks;
+  }
 });
 
 /* -------------------------------------------- */
@@ -290,72 +282,68 @@ function hookActor({ type = "npc", value = 6, nonlethal = 4, max = 10 } = {}) {
 }
 const flagOf = (changes) => readChange(changes, `flags.${MODULE}.nonlethal`);
 
-test("preUpdateActor: nested and dotted changes", () => withSetting("on", () => {
+test("preUpdateActor: nested and dotted changes", () => withSetting("on", ({ state }) => {
   const nested = { system: { attributes: { pv: { value: 9 } } } };
-  onPreUpdateActor(hookActor(), nested, {});
+  onPreUpdate(state, hookActor(), nested, {});
   assert.deepEqual(flagOf(nested), { found: true, value: 1 });
 
   const dotted = { "system.attributes.pv.value": 2 };
-  onPreUpdateActor(hookActor(), dotted, { [MODULE]: { nonlethal: true } });
+  onPreUpdate(state, hookActor(), dotted, { [MODULE]: { nonlethal: true } });
   assert.equal(nested.flags[MODULE].nonlethal, 1);
   assert.equal(dotted.flags[MODULE].nonlethal, 8);
 
   const dottedFlag = { "system.attributes.pv.value": 9, [`flags.${MODULE}.nonlethal`]: 4 };
-  onPreUpdateActor(hookActor(), dottedFlag, {});
+  onPreUpdate(state, hookActor(), dottedFlag, {});
   assert.equal(Object.hasOwn(dottedFlag, `flags.${MODULE}.nonlethal`), false);
   assert.equal(dottedFlag.flags[MODULE].nonlethal, 1);
 }));
 
-test("preUpdateActor: full sheet submission heals N; a changed flag wins", () => withSetting("on", () => {
+test("preUpdateActor: full sheet submission heals N; a changed flag wins", () => withSetting("on", ({ state }) => {
   const full = { system: { attributes: { pv: { value: 9, temp: 0 } } }, flags: { [MODULE]: { nonlethal: 4 } } };
-  onPreUpdateActor(hookActor(), full, {});
+  onPreUpdate(state, hookActor(), full, {});
   assert.equal(full.flags[MODULE].nonlethal, 1);
 
   const edit = { system: { attributes: { pv: { value: 6, temp: 0 } } }, flags: { [MODULE]: { nonlethal: 2 } } };
-  onPreUpdateActor(hookActor(), edit, {});
+  onPreUpdate(state, hookActor(), edit, {});
   assert.equal(edit.flags[MODULE].nonlethal, 2);
 }));
 
-test("preUpdateActor: filling the field at full HP lowers the HP and keeps N", () => withSetting("on", () => {
+test("preUpdateActor: filling the field at full HP lowers the HP and keeps N", () => withSetting("on", ({ state }) => {
   const sheet = { system: { attributes: { pv: { value: 10, temp: 0 } } }, flags: { [MODULE]: { nonlethal: 3 } } };
-  onPreUpdateActor(hookActor({ value: 10, nonlethal: 0 }), sheet, {});
+  onPreUpdate(state, hookActor({ value: 10, nonlethal: 0 }), sheet, {});
   assert.deepEqual(readChange(sheet, "system.attributes.pv.value"), { found: true, value: 7 });
   assert.equal(sheet.flags[MODULE].nonlethal, 3);
 }));
 
-test("preUpdateActor: hazards and updates without HP are ignored", () => withSetting("on", () => {
+test("preUpdateActor: hazards and updates without HP are ignored", () => withSetting("on", ({ state }) => {
   const changes = { system: { attributes: { pv: { value: 9 } } } };
-  onPreUpdateActor(hookActor({ type: "hazard" }), changes, {});
+  onPreUpdate(state, hookActor({ type: "hazard" }), changes, {});
   assert.equal(flagOf(changes).found, false);
   const other = { name: "x" };
-  onPreUpdateActor(hookActor(), other, {});
+  onPreUpdate(state, hookActor(), other, {});
   assert.deepEqual(other, { name: "x" });
 }));
 
-test("preUpdateActor with the rule off: only healing consumes N", () => withSetting("off", () => {
+test("preUpdateActor with the rule off: only healing consumes N", () => withSetting("off", ({ state }) => {
   const heal = { system: { attributes: { pv: { value: 9 } } } };
-  onPreUpdateActor(hookActor(), heal, {});
+  onPreUpdate(state, hookActor(), heal, {});
   assert.equal(heal.flags[MODULE].nonlethal, 1);
   const damage = { system: { attributes: { pv: { value: 2 } } } };
-  onPreUpdateActor(hookActor(), damage, { [MODULE]: { nonlethal: true } });
+  onPreUpdate(state, hookActor(), damage, { [MODULE]: { nonlethal: true } });
   assert.equal(flagOf(damage).found, false);
 }));
 
-test("preUpdateActor never throws", () => withSetting("on", () => {
-  const error = console.error;
-  console.error = () => {};
-  try {
-    const actor = hookActor();
-    actor.getFlag = () => {
-      throw new Error("boom");
-    };
-    assert.doesNotThrow(() => onPreUpdateActor(actor, { system: { attributes: { pv: { value: 9 } } } }, {}));
-  } finally {
-    console.error = error;
-  }
+test("preUpdateActor never throws", () => withSetting("on", ({ state, platform }) => {
+  const actor = hookActor();
+  actor.getFlag = () => {
+    throw new Error("boom");
+  };
+  assert.doesNotThrow(() => onPreUpdate(state, actor, { system: { attributes: { pv: { value: 9 } } } }, {}));
+  assert.equal(platform.logs.filter((l) => l.level === "error").length, 1);
 }));
 
 test("repeated preparations do not lower the floor twice", () => {
+  const { restorePreparedMin, widenPreparedMin } = createPreparedFloors();
   // SimpleData keeps pv.min from the source and never resets it.
   const model = { attributes: { pv: { value: 6, max: 10, min: -5 } }, parent: { getFlag: () => 4 } };
   for (let i = 0; i < 3; i++) {
@@ -375,16 +363,17 @@ test("repeated preparations do not lower the floor twice", () => {
   assert.equal(model.attributes.pv.min, -7);
 });
 
-test("preUpdateActor: an explicit N is limited by the maximum sent in the same update", () => withSetting("on", () => {
+test("preUpdateActor: an explicit N is limited by the maximum sent in the same update", () => withSetting("on", ({ state }) => {
   const raise = { system: { attributes: { pv: { max: 20 } } }, flags: { [MODULE]: { nonlethal: 10 } } };
-  onPreUpdateActor(hookActor(), raise, {});
+  onPreUpdate(state, hookActor(), raise, {});
   assert.equal(raise.flags[MODULE].nonlethal, 10);
   const lower = { "system.attributes.pv.max": 8, [`flags.${MODULE}.nonlethal`]: 3 };
-  onPreUpdateActor(hookActor(), lower, {});
+  onPreUpdate(state, hookActor(), lower, {});
   assert.equal(lower.flags[MODULE].nonlethal, 2);
 }));
 
 test("widenPreparedMin lowers the floor by the effective N", () => {
+  const { widenPreparedMin } = createPreparedFloors();
   const model = { attributes: { pv: { value: 0, max: 10, min: -5 } }, parent: { getFlag: () => 10 } };
   widenPreparedMin(model);
   assert.equal(model.attributes.pv.min, -15);
@@ -448,34 +437,86 @@ test("capture listener: only intercepts with the rule on, a pressed toggle and d
   };
   const roll = { options: { title: "Dano" } };
   const message = { rolls: [roll] };
-  globalThis.canvas = { tokens: { controlled: [{ actor }] } };
-  const warnings = [];
-  globalThis.ui = { notifications: { warn: (m) => warnings.push(m) } };
+  let controlled = [{ actor }];
+  const { platform, state } = setup("off", { canvas: { controlledTokens: () => controlled } });
 
-  setting = "off";
   const off = chatClick({ mod: 1, pressed: true });
-  assert.equal(onCaptureClick(off, message), undefined);
+  assert.equal(onCapture(state, off, message), undefined);
   assert.equal(off.prevented, false);
-  setting = "on";
-  try {
-    for (const [mod, pressed] of [[1, false], [-1, true]]) {
-      const event = chatClick({ mod, pressed });
-      onCaptureClick(event, message);
-      assert.equal(event.prevented, false, `mod ${mod} pressed ${pressed}`);
-    }
-    const event = chatClick({ mod: 0.5, pressed: true });
-    await onCaptureClick(event, message);
-    assert.equal(event.prevented, true);
-    assert.equal(applied.length, 1);
-    assert.equal(applied[0].roll, roll);
-    assert.equal(applied[0].mult, 0.5);
-    assert.equal(applied[0].min, -Infinity);
-
-    globalThis.canvas.tokens.controlled = [];
-    await onCaptureClick(chatClick({ mod: 2, pressed: true }), message);
-    assert.deepEqual(warnings, ["T20CP.NonlethalDamage.NoTokens"]);
-  } finally {
-    setting = "off";
+  await platform.settings.set("nonlethalDamageRule", "on");
+  for (const [mod, pressed] of [[1, false], [-1, true]]) {
+    const event = chatClick({ mod, pressed });
+    onCapture(state, event, message);
+    assert.equal(event.prevented, false, `mod ${mod} pressed ${pressed}`);
   }
+  const event = chatClick({ mod: 0.5, pressed: true });
+  await onCapture(state, event, message);
+  assert.equal(event.prevented, true);
+  assert.equal(applied.length, 1);
+  assert.equal(applied[0].roll, roll);
+  assert.equal(applied[0].mult, 0.5);
+  assert.equal(applied[0].min, -Infinity);
+
+  controlled = [];
+  await onCapture(state, chatClick({ mod: 2, pressed: true }), message);
+  assert.deepEqual(platform.notes.map((n) => [n.level, n.message]), [["warn", "T20CP.NonlethalDamage.NoTokens"]]);
   assert.equal(actor.system.attributes.pv.min, -5);
+});
+
+/* -------------------------------------------- */
+/*  Install                                     */
+/* -------------------------------------------- */
+
+/** A platform with the Actor class and data models the rule wraps; `reset` records the actors prepared again. */
+function installPlatform(setting = "on") {
+  const resets = [];
+  class CharacterData {
+    prepareDerivedData() {}
+  }
+  class SimpleData {
+    prepareDerivedData() {}
+  }
+  const ActorT20 = class {};
+  ActorT20.prototype.applyDamage = new Function(`return ({ ${SYSTEM_APPLY_DAMAGE} }).applyDamage;`)();
+  const world = [{ name: "a", reset: () => resets.push("a") }];
+  const platform = createFakePlatform({
+    settings: { nonlethalDamageRule: setting },
+    classes: { actor: ActorT20 },
+    config: { Actor: { dataModels: { character: CharacterData, npc: CharacterData, simple: SimpleData } } },
+    documents: { actors: () => world, scenes: () => [] }
+  });
+  return { platform, resets, CharacterData, SimpleData };
+}
+
+test("install: one prepareDerivedData wrapper per data model, owned by the rule, and the hooks", () => {
+  const { platform, CharacterData, SimpleData } = installPlatform();
+  const wraps = createWrapRegistry();
+  createTestKernel({ platform, wraps, features: [nonlethalDamage] }).install(nonlethalDamage);
+  assert.deepEqual(wraps.chain(CharacterData.prototype, "prepareDerivedData"), ["nonlethal-damage"]);
+  assert.deepEqual(wraps.chain(SimpleData.prototype, "prepareDerivedData"), ["nonlethal-damage"]);
+  const model = new CharacterData();
+  model.attributes = { pv: { value: 6, max: 10, min: -5 } };
+  model.parent = { getFlag: () => 4 };
+  model.prepareDerivedData();
+  assert.equal(model.attributes.pv.min, -9);
+  assert.deepEqual(
+    platform.hookCalls.map((h) => h.name),
+    ["preUpdateActor", "renderChatMessageHTML", "renderActorSheetT20"]
+  );
+  // applyDamageV2 is missing: the chat toggle is disabled with one warning.
+  assert.equal(platform.logs.filter((l) => l.level === "warn").length, 1);
+});
+
+test("install: a setting change prepares the actors again; installations do not share state", async () => {
+  const first = installPlatform("off");
+  const kernel = createTestKernel({ platform: first.platform, features: [nonlethalDamage] });
+  const state = nonlethalDamage.install(kernel.contextFor(nonlethalDamage));
+  await kernel.changeSetting("nonlethalDamageRule", "on");
+  assert.deepEqual(first.resets, ["a"]);
+
+  const second = installPlatform("on");
+  const other = nonlethalDamage.install(createFakeContext(nonlethalDamage, second.platform));
+  assert.notEqual(other.floors, state.floors);
+  assert.notEqual(other.listened, state.listened);
+  assert.equal(second.resets.length, 0);
 });

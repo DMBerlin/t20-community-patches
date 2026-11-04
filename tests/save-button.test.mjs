@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import {
   buildSaveData,
   damageMultiplier,
-  installSaveButtonRule,
   latestResults,
   naturalD20,
   parseSaveText,
@@ -11,9 +10,10 @@ import {
   pickDamageRoll,
   saveOutcome,
   shouldHideDc
-} from "../scripts/rules/save-button.mjs";
+} from "../scripts/features/save-button/domain.mjs";
+import saveButton from "../scripts/features/save-button/index.mjs";
 import { USE_PURPOSES } from "../scripts/lib/targets.mjs";
-import { currentUseTargets as uses } from "./support/legacy-services.mjs";
+import { createFakePlatform, createTestKernel } from "./support/fake-platform.mjs";
 
 const MODULE = "t20-community-patches";
 
@@ -172,7 +172,6 @@ class Messages extends Map {
 }
 
 function setupFoundry({ isGM = false, rule = "on", showFoeDc = false } = {}) {
-  const settings = { [`${MODULE}.saveButtonRule`]: rule, "tormenta20.showFoeDc": showFoeDc };
   const hooks = {};
   const created = [];
   const redraws = [];
@@ -231,47 +230,35 @@ function setupFoundry({ isGM = false, rule = "on", showFoeDc = false } = {}) {
       this.displayCalls.push(params);
       await this.hooks?.insideDisplay?.(this);
       const chatData = { content: "<p>card</p>", flags: { tormenta20: { itemData: {} } } };
-      return params.createMessage === false ? chatData : globalThis.ChatMessage.create(chatData);
+      return params.createMessage === false ? chatData : platform.chat.create(chatData);
     }
   }
 
-  Object.assign(globalThis, {
-    CONFIG: { Item: { documentClass: ItemT20 }, T20: { resistencias: { fort: "Fortitude", refl: "Reflexos", vont: "Vontade" } } },
-    game: {
-      settings: { get: (scope, key) => settings[`${scope}.${key}`] },
-      user: { id: "u1", isGM, targets: new Set() },
-      messages,
-      i18n: {
-        localize: (key) => key.replace(/^T20CP\.SaveButton\./, ""),
-        format: (key, data) => `${key.replace(/^T20CP\.SaveButton\./, "")}${JSON.stringify(data)}`
-      }
+  const env = { targets: new Set() };
+  const platform = createFakePlatform({
+    isGM,
+    settings: { saveButtonRule: rule },
+    namespaceSettings: { "tormenta20.showFoeDc": showFoeDc },
+    classes: { item: ItemT20 },
+    t20Config: { resistencias: { fort: "Fortitude", refl: "Reflexos", vont: "Vontade" } },
+    targets: () => env.targets,
+    documents: { messages: () => messages, fromUuidSync: (uuid) => tokens.get(uuid) ?? null },
+    i18n: {
+      localize: (key) => key.replace(/^T20CP\.SaveButton\./, ""),
+      format: (key, data) => `${key.replace(/^T20CP\.SaveButton\./, "")}${JSON.stringify(data)}`
     },
-    ui: {
-      chat: { updateMessage: (message) => redraws.push(message.id) },
-      notifications: { warn() {}, error() {} }
-    },
-    Hooks: { on: (name, fn) => (hooks[name] = fn) },
-    ChatMessage: {
+    chat: {
       create: async (chatData) => {
         created.push(chatData);
         return makeMessage(chatData);
-      }
-    },
-    foundry: {
-      utils: {
-        setProperty(obj, path, value) {
-          const keys = path.split(".");
-          const last = keys.pop();
-          let node = obj;
-          for (const key of keys) node = node[key] ??= {};
-          node[last] = value;
-        },
-        fromUuidSync: (uuid) => tokens.get(uuid) ?? null
-      }
-    },
-    document: { createElement: (tag) => new FakeElement(tag) }
+      },
+      updateMessage: (message) => redraws.push(message.id)
+    }
   });
-  installSaveButtonRule(uses());
+  globalThis.document = { createElement: (tag) => new FakeElement(tag) };
+  const kernel = createTestKernel({ platform, features: [saveButton] });
+  kernel.install(saveButton);
+  for (const { name, fn } of platform.hookCalls) hooks[name] = fn;
 
   const addToken = (id, { name = id, displayName = 50, isOwner = true, rollPericia } = {}) => {
     const doc = {
@@ -295,7 +282,10 @@ function setupFoundry({ isGM = false, rule = "on", showFoeDc = false } = {}) {
   };
   const rows = (root) => root.querySelectorAll(".t20cp-save-row");
   const buttons = (node) => node.querySelectorAll(".t20cp-save-button");
-  return { ItemT20, hooks, created, redraws, tokens, messages, settings, makeMessage, addToken, render, rows, buttons };
+  return Object.assign(env, {
+    ItemT20, hooks, created, redraws, tokens, messages, platform, kernel, makeMessage, addToken, render, rows, buttons,
+    uses: kernel.service("use-targets")
+  });
 }
 
 const record = (doc) => ({ uuid: doc.uuid, name: doc.name, displayName: doc.displayName });
@@ -307,7 +297,7 @@ const record = (doc) => ({ uuid: doc.uuid, name: doc.name, displayName: doc.disp
 test("on: the original gets createMessage false and the created card carries the save and the targets", async () => {
   const env = setupFoundry();
   const A = env.addToken("A", { name: "Guerreiro" });
-  game.user.targets = new Set([{ document: A }]);
+  env.targets = new Set([{ document: A }]);
   const item = new env.ItemT20();
   const message = await item.roll();
   assert.equal(item.displayCalls[0].createMessage, false);
@@ -323,9 +313,9 @@ test("targets changed during the damage or the attack do not reach the card", as
     const env = setupFoundry();
     const A = env.addToken("A");
     const B = env.addToken("B");
-    game.user.targets = new Set([{ document: A }]);
+    env.targets = new Set([{ document: A }]);
     const item = new env.ItemT20();
-    item.hooks = { [step]: async () => (game.user.targets = new Set([{ document: B }])) };
+    item.hooks = { [step]: async () => (env.targets = new Set([{ document: B }])) };
     const message = await item.roll();
     assert.deepEqual(message.flags[MODULE].save.targets.map((t) => t.uuid), [A.uuid], step);
   }
@@ -334,7 +324,7 @@ test("targets changed during the damage or the attack do not reach the card", as
 test("renaming the token during the use keeps the clicked name", async () => {
   const env = setupFoundry();
   const A = env.addToken("A", { name: "Guerreiro" });
-  game.user.targets = new Set([{ document: A }]);
+  env.targets = new Set([{ document: A }]);
   const item = new env.ItemT20();
   item.hooks = { rollDamage: async () => (A.name = "Outro") };
   const message = await item.roll();
@@ -346,9 +336,9 @@ test("a direct call outside roll reads the current targets each time", async () 
   const A = env.addToken("A");
   const B = env.addToken("B");
   const item = new env.ItemT20();
-  game.user.targets = new Set([{ document: A }]);
+  env.targets = new Set([{ document: A }]);
   const first = await item.displayCard({ options: {} });
-  game.user.targets = new Set([{ document: B }]);
+  env.targets = new Set([{ document: B }]);
   const second = await item.displayCard({ options: {} });
   assert.deepEqual(first.flags[MODULE].save.targets.map((t) => t.uuid), [A.uuid]);
   assert.deepEqual(second.flags[MODULE].save.targets.map((t) => t.uuid), [B.uuid]);
@@ -377,7 +367,7 @@ test("off, an unrecognized save or a maneuver resistance use: the original gets 
   }
   const env = setupFoundry();
   const item = new env.ItemT20();
-  const message = await uses().withUsePurpose(USE_PURPOSES.MANEUVER_RESISTANCE, () => item.roll());
+  const message = await env.uses.withUsePurpose(USE_PURPOSES.MANEUVER_RESISTANCE, () => item.roll());
   assert.equal(item.displayCalls[0].createMessage, true);
   assert.equal(message.flags[MODULE], undefined);
 });
@@ -509,7 +499,7 @@ test("a card drawn before the rule is turned off does not roll", async () => {
   const A = env.addToken("A", { rollPericia: async () => (calls++, env.makeMessage({})) });
   const card = env.makeMessage({ flags: saveFlag([record(A)]) });
   const [button] = env.buttons(env.rows(env.render(card))[0]);
-  env.settings[`${MODULE}.saveButtonRule`] = "off";
+  await env.platform.settings.set("saveButtonRule", "off");
   await button.click();
   assert.equal(calls, 0);
   assert.equal(card.flags[MODULE].saveResult, undefined);
@@ -520,4 +510,12 @@ test("off: no footer on cards that already have the flag", () => {
   const A = env.addToken("A");
   const card = env.makeMessage({ flags: saveFlag([record(A)]) });
   assert.equal(env.render(card).querySelector(".t20cp-save"), null);
+});
+
+test("changing the setting redraws only the cards with a save or a result", async () => {
+  const env = setupFoundry();
+  const card = env.makeMessage({ flags: saveFlag([]) });
+  env.makeMessage({});
+  await env.kernel.changeSetting("saveButtonRule", "off");
+  assert.deepEqual(env.redraws, [card.id, `window:${card.id}`]);
 });

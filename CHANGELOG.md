@@ -22,6 +22,7 @@ Não edite as seções de versão à mão.
 - Camada de plataforma e injeção de dependências: globais do Foundry ficam isolados num único módulo (#86).
 - Código compartilhado separado em lib e serviços, com dependências entre correções declaradas (#87).
 - Correções reorganizadas em pastas por feature (`scripts/features/<id>/`), com domínio, integração e interface separados e sem globais do Foundry fora da plataforma (#88).
+- Regras opcionais e Central reorganizadas em módulos menores, com estado isolado por instalação (#89).
 
 ### Fixed
 

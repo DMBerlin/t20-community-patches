@@ -7,7 +7,7 @@ import { createAuditPlatform } from "./platform.mjs";
 import { checkRef, findRefs } from "./refs.mjs";
 import { createFeatureContext } from "../../scripts/kernel/context.mjs";
 import { createWrapRegistry } from "../../scripts/kernel/wrap.mjs";
-import { normalizeDiagnosis } from "../../scripts/registry.mjs";
+import { normalizeDiagnosis } from "../../scripts/kernel/diagnosis.mjs";
 import { sourceFingerprint } from "../../scripts/lib/source.mjs";
 import { compareVersions } from "../../scripts/lib/version.mjs";
 

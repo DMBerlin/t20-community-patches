@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { centerSettings, registerFeatureSetting } from "../scripts/kernel/settings.mjs";
+import { centerSettings, createSettingListeners, registerFeatureSetting } from "../scripts/kernel/settings.mjs";
 import { FEATURES, GROUPS } from "../scripts/features/index.mjs";
 
 /** RULE_SETTINGS of scripts/settings.mjs before #85, in its display order. */
@@ -72,4 +72,29 @@ test("registerFeatureSetting hides the setting, drops the module keys and builds
   registerFeatureSetting((key, config) => calls.push([key, config]), spec);
   assert.deepEqual(calls, [["limit", { scope: "world", config: false, type: "field", default: 1 }]]);
   assert.equal(built, 1);
+});
+
+test("registerFeatureSetting builds the type with typeOf(platform) and calls the listeners after the spec's onChange", () => {
+  const calls = [];
+  const order = [];
+  const platform = { fields: "core" };
+  const errors = [];
+  const listeners = createSettingListeners((err) => errors.push(err.message));
+  listeners.on("limit", (value) => order.push(["listener", value]));
+  listeners.on("limit", () => {
+    throw new Error("boom");
+  });
+  listeners.on("limit", (value) => order.push(["after a failed listener", value]));
+  const spec = { key: "limit", scope: "world", typeOf: (p) => `field of ${p.fields}`, onChange: (v) => order.push(["spec", v]) };
+  registerFeatureSetting((key, config) => calls.push([key, config]), spec, { platform, listeners });
+  const [[, config]] = calls;
+  assert.equal(config.type, "field of core");
+  assert.equal("typeOf" in config, false);
+  config.onChange(3);
+  assert.deepEqual(order, [
+    ["spec", 3],
+    ["listener", 3],
+    ["after a failed listener", 3]
+  ]);
+  assert.deepEqual(errors, ["boom"]);
 });

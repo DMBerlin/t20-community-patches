@@ -1,25 +1,33 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { NONLETHAL_FIELD } from "../scripts/lib/nonlethal.mjs";
+import { NONLETHAL_FIELD, NONLETHAL_SETTING } from "../scripts/lib/nonlethal.mjs";
 import {
   NATURAL_FLAG,
   PENALTY,
   decide,
-  installNonlethalAttackRule,
   isDamageParts,
   naturalType,
-  onRenderDialog,
-  onRenderItemSheet,
   parseChoice,
   penaltyFor,
   waiversFor
-} from "../scripts/rules/nonlethal-attack.mjs";
+} from "../scripts/features/nonlethal-attack/domain.mjs";
+import nonlethalAttack from "../scripts/features/nonlethal-attack/index.mjs";
+import {
+  onRenderDialog as renderDialog,
+  onRenderItemSheet as renderItemSheet
+} from "../scripts/features/nonlethal-attack/integration.mjs";
 import { ROLL_DATA_KEY } from "../scripts/lib/nonlethal.mjs";
-import { pickDamageRoll, recordedNonlethal } from "../scripts/rules/nonlethal-damage.mjs";
-import { currentUseTargets as uses } from "./support/legacy-services.mjs";
+import { pickDamageRoll, recordedNonlethal } from "../scripts/features/nonlethal-damage/domain/index.mjs";
+import { createFakePlatform, createTestKernel } from "./support/fake-platform.mjs";
 
 const MODULE = "t20-community-patches";
+/** Stand-in for the nonlethal damage rule: only its setting, read by ctx.features.setting. */
+const nonlethalDamage = { id: "nonlethal-damage", kind: "rule", settings: [{ key: NONLETHAL_SETTING, default: "off" }], install() {} };
+/** The rule's context of the last setup() (one kernel per setup). */
+const current = {};
+const onRenderDialog = (app, html) => renderDialog(current.ctx, app, html);
+const onRenderItemSheet = (app, html) => renderItemSheet(current.ctx, app, html);
 
 /* -------------------------------------------- */
 /*  Pure logic                                  */
@@ -171,18 +179,8 @@ const power = (id, name) => ({ type: "poder", name, _stats: { compendiumSource: 
 
 /** ItemT20 mirroring the system: roll clones the item, rollAttack reads the first attack roll, rollDamage fills rolled. */
 function setup({ rule = "on", powers = [] } = {}) {
-  const settings = { [`${MODULE}.nonlethalDamageRule`]: rule };
   const registered = {};
   const seen = [];
-  globalThis.game = {
-    user: { targets: new Set() },
-    settings: { get: (scope, key) => settings[`${scope}.${key}`] },
-    i18n: {
-      localize: (key) => STRINGS[key] ?? key,
-      format: (key, data) => (STRINGS[key] ?? key).replace(/\{(\w+)\}/g, (_, k) => data[k])
-    }
-  };
-  globalThis.Hooks = { on: (name, fn) => (registered[name] = fn) };
   globalThis.document = { createElement: (tag) => new FakeElement(tag), createTextNode: (text) => ({ textContent: String(text) }) };
   const actor = { items: powers };
 
@@ -215,8 +213,18 @@ function setup({ rule = "on", powers = [] } = {}) {
       for (const r of this.system.rolls.filter((x) => x.type === "dano")) this.system.rolled[r.name] = { options: { ...options } };
     }
   }
-  globalThis.CONFIG = { Item: { documentClass: ItemT20 } };
-  installNonlethalAttackRule(uses(), () => settings[`${MODULE}.nonlethalDamageRule`] === "on");
+  const platform = createFakePlatform({
+    settings: { [NONLETHAL_SETTING]: rule },
+    classes: { item: ItemT20 },
+    targets: () => new Set(),
+    i18n: {
+      localize: (key) => STRINGS[key] ?? key,
+      format: (key, data) => (STRINGS[key] ?? key).replace(/\{(\w+)\}/g, (_, k) => data[k])
+    }
+  });
+  const kernel = createTestKernel({ platform, features: [nonlethalDamage, nonlethalAttack] });
+  current.ctx = kernel.install(nonlethalAttack);
+  for (const { name, fn } of platform.hookCalls) registered[name] = fn;
 
   const weapon = ({ name = "Espada longa", source, proposito = "corpo-a-corpo", natural, effects = [], heal = false } = {}) =>
     new ItemT20({
@@ -234,7 +242,7 @@ function setup({ rule = "on", powers = [] } = {}) {
         ]
       }
     });
-  return { ItemT20, weapon, seen, settings, registered };
+  return { ItemT20, weapon, seen, platform, registered };
 }
 
 const recorded = (item, name = "Dano") => item.system.rolled[name].options[MODULE]?.[ROLL_DATA_KEY];
@@ -391,7 +399,7 @@ test("each use resolves its own choice; the rule is read again at damage time", 
   assert.deepEqual(env.seen, ["1d20 + luta", "1d20 + luta"]);
   const { item } = await env.weapon().roll({
     form: { [NONLETHAL_FIELD]: "nonlethal" },
-    between: () => (env.settings[`${MODULE}.nonlethalDamageRule`] = "off")
+    between: () => env.platform.settings.set(NONLETHAL_SETTING, "off")
   });
   assert.equal(env.seen[2], "1d20 + luta + -5[Não letal]");
   assert.equal(recorded(item), undefined);

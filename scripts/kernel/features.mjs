@@ -2,7 +2,7 @@
  * Declared runtime dependencies between features (#87): `ctx.features` reads another feature's state or setting only
  * when its id is in `interactsWith`. Pure: the features, the status and the settings come in through parameters.
  */
-import { APPLY_STATES } from "../registry.mjs";
+import { APPLY_STATES } from "./diagnosis.mjs";
 
 /**
  * Whether a status entry is active: an applied patch, or an installed rule.

@@ -1,13 +1,21 @@
 import { SOURCE_PACK, STATUS_PACK, selectConditionSources, shouldRebuild, shouldSubstitute } from "./domain.mjs";
 
-let substituted = false;
-/** Resolved once the system's empty copy was replaced and written on this load: the bug did show up. */
-let markTriggered;
-const triggered = new Promise((resolve) => (markTriggered = resolve));
 /** How long the late probe waits for the system's routine, which runs without await on "ready". */
 const LATE_PROBE_TIMEOUT = 60_000;
-let rebuilding = false;
-let rebuildPending = false;
+
+/**
+ * State shared by install and lateProbe (ctx.state). `triggered` resolves once the system's empty copy was replaced
+ * and written on this load: the bug did show up.
+ * @param {import("../../kernel/feature.mjs").FeatureContext} ctx
+ */
+function compendiumState(ctx) {
+  if (!ctx.state.compendium) {
+    const state = { substituted: false, rebuilding: false, rebuildPending: false };
+    state.triggered = new Promise((resolve) => (state.markTriggered = resolve));
+    ctx.state.compendium = state;
+  }
+  return ctx.state.compendium;
+}
 
 /** @param {import("../../kernel/feature.mjs").FeatureContext} ctx */
 function isSystemEmptyCopy(ctx, data, operation) {
@@ -26,12 +34,13 @@ async function conditionSources(ctx) {
 
 /** @param {import("../../kernel/feature.mjs").FeatureContext} ctx */
 function wrapCreateDocuments(ctx, Base) {
+  const state = compendiumState(ctx);
   ctx.wrap(Base, "createDocuments", async function (original, data = [], operation = {}) {
     let substitutedNow = false;
-    if (!substituted) {
+    if (!state.substituted) {
       try {
         if (isSystemEmptyCopy(ctx, data, operation)) {
-          substituted = true;
+          state.substituted = true;
           substitutedNow = true;
           data = await conditionSources(ctx);
         }
@@ -40,7 +49,7 @@ function wrapCreateDocuments(ctx, Base) {
       }
     }
     const result = original.call(this, data, operation);
-    if (substitutedNow) Promise.resolve(result).then(() => markTriggered(), () => {});
+    if (substitutedNow) Promise.resolve(result).then(() => state.markTriggered(), () => {});
     return result;
   });
 }
@@ -83,25 +92,26 @@ function publishStatusEffects(ctx, entries) {
  * @param {import("../../kernel/feature.mjs").FeatureContext} ctx
  */
 async function rebuildStatusEffects(ctx) {
-  if (rebuilding) {
-    rebuildPending = true;
+  const state = compendiumState(ctx);
+  if (state.rebuilding) {
+    state.rebuildPending = true;
     return;
   }
-  rebuilding = true;
+  state.rebuilding = true;
   try {
     do {
-      rebuildPending = false;
+      state.rebuildPending = false;
       if (ctx.platform.statusEffects()?.inconsciente) return;
       const pack = ctx.platform.documents.packs()?.get(STATUS_PACK);
       if (!pack) return;
       const docs = await pack.getDocuments();
       if (!docs.some((d) => d.statuses?.has("inconsciente"))) continue;
       publishStatusEffects(ctx, await statusEntries(ctx, docs));
-    } while (rebuildPending);
+    } while (state.rebuildPending);
   } catch (err) {
     ctx.log.error("could not rebuild CONFIG.statusEffects", err);
   } finally {
-    rebuilding = false;
+    state.rebuilding = false;
   }
 }
 
@@ -139,9 +149,11 @@ export function isNeeded() {
  * After "ready": the bug is confirmed when this load replaced the system's empty copy. If that did not happen
  * (pack already filled, another GM, timeout), nothing is learned: a filled pack may have been filled by this
  * patch on an earlier load, so it never proves an official fix.
+ * @param {import("../../kernel/feature.mjs").FeatureContext} ctx
  * @returns {Promise<import("../../registry.mjs").Diagnosis|undefined>}
  */
-export function lateProbe() {
+export function lateProbe(ctx) {
+  const { triggered } = compendiumState(ctx);
   const timeout = new Promise((resolve) => setTimeout(() => resolve(undefined), LATE_PROBE_TIMEOUT));
   return Promise.race([
     triggered.then(() => ({

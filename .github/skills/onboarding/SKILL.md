@@ -71,8 +71,8 @@ Leia **apenas** estes trechos. São os pontos que qualquer tarefa toca:
 
 1. `scripts/features/index.mjs`: a lista `FEATURES` (patches de `scripts/features/patches.mjs`, cada um em `scripts/features/<id>/`, depois as regras), na ordem de instalação, com `after`.
 2. `scripts/kernel/lifecycle.mjs` (`bootFeatures`): onde o estado é resolvido e o `install()` é chamado; `scripts/main.mjs` só liga o `init` e o `ready`.
-3. `scripts/registry.mjs`: só as assinaturas e os comentários de `resolvePatchState` e `shouldNotify`, mais os estados possíveis.
-4. A lista de arquivos: `ls scripts scripts/features scripts/apps tests tools .github/skills`.
+3. `scripts/kernel/diagnosis.mjs` e `scripts/kernel/notifications.mjs`: só as assinaturas e os comentários de `resolvePatchState` e `pickNotification`, mais os estados possíveis.
+4. A lista de arquivos: `ls scripts scripts/features scripts/apps/patch-manager tests tools .github/skills`.
 
 Guarde, em uma linha cada:
 - o ciclo de vida de um patch: setting → `resolvePatchState` (versão + `isNeeded`) → `install(ctx)` no `init` → aviso no `ready`; regras: `settings` registradas → `install(ctx)`;
@@ -102,7 +102,7 @@ Carregue sob demanda, quando a tarefa pedir:
 | publicar uma versão | a skill `release` |
 | entender um bug do sistema | trechos do bundle `tormenta20.mjs`, localizados por busca (`grep -n`), **nunca** o arquivo inteiro (mais de 20 mil linhas) |
 | confirmar uma API do Foundry | o arquivo do core encontrado por busca em `$FOUNDRY_CORE/client` ou `$FOUNDRY_CORE/common` |
-| mexer na interface do gerenciador | `scripts/apps/patch-manager.mjs` (Central do T20CP), `templates/patch-manager*.hbs`, `styles/` |
+| mexer na interface do gerenciador | `scripts/apps/patch-manager/` (Central do T20CP), `templates/patch-manager*.hbs`, `styles/` |
 | mexer em configurações ou migração | `scripts/kernel/patch-settings.mjs` |
 | histórico de decisões de um patch | a issue dele (comentários) e o `git log --follow` do arquivo |
 

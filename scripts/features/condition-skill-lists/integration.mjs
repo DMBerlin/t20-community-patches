@@ -4,20 +4,22 @@ import { CONDITION_ABILITIES, conditionAbilities, diagnoseConditionLists, planCo
 
 /** @typedef {import("../../kernel/feature.mjs").FeatureContext} FeatureContext */
 
-let warned = false;
-
-/** @param {FeatureContext} ctx */
-function warnOnce(ctx, message, err) {
-  if (warned) return;
-  warned = true;
-  ctx.log.error(message, err);
+/** Logs only the first error of this install. */
+function createWarnOnce(ctx) {
+  let warned = false;
+  return (message, err) => {
+    if (warned) return;
+    warned = true;
+    ctx.log.error(message, err);
+  };
 }
 
 /**
  * Gives each affected condition its planned changes for this phase; returns what to restore.
  * @param {FeatureContext} ctx
+ * @param {(message: string, err: unknown) => void} warnOnce
  */
-function augment(ctx, actor, phase) {
+function augment(ctx, warnOnce, actor, phase) {
   const swapped = [];
   const skills = actor.system?.pericias;
   const skillConfig = ctx.platform.t20Config()?.pericias;
@@ -26,7 +28,7 @@ function augment(ctx, actor, phase) {
     swapConditions(actor, { phase, skills, skillConfig }, swapped);
   } catch (err) {
     restore(swapped);
-    warnOnce(ctx, `could not plan the conditions of ${actor?.name}; keeping the system's lists`, err);
+    warnOnce(`could not plan the conditions of ${actor?.name}; keeping the system's lists`, err);
     return [];
   }
   return swapped;
@@ -70,6 +72,7 @@ export function install(ctx) {
 
   /** Phases being planned per actor: the core marks a phase as done only after the planning has run. */
   const planning = new WeakMap();
+  const warnOnce = createWarnOnce(ctx);
 
   ctx.wrap(ActorClass.prototype, "applyActiveEffects", function (applyActiveEffects, phase, ...args) {
     // Invalid or repeated phases are left to the core, which warns and normalizes them.
@@ -84,7 +87,7 @@ export function install(ctx) {
     phases.add(phase);
     let swapped;
     try {
-      swapped = augment(ctx, this, phase);
+      swapped = augment(ctx, warnOnce, this, phase);
     } finally {
       phases.delete(phase);
     }

@@ -9,7 +9,8 @@
  * @property {string} [name]          i18n key.
  * @property {string} [hint]
  * @property {Record<string, string>} [choices]
- * @property {(value: unknown) => void} [onChange]
+ * @property {(value: unknown) => void} [onChange]  Static; state touched by a change goes in ctx.onSettingChange.
+ * @property {(platform: object) => Function|object} [typeOf]  Builds `type` on registration (core fields, #89).
  * @property {boolean} [center]       Shown in the Center's "Optional rules" tab (default: true).
  * @property {string} [centerId]      Center entry the key belongs to (default: the feature id).
  *
@@ -25,11 +26,13 @@
  * @property {string[]} [after]                   Ids that must come BEFORE in FEATURES (inner wrappers). "*" = all.
  * @property {string[]} [services]              Services used through ctx.services[id] (scripts/services/).
  * @property {string[]} [interactsWith]         Features whose state or settings this one reads at run time.
+ * @property {string} [wrapOwner]              Owner of its wrappers in api.wraps() (default: the id). Only for the
+ *                                                 rules whose wrappers kept a historical owner (#89).
  * @property {boolean} [guarded]
  * @property {"source"|"behavior"} [probeKind]   See Patch in scripts/features/patches.mjs (used by `make audit`).
  * @property {string[]} [sources]               Method labels the feature depends on (fingerprinted by `make audit`).
- * @property {(ctx: FeatureContext) => import("../registry.mjs").Diagnosis|boolean|undefined} [isNeeded]
- * @property {(ctx: FeatureContext) => Promise<import("../registry.mjs").Diagnosis|boolean|undefined>} [lateProbe]
+ * @property {(ctx: FeatureContext) => import("./diagnosis.mjs").Diagnosis|boolean|undefined} [isNeeded]
+ * @property {(ctx: FeatureContext) => Promise<import("./diagnosis.mjs").Diagnosis|boolean|undefined>} [lateProbe]
  * @property {(ctx: FeatureContext) => void} install
  *
  * @typedef {object} FeatureContext            Built by createFeatureContext (scripts/kernel/context.mjs).
@@ -37,8 +40,15 @@
  * @property {import("../platform/foundry.mjs").Platform} platform   The only way to reach Foundry.
  * @property {import("./context.mjs").FeatureLog} log                Prefixed with the module and the feature id.
  * @property {import("../platform/foundry.mjs").Platform["hooks"]} hooks
- * @property {(target: object, method: string, wrapper: Function, options?: object) => Function} wrap  Owner = id.
+ * @property {(target: object, method: string, wrapper: Function, options?: object) => Function} wrap
+ *           Owner = wrapOwner ?? id.
+ * @property {(name: string, value: object) => void} publish  Publishes `api.<name>` (game.modules.get(…).api); a
+ *           name already taken throws.
  * @property {(key: string) => unknown} setting  Value of a key declared in `settings`; any other key throws.
+ * @property {(key: string, fn: (value: unknown) => void) => () => void} onSettingChange  Called after each change of
+ *           a key declared in `settings` (any other key throws); returns a function that removes the listener.
+ * @property {Record<string, unknown>} state    Mutable bag of this context, shared by isNeeded, install and lateProbe
+ *           (for what install leaves for lateProbe); state used only by install stays in its closure.
  * @property {Record<string, object>} services   API of each declared service; any other id throws.
  * @property {{isActive: (id: string) => boolean, setting: (id: string, key: string) => unknown, list: () => object[]}}
  *           features                            Features declared in `interactsWith`; any other id throws.
@@ -73,9 +83,20 @@ function problemOf(feature, index, positions, { groups, last, services }) {
   if (!KINDS.includes(feature.kind)) return `invalid kind ${JSON.stringify(feature.kind)}`;
   if (!groups.includes(feature.group)) return `unknown group ${JSON.stringify(feature.group)}`;
   if (typeof feature.install !== "function") return "install missing";
+  return (
+    shapeProblem(feature) ??
+    afterProblem(feature.after, index, positions, last) ??
+    dependencyProblem(feature, positions, services)
+  );
+}
+
+/** The first problem of the patch fields or of wrapOwner, or null. */
+function shapeProblem(feature) {
   if (feature.kind === "patch" && !feature.system?.id) return "patch without system";
   if (feature.kind === "patch" && !feature.system.affected) return "patch without system.affected";
-  return afterProblem(feature.after, index, positions, last) ?? dependencyProblem(feature, positions, services);
+  const owner = feature.wrapOwner;
+  if (owner !== undefined && (typeof owner !== "string" || !owner)) return "invalid wrapOwner";
+  return null;
 }
 
 /** The first unknown id in `interactsWith` or `services`, or null. */

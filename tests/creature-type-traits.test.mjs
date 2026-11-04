@@ -8,32 +8,35 @@ import {
   creatureKind,
   isTypeImmune,
   needsLightChoice,
-  onCreateActiveEffect,
   planDamage,
   presentDamage,
-  resolveTerms,
+  resolveTerms
+} from "../scripts/features/creature-type-traits/domain.mjs";
+import {
+  createState,
+  onCreateActiveEffect,
   typeImmunityGetter,
   wrapApplyDamage
-} from "../scripts/rules/creature-type-traits.mjs";
+} from "../scripts/features/creature-type-traits/integration.mjs";
+import creatureTypeTraits from "../scripts/features/creature-type-traits/index.mjs";
+import { createWrapRegistry } from "../scripts/kernel/wrap.mjs";
+import { createFakeContext, createFakePlatform, createTestKernel } from "./support/fake-platform.mjs";
 
 const term = (total, flavor, extra = {}) => ({ total, options: flavor ? { flavor } : {}, ...extra });
 const op = (operator) => ({ operator });
 const entry = (flavor, total) => ({ flavor, total });
 const strip = (plan) => plan && { ...plan, entries: plan.entries.map(({ flavor, total }) => ({ flavor, total })) };
 
-function fakeGame({ enabled = true, userId = "u1", isGM = true } = {}) {
-  const notes = [];
-  globalThis.game = {
-    settings: { get: () => (enabled ? "on" : "off") },
-    i18n: {
-      localize: (key) => key,
-      format: (key, data) => `${key} ${JSON.stringify(data)}`
-    },
-    user: { id: userId, isGM }
-  };
-  globalThis.ui = { notifications: { info: (message) => notes.push(message) } };
-  return notes;
+/** The state of one installation over a fake platform with the rule on or off; `notes` are its notices. */
+function setup({ enabled = true, userId = "u1", isGM = true, ...overrides } = {}) {
+  const platform = createFakePlatform({ settings: { creatureTypeTraitsRule: enabled ? "on" : "off" }, userId, isGM, ...overrides });
+  const state = createState(createFakeContext(creatureTypeTraits, platform));
+  const notes = () => platform.notes.filter((n) => n.level === "info").map((n) => n.message);
+  return { platform, state, notes };
 }
+
+/** Wrapper dependencies of an installation with the rule on, with `overrides` (ask, notify, enabled). */
+const deps = (overrides = {}) => ({ ...setup().state, ...overrides });
 
 /* -------------------------------------------- */
 /*  Pure logic                                  */
@@ -245,12 +248,11 @@ function makeOriginal(calls) {
 const mixedRoll = () => ({ options: { rd: 0 }, terms: [term(20, "corte"), op("+"), term(20, "trevas")] });
 
 test("wrapper: a mixed roll on an undead is ONE inner call, one update and two real cards", async () => {
-  fakeGame();
   const calls = [];
   const { actor, log } = makeActor("mor");
   const roll = mixedRoll();
   const termsBefore = JSON.stringify(roll.terms);
-  const wrapped = wrapApplyDamage(makeOriginal(calls), { enabled: () => true });
+  const wrapped = wrapApplyDamage(makeOriginal(calls), deps({ enabled: () => true }));
   await wrapped.call(actor, roll, 1);
   assert.equal(calls.length, 1);
   assert.equal(log.updates.length, 1);
@@ -264,7 +266,6 @@ test("wrapper: a mixed roll on an undead is ONE inner call, one update and two r
 });
 
 test("wrapper: the received `this` (another rule's Proxy) owns the update", async () => {
-  fakeGame();
   const calls = [];
   const { actor } = makeActor("mor");
   const proxied = [];
@@ -274,27 +275,26 @@ test("wrapper: the received `this` (another rule's Proxy) owns the update", asyn
       return Reflect.get(target, prop, receiver);
     }
   });
-  await wrapApplyDamage(makeOriginal(calls), { enabled: () => true }).call(outer, mixedRoll(), 1);
+  await wrapApplyDamage(makeOriginal(calls), deps({ enabled: () => true })).call(outer, mixedRoll(), 1);
   assert.equal(proxied.length, 1);
 });
 
 test("wrapper: the light dialog decides, closing it applies nothing", async () => {
-  fakeGame();
   const cure = () => ({ options: {}, terms: [term(9, "curapv"), op("+"), term(4, "curatpv")] });
 
   let calls = [];
   let { actor, log } = makeActor("mor", { pv: 20 });
-  await wrapApplyDamage(makeOriginal(calls), { enabled: () => true, ask: async () => null }).call(actor, cure(), -1);
+  await wrapApplyDamage(makeOriginal(calls), deps({ enabled: () => true, ask: async () => null })).call(actor, cure(), -1);
   assert.equal(calls.length, 0);
   assert.equal(log.updates.length, 0);
 
   calls = [];
   ({ actor, log } = makeActor("mor", { pv: 20 }));
   let asked;
-  await wrapApplyDamage(makeOriginal(calls), {
+  await wrapApplyDamage(makeOriginal(calls), deps({
     enabled: () => true,
     ask: async (_actor, amount) => ((asked = amount), 0.5)
-  }).call(actor, cure(), -1);
+  })).call(actor, cure(), -1);
   assert.equal(asked, 9);
   assert.equal(calls.length, 1);
   assert.equal(calls[0].multiplier, 1);
@@ -303,16 +303,15 @@ test("wrapper: the light dialog decides, closing it applies nothing", async () =
   calls = [];
   ({ actor } = makeActor("mor", { pv: 20 }));
   const roll = cure();
-  await wrapApplyDamage(makeOriginal(calls), { enabled: () => true, ask: async () => "heal" }).call(actor, roll, -1);
+  await wrapApplyDamage(makeOriginal(calls), deps({ enabled: () => true, ask: async () => "heal" })).call(actor, roll, -1);
   assert.equal(calls[0].roll, roll, "heal normally passes the original roll through");
 });
 
 test("wrapper: constructs drop the HP healing with a notice; off or other types pass through", async () => {
-  fakeGame();
   const notes = [];
   let calls = [];
   const { actor, log } = makeActor("con", { pv: 10 });
-  await wrapApplyDamage(makeOriginal(calls), { enabled: () => true, notify: (m) => notes.push(m) })
+  await wrapApplyDamage(makeOriginal(calls), deps({ enabled: () => true, notify: (m) => notes.push(m) }))
     .call(actor, { options: {}, terms: [term(9, "curapv")] }, -1);
   assert.equal(calls.length, 0);
   assert.equal(log.updates.length, 0);
@@ -320,10 +319,10 @@ test("wrapper: constructs drop the HP healing with a notice; off or other types 
 
   const roll = mixedRoll();
   calls = [];
-  await wrapApplyDamage(makeOriginal(calls), { enabled: () => false }).call(makeActor("mor").actor, roll, 1);
+  await wrapApplyDamage(makeOriginal(calls), deps({ enabled: () => false })).call(makeActor("mor").actor, roll, 1);
   assert.equal(calls[0].roll, roll);
   calls = [];
-  await wrapApplyDamage(makeOriginal(calls), { enabled: () => true }).call(makeActor("hum").actor, roll, 1);
+  await wrapApplyDamage(makeOriginal(calls), deps({ enabled: () => true })).call(makeActor("hum").actor, roll, 1);
   assert.equal(calls[0].roll, roll);
 });
 
@@ -341,26 +340,26 @@ function makeEffect(actor, statusId, category, ignoreImunity = false) {
 }
 
 test("typeImmunityGetter: the system's answer first, then the type", () => {
-  fakeGame();
   const zombie = { system: { detalhes: { tipo: "mor" } }, items: [] };
   const model = (statusId, category, ignoreImunity) => ({
     parent: { actor: zombie, statuses: new Set([statusId]) },
     status: { category, ignoreImunity }
   });
-  const getter = typeImmunityGetter(() => false);
+  let enabled = true;
+  const getter = typeImmunityGetter(() => false, () => enabled);
   assert.equal(getter.call(model("fatigado", "cansaco")), true);
   assert.equal(getter.call(model("abalado", "medo")), false);
   assert.equal(getter.call(model("fatigado", "cansaco", true)), false);
-  assert.equal(typeImmunityGetter(() => true).call(model("abalado", "medo")), true);
-  fakeGame({ enabled: false });
+  assert.equal(typeImmunityGetter(() => true, () => true).call(model("abalado", "medo")), true);
+  enabled = false;
   assert.equal(getter.call(model("fatigado", "cansaco")), false);
 });
 
 test("notice: only to the user who applied it, who can see the actor, for an immune condition", () => {
   const zombie = { documentName: "Actor", name: "Zumbi", system: { detalhes: { tipo: "mor" }, tracos: { ic: { value: [] } } }, items: [], testUserPermission: () => false };
-  let notes = fakeGame();
-  onCreateActiveEffect(makeEffect(zombie, "fatigado", "cansaco"), {}, "u1");
-  assert.equal(notes.length, 1);
+  let run = setup();
+  onCreateActiveEffect(run.state, makeEffect(zombie, "fatigado", "cansaco"), {}, "u1");
+  assert.equal(run.notes().length, 1);
 
   const osteon = {
     documentName: "Actor",
@@ -368,23 +367,75 @@ test("notice: only to the user who applied it, who can see the actor, for an imm
     system: { detalhes: { tipo: "hum" }, tracos: { ic: { value: ["fatigado", "cansaco"] } } },
     items: [{ type: "poder", name: "Natureza Esquelética" }]
   };
-  notes = fakeGame();
-  onCreateActiveEffect(makeEffect(osteon, "fatigado", "cansaco"), {}, "u1");
-  assert.equal(notes.length, 1);
+  run = setup();
+  onCreateActiveEffect(run.state, makeEffect(osteon, "fatigado", "cansaco"), {}, "u1");
+  assert.equal(run.notes().length, 1);
 
-  notes = fakeGame();
-  onCreateActiveEffect(makeEffect(zombie, "fatigado", "cansaco"), {}, "other");
-  assert.equal(notes.length, 0);
+  run = setup();
+  onCreateActiveEffect(run.state, makeEffect(zombie, "fatigado", "cansaco"), {}, "other");
+  assert.equal(run.notes().length, 0);
 
-  notes = fakeGame({ isGM: false });
-  onCreateActiveEffect(makeEffect(zombie, "fatigado", "cansaco"), {}, "u1");
-  assert.equal(notes.length, 0);
+  run = setup({ isGM: false });
+  onCreateActiveEffect(run.state, makeEffect(zombie, "fatigado", "cansaco"), {}, "u1");
+  assert.equal(run.notes().length, 0);
 
-  notes = fakeGame();
-  onCreateActiveEffect(makeEffect(zombie, "abalado", "medo"), {}, "u1");
-  assert.equal(notes.length, 0);
+  run = setup();
+  onCreateActiveEffect(run.state, makeEffect(zombie, "abalado", "medo"), {}, "u1");
+  assert.equal(run.notes().length, 0);
 
-  notes = fakeGame({ enabled: false });
-  onCreateActiveEffect(makeEffect(zombie, "fatigado", "cansaco"), {}, "u1");
-  assert.equal(notes.length, 0);
+  run = setup({ enabled: false });
+  onCreateActiveEffect(run.state, makeEffect(zombie, "fatigado", "cansaco"), {}, "u1");
+  assert.equal(run.notes().length, 0);
+});
+
+/* -------------------------------------------- */
+/*  Install                                     */
+/* -------------------------------------------- */
+
+function installWorld(settings = { creatureTypeTraitsRule: "on" }) {
+  class BaseEffect {
+    get isSuppressedByImunity() {
+      return false;
+    }
+  }
+  class Actor {
+    async applyDamageV2() {}
+  }
+  const resets = [];
+  const actor = { name: "Zumbi", reset: () => resets.push("Zumbi"), sheet: { rendered: false } };
+  const platform = createFakePlatform({
+    settings,
+    classes: { actor: Actor },
+    config: { ActiveEffect: { dataModels: { base: BaseEffect } } },
+    documents: { actors: () => [actor], scenes: () => [] }
+  });
+  const wraps = createWrapRegistry();
+  const kernel = createTestKernel({ platform, wraps, features: [creatureTypeTraits] });
+  kernel.install(creatureTypeTraits);
+  return { platform, wraps, kernel, BaseEffect, Actor, resets };
+}
+
+test("install: getter, applyDamageV2 wrapper with this rule as owner, one hook; a setting change resets the actors", async () => {
+  const { platform, wraps, kernel, BaseEffect, Actor, resets } = installWorld();
+  const zombie = { system: { detalhes: { tipo: "mor" } }, items: [] };
+  const model = Object.assign(Object.create(BaseEffect.prototype), {
+    parent: { actor: zombie, statuses: new Set(["fatigado"]) },
+    status: { category: "cansaco" }
+  });
+  assert.equal(model.isSuppressedByImunity, true);
+  assert.deepEqual(wraps.chain(Actor.prototype, "applyDamageV2"), ["creature-type-traits"]);
+  assert.deepEqual(platform.hookCalls.map((h) => h.name), ["createActiveEffect"]);
+  await kernel.changeSetting("creatureTypeTraitsRule", "off");
+  assert.equal(model.isSuppressedByImunity, false);
+  assert.deepEqual(resets, ["Zumbi"]);
+});
+
+test("install: missing system APIs only warn", () => {
+  const platform = createFakePlatform({ settings: { creatureTypeTraitsRule: "on" } });
+  createTestKernel({ platform, features: [creatureTypeTraits] }).install(creatureTypeTraits);
+  const warnings = platform.logs.filter((l) => l.level === "warn").map((l) => l.args.join(" "));
+  assert.deepEqual(warnings, [
+    "creature-type-traits: BaseEffect#isSuppressedByImunity not found; type immunities are disabled",
+    "creature-type-traits: ActorT20#applyDamageV2 not found; damage and healing are unchanged"
+  ]);
 });

@@ -189,20 +189,23 @@ function setupFoundry(appliedChanges = null) {
           if (!effect.shouldApplyChange(change, { phase, replacementData: {} })) continue;
           this.applied.push(`${effect.id}:${phase}`);
           const field = this.system.getFieldForProperty(change.key.slice(7));
-          if (field instanceof ArrayField) {
-            const parts = (this.parts[change.key] ??= []);
-            if (change.type === "add") parts.push(String(change.value));
-            else if (change.type === "subtract" && parts.includes(String(change.value))) parts.splice(parts.indexOf(String(change.value)), 1);
-            this.totals[change.key] = parts.reduce((sum, v) => sum + Number(v), 0);
-          } else {
-            let delta = Number(change.value);
-            if (change.key === PENALTY_KEY) delta = -Math.abs(delta);
-            let total = (this.totals[change.key] ?? 0) + (change.type === "subtract" ? -delta : delta);
-            if (change.key === PENALTY_KEY) total = -Math.abs(total); // PenaltyField cleans the result too
-            this.totals[change.key] = total;
-          }
+          if (field instanceof ArrayField) this.applyArrayChange(change);
+          else this.applyNumberChange(change);
         }
       }
+    }
+    applyArrayChange(change) {
+      const parts = (this.parts[change.key] ??= []);
+      if (change.type === "add") parts.push(String(change.value));
+      else if (change.type === "subtract" && parts.includes(String(change.value))) parts.splice(parts.indexOf(String(change.value)), 1);
+      this.totals[change.key] = parts.reduce((sum, v) => sum + Number(v), 0);
+    }
+    applyNumberChange(change) {
+      let delta = Number(change.value);
+      if (change.key === PENALTY_KEY) delta = -Math.abs(delta);
+      let total = (this.totals[change.key] ?? 0) + (change.type === "subtract" ? -delta : delta);
+      if (change.key === PENALTY_KEY) total = -Math.abs(total); // PenaltyField cleans the result too
+      this.totals[change.key] = total;
     }
     prepare() {
       this.totals = {};

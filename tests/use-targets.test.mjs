@@ -113,7 +113,7 @@ test("a roll started synchronously inside the clone gets its own targets and lea
     const inner = same ? outer : new ItemT20("Interno");
     setTargets(token("A"));
     let nested = null;
-    hooks.onClone = (source) => {
+    hooks.onClone = () => {
       if (nested) return;
       hooks.onClone = null;
       setTargets(token("B"));

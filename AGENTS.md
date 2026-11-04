@@ -77,7 +77,7 @@ O `eslint.config.mjs` garante as fronteiras da arquitetura em camadas (épico #8
 - A Central (`scripts/apps/patch-manager/`) não importa `scripts/platform` nem as features: `scripts/platform/manager-menu.mjs` monta a classe com uma fábrica que recebe a plataforma, as features e o estado. Os helpers puros dela ficam em `rows.mjs` e em `scripts/kernel/center.mjs`.
 - No máximo 300 linhas por arquivo em todo `scripts/`. Um domínio maior vira uma pasta `domain/`.
 - Estilo: retorno antecipado (`no-else-return`), profundidade de blocos até 3, `===` (exceto com `null`), `const` e nenhum `var`. Complexidade acima de 12 e mais de 4 parâmetros geram aviso.
-- Os testes só geram avisos de estilo. Não rode `eslint --fix` neles fora de uma migração.
+- Os testes seguem as mesmas regras de estilo, sem exceção legada (#82); só `complexity` e `max-params` ficam desligadas neles. Desestruturação que omite chaves (`const { a, ...resto }`) não conta como variável sem uso.
 
 ## GitHub e git
 

@@ -36,7 +36,7 @@ export default [
       eqeqeq: ["error", "always", { null: "ignore" }],
       "prefer-const": "error",
       "no-var": "error",
-      "no-unused-vars": ["error", { argsIgnorePattern: "^_" }]
+      "no-unused-vars": ["error", { argsIgnorePattern: "^_", ignoreRestSiblings: true }]
     }
   },
   { files: LAYERED, rules: { "max-lines": ["error", { max: 300 }] } },
@@ -60,7 +60,5 @@ export default [
     files: ["tests/**", "tools/**", ".github/**", "eslint.config.mjs"],
     languageOptions: { globals: { ...globals.node } },
     rules: { complexity: "off", "max-params": "off" }
-  },
-  // Testes existentes: avisos até as fases de migração, para não editar arquivos tocados por outras worktrees.
-  { files: ["tests/**"], rules: { "max-depth": "warn", "no-unused-vars": "warn", eqeqeq: "warn", "prefer-const": "warn" } }
+  }
 ];

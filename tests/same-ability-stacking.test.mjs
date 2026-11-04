@@ -110,7 +110,7 @@ test("planReconcile: tied creations converge in any arrival order, with deletion
       const seen = [];
       for (const id of arrival) {
         seen.push(e(id));
-        for (const r of planReconcile(policy, id, seen).remove) removed.add(r);
+        planReconcile(policy, id, seen).remove.forEach((r) => removed.add(r));
       }
       const left = arrival.filter((id) => !removed.has(id));
       assert.equal(left.length, 1, `${policy} ${arrival.join(",")}`);

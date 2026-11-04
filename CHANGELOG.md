@@ -23,6 +23,7 @@ Não edite as seções de versão à mão.
 - Código compartilhado separado em lib e serviços, com dependências entre correções declaradas (#87).
 - Correções reorganizadas em pastas por feature (`scripts/features/<id>/`), com domínio, integração e interface separados e sem globais do Foundry fora da plataforma (#88).
 - Regras opcionais e Central reorganizadas em módulos menores, com estado isolado por instalação (#89).
+- Reorganização interna em camadas (kernel, plataforma, serviços e features), sem mudança de comportamento (#82).
 
 ### Fixed
 

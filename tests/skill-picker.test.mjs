@@ -188,13 +188,10 @@ function setup({ mode = "on", skills = SKILLS, actorType = "character", dialog, 
   };
   actor.prepare = () => {
     actor.system.pericias = Object.fromEntries(Object.entries(actor.base).map(([k, t]) => [k, { treinado: t }]));
-    for (const item of actor.items) {
-      for (const effect of item._source.effects ?? []) {
-        for (const change of effect.system?.changes ?? []) {
-          const m = /^system\.pericias\.([^.]+)\.treinado$/.exec(change.key);
-          if (m && actor.system.pericias[m[1]]) actor.system.pericias[m[1]].treinado = true;
-        }
-      }
+    const changes = actor.items.flatMap((item) => (item._source.effects ?? []).flatMap((effect) => effect.system?.changes ?? []));
+    for (const change of changes) {
+      const m = /^system\.pericias\.([^.]+)\.treinado$/.exec(change.key);
+      if (m && actor.system.pericias[m[1]]) actor.system.pericias[m[1]].treinado = true;
     }
   };
   actor.prepare();
@@ -259,7 +256,7 @@ function setup({ mode = "on", skills = SKILLS, actorType = "character", dialog, 
   }
   class Item extends Document {}
   class ItemT20 extends Item {
-    async _preCreate(data, options, user) {
+    async _preCreate() {
       if (this.type !== "raca") return;
       await ItemT20.createDocuments(this._source.grants.map((g) => structuredClone(g)), { keepId: true, parent: this.parent });
     }

@@ -27,7 +27,7 @@ class FakeActor {
     return `damage ${amount}`;
   }
   // T20:7340-7349: the absolute PM value becomes a debit read before spendMana.
-  async modifyTokenAttribute(attribute, value, isDelta, isBar) {
+  async modifyTokenAttribute(attribute, value, isDelta, _isBar) {
     if (attribute === "attributes.pv" || attribute === "attributes.pm") {
       const hp = this.system.attributes[attribute.split(".")[1]];
       const delta = isDelta ? -1 * value : hp.value + hp.temp - value;

@@ -202,7 +202,7 @@ function setup({ rule = "on", powers = [] } = {}) {
       await item.rollDamage({ options });
       return { item, options };
     }
-    async rollAttack({ options = {} } = {}) {
+    async rollAttack() {
       const first = this.system.rolls.find((r) => r.type === "ataque");
       const formula = first.parts.map((p) => p[0]).join(" + ");
       seen.push(formula);

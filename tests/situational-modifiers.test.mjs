@@ -219,7 +219,7 @@ function setup({ rule = "on", isGM = true, invisible = false, wrapBefore, wrapAf
       const result = await item.displayCard({ options, createMessage: card });
       return { item, options, result };
     }
-    async rollAttack({ options } = {}) {
+    async rollAttack() {
       const first = this.system.rolls.find((r) => r.type === "ataque");
       const formula = first.parts.map((p) => p[0]).join(" + ");
       seen.push({ formula, adjustments: env.uses.defenseAdjustmentsFor(this, "Scene.s.Token.A") });

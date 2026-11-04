@@ -2,7 +2,7 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
-.PHONY: help test lint check audit active active-status worktree package
+.PHONY: help test lint check audit audit-promote active active-status worktree package
 
 help: ## List commands
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-15s %s\n", $$1, $$2}'
@@ -20,6 +20,9 @@ check: ## Syntax-check all scripts, lint, then run tests
 
 audit: ## Audit the patches against the installed Tormenta20 bundle, without Foundry (BUNDLE=path overrides)
 	@node tools/audit.mjs $(if $(BUNDLE),"$(BUNDLE)")
+
+audit-promote: ## Plan the affected.maximum bump of unchanged patches to the audited version (WRITE=1 writes)
+	@node tools/audit.mjs $(if $(BUNDLE),"$(BUNDLE)") --promote $(if $(filter 1,$(WRITE)),--write)
 
 active: ## Make Foundry load THIS worktree (symlink in Data/modules; FOUNDRY_DATA overrides the path)
 	@tools/active.sh link "$(CURDIR)"

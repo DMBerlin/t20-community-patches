@@ -56,3 +56,31 @@ export function formatReport(report) {
   const summary = report.ok ? "OK: nothing changed that the patches depend on." : `ATTENTION: ${report.failing.join(", ")}`;
   return [header, "", table(rows), ...(notes.length ? ["", ...notes] : []), "", summary].join("\n");
 }
+
+const ACTIONS = ["promote", "review", "current", "retired"];
+
+/**
+ * Text of `make audit-promote` (#93).
+ * @param {ReturnType<import("./promote.mjs").planPromotion>} plan
+ * @param {{write?: boolean, command?: string}} [options]  `command`: the audit command for the same bundle (already
+ *   shell-quoted), used in the next steps.
+ * @returns {string}
+ */
+export function formatPromotion(plan, { write = false, command = "node tools/audit.mjs" } = {}) {
+  if (!plan.newer) {
+    return `Tormenta20 ${plan.to} is not newer than the baseline ${plan.from ?? "(none)"}: nothing to promote.`;
+  }
+  const header = `Tormenta20 ${plan.from} → ${plan.to} · ${write ? "WRITE" : "dry run (WRITE=1 to write)"}`;
+  const ordered = [...plan.rows].sort((a, b) => ACTIONS.indexOf(a.action) - ACTIONS.indexOf(b.action));
+  const rows = [["patch", "maximum", "action", "reason"], ...ordered.map((row) => [row.id, row.maximum ?? "-", row.action, row.reason])];
+  const counts = ACTIONS.map((action) => `${action} ${plan.rows.filter((row) => row.action === action).length}`).join(" · ");
+  const promoted = write ? `maximum ${plan.from} → ${plan.to} written to the index.mjs of every promote` : "no file changed";
+  const steps = [
+    "Next steps:",
+    "  1. review every `review` (playtest in Foundry for behavior probes and patches without sources);",
+    `  2. ${write ? "" : `${command} --promote --write, then `}${command} --write-baseline;`,
+    "  3. update relationships.systems[0].compatibility.verified in module.json (release skill);",
+    "  4. make check."
+  ];
+  return [header, "", table(rows), "", `${counts} · ${promoted}`, "", ...steps].join("\n");
+}

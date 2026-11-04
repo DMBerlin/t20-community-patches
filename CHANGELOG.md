@@ -13,6 +13,7 @@ Não edite as seções de versão à mão.
 ### Added
 
 - Ferramenta de auditoria (`make audit`) que verifica os patches contra uma nova versão do Tormenta20 sem abrir o Foundry (#90).
+- Comando `make audit-promote`, que sobe a faixa de versões afetadas dos patches cujas funções do sistema não mudaram numa versão nova do Tormenta20 e lista os demais para revisão (#93).
 
 ### Changed
 

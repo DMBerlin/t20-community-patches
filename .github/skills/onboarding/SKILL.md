@@ -34,7 +34,7 @@ git config --get commit.gpgsign; node --version
 |---|---|
 | `gh` não é `DMBerlin` | Nenhuma operação no GitHub até corrigir (`.envrc`/direnv ou `GH_TOKEN`). |
 | `FOUNDRY_CORE` ausente | Não dá para verificar APIs do core; investigações e o review ficam limitados. |
-| Tormenta20 instalado > `verified` | Os patches podem estar obsoletos: rode `make audit` (na `main`) e a skill `triage` antes de implementar. |
+| Tormenta20 instalado > `verified` | Os patches podem estar obsoletos: rode `make audit` e `make audit-promote` (simulação, na `main`) e a skill `triage` antes de implementar. |
 | `commit.gpgsign` ≠ `true` | Não faça commits até corrigir. |
 
 ## 2. Estado do repositório

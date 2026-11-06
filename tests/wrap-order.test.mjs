@@ -155,7 +155,7 @@ ${ON_DELETE}
       poder: make("PowerData", ItemData),
       race: make("RaceData", IdentityData)
     } },
-    ActiveEffect: { documentClass: ActiveEffectT20, dataModels: { base: make("BaseEffect", make("ActiveEffectTypeDataModel"), { own: prepare, getters: ["isSuppressed", "isSuppressedByImunity"] }) } },
+    ActiveEffect: { documentClass: ActiveEffectT20, dataModels: { base: make("BaseEffect", make("ActiveEffectTypeDataModel"), { own: prepare, getters: ["isSuppressed", "isSuppressedByImunity", "isSuppressedByUpgrade", "isSuppressedByDuplicated"] }) } },
     Token: { documentClass: make("TokenDocumentT20", make("TokenDocument")), dataModels: {} },
     ChatMessage: { documentClass: make("ChatMessageT20", ChatMessage), dataModels: {} },
     Combat: { documentClass: make("CombatT20", Combat), dataModels: {}, initiative: { formula: SYSTEM_FORMULA } },

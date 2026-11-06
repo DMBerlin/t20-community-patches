@@ -508,6 +508,7 @@
     }
   ],
   "noWraps": [
+    "condition-upgrade-chain",
     "modified-fields-filter",
     "temporary-usage-effect-expiry",
     "hide-legacy-upgrades",
@@ -582,6 +583,13 @@
       "id": "conditional-powers",
       "kind": "patch",
       "group": "sheet-effects",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "condition-upgrade-chain",
+      "kind": "patch",
+      "group": "conditions",
       "mode": "force",
       "state": "forced"
     },

@@ -30,6 +30,7 @@ Não edite as seções de versão à mão.
 
 - `field-bonuses-breakdown` (#91): o detalhamento da Defesa e das perícias passa a mostrar só o que a preparação do ator aplicou; bônus incorporados à armadura, bônus que não acumulam e armaduras ou escudos além do primeiro aparecem atenuados com o motivo, e o total sempre bate com a ficha. Afeta Tormenta20 1.6.5–1.6.6.
 - `d20-roll-bonus-zero` (#92): testes de perícia, de atributo e ataques deixam de mostrar parcelas "+ 0" na fórmula, sem mudar o total. Afeta Tormenta20 1.6.5–1.6.6.
+- `condition-upgrade-chain` (#94): a versão agravada de uma condição (Apavorado, Exausto, Inconsciente, Debilitado, Esmorecido) passa a suprimir a branda em qualquer ordem de aplicação, e as penalidades deixam de somar. Afeta Tormenta20 1.6.5–1.6.6.
 
 ## v1.1.0 - 2026-10-27
 

@@ -35,6 +35,10 @@
           "clamp": "Travar no limiar"
         }
       },
+      "legacy-condition-status": {
+        "Name": "Reparar condições migradas da 1.5",
+        "Hint": "Adiciona às configurações do módulo, só para o GM, uma ferramenta que encontra condições vindas da 1.5 sem dados de condição (a migração 1.6.0 os perdeu) e os restaura a partir das marcas da 1.5, com prévia, confirmação e desfazer. Nada é gravado sem confirmação."
+      },
       "armor-penalty-reduction": {
         "Name": "Melhorias que reduzem a penalidade de armadura",
         "Hint": "Ajustada, Sob Medida e Mitral reduzem a penalidade de armadura (até 0), em vez de aumentá-la."
@@ -210,6 +214,37 @@
     "ItemEffects": {
       "DeleteTitle": "Excluir efeito do item",
       "DeleteContent": "Excluir o efeito <strong>{effect}</strong> do item <strong>{item}</strong>? Isso altera o item."
+    },
+    "LegacyConditionStatus": {
+      "Name": "Reparar condições da 1.5",
+      "Button": "Abrir",
+      "Hint": "Lista as condições vindas da 1.5 que a migração deixou sem dados e as restaura, com prévia e desfazer. Só o GM ativo grava.",
+      "Title": "Reparar condições da 1.5",
+      "ToRepair": "A reparar",
+      "Repaired": "Reparadas pelo módulo",
+      "Columns": {
+        "Document": "Documento",
+        "Condition": "Condição",
+        "Category": "Categoria",
+        "Upgrade": "Agrava para",
+        "Children": "Efeitos filhos",
+        "IgnoreImmunity": "Ignora imunidade",
+        "State": "Situação"
+      },
+      "Yes": "Sim",
+      "No": "Não",
+      "Empty": "Nenhuma condição da 1.5 sem dados foi encontrada.",
+      "Acknowledge": "Entendo que esta ação grava nos atores, tokens e itens do mundo.",
+      "NeedAcknowledge": "Marque a confirmação antes de continuar.",
+      "Repair": "Reparar {count} condições",
+      "Undo": "Desfazer reparos ({count})",
+      "CanUndo": "Pode desfazer",
+      "ChangedAfterRepair": "Alterada depois do reparo",
+      "OnlyActiveGM": "Só o GM ativo pode reparar ou desfazer. A lista é só para consulta.",
+      "Busy": "Já existe um reparo em andamento.",
+      "Done": "{done} gravadas, {skipped} puladas, {failed} falhas.",
+      "Failed": "Falharam: {list}.",
+      "Stopped": "Execução interrompida: você deixou de ser o GM ativo. Abra a janela de novo para ver o que falta."
     },
     "SegmentedScene": {
       "Title": "Cena Segmentada",

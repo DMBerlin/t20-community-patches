@@ -6,7 +6,7 @@
 import { MODULE_ID } from "../lib/module.mjs";
 import { unwrap } from "../lib/source.mjs";
 import { findClassMember, parseMethodLabel } from "../lib/method-label.mjs";
-import { createConfig, createCore, createHandlebars, settingsOf } from "./ports.mjs";
+import { createConfig, createCore, createDocuments, createHandlebars, settingsOf } from "./ports.mjs";
 import { createApps, createChat, createModuleInfo, createScene, createUi, createUsers } from "./rule-ports.mjs";
 
 /**
@@ -36,7 +36,7 @@ import { createApps, createChat, createModuleInfo, createScene, createUi, create
  * @property {{isGM(): boolean, isActiveGM(): boolean, id(): string|undefined, targets(): Iterable<object>}} user
  * @property {{fromUuid(uuid: string, options?: object): Promise<object|null>,
  *   fromUuidSync(uuid: string, options?: object): object|null,
- *   actors(): object, messages(): object, combats(): object, packs(): object, scenes(): object}} documents
+ *   actors(): object, messages(): object, combats(): object, packs(): object, scenes(): object, items(): object}} documents
  * @property {{getProperty: Function, setProperty: Function, hasProperty: Function, deepClone: Function,
  *   randomID: Function, escapeHTML: Function, expandObject: Function, slugify(text: string): string,
  *   getRoute(path: string): string, debounce(fn: Function, ms: number): Function, parseUuid(uuid: string): object,
@@ -186,18 +186,6 @@ function createUtils() {
     debounce: (fn, ms) => foundry.utils.debounce(fn, ms),
     parseUuid: (uuid) => foundry.utils.parseUuid(uuid),
     enrichHTML: (html, options) => foundry.applications.ux.TextEditor.implementation.enrichHTML(html, options)
-  });
-}
-
-function createDocuments() {
-  return Object.freeze({
-    fromUuid: (uuid, options) => foundry.utils.fromUuid(uuid, options),
-    fromUuidSync: (uuid, options) => foundry.utils.fromUuidSync(uuid, options),
-    actors: () => game.actors,
-    messages: () => game.messages,
-    combats: () => game.combats,
-    packs: () => game.packs,
-    scenes: () => game.scenes
   });
 }
 

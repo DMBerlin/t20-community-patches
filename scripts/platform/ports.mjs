@@ -96,3 +96,17 @@ export function settingsOf(namespace) {
 export function createHandlebars() {
   return Object.freeze({ helpers: () => globalThis.Handlebars?.helpers });
 }
+
+/** World collections and uuid lookup, read on every call. */
+export function createDocuments() {
+  return Object.freeze({
+    fromUuid: (uuid, options) => foundry.utils.fromUuid(uuid, options),
+    fromUuidSync: (uuid, options) => foundry.utils.fromUuidSync(uuid, options),
+    actors: () => game.actors,
+    messages: () => game.messages,
+    combats: () => game.combats,
+    packs: () => game.packs,
+    scenes: () => game.scenes,
+    items: () => game.items
+  });
+}

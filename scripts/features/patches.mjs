@@ -13,6 +13,7 @@ import defaultDamageAttribute from "./default-damage-attribute/index.mjs";
 import ongoingDamageConditions from "./ongoing-damage-conditions/index.mjs";
 import proneDefense from "./prone-defense/index.mjs";
 import hideLegacyUpgrades from "./hide-legacy-upgrades/index.mjs";
+import legacyConditionStatus from "./legacy-condition-status/index.mjs";
 import itemEffectsOnActorSheet from "./item-effects-on-actor-sheet/index.mjs";
 import linkedUsageEffects from "./linked-usage-effects/index.mjs";
 import menaceXpFraction from "./menace-xp-fraction/index.mjs";
@@ -86,4 +87,4 @@ export const GROUPS = ["conditions", "sheet-effects", "usage-effects", "items", 
  */
 
 /** @type {Patch[]} */
-export const PATCHES = [statusEffectsCompendium, encumberedStatusSync, petrifiedDamageReduction, ongoingDamageConditions, proneDefense, conditionSkillLists, deathThreshold, itemEffectsOnActorSheet, usageEffectToggle, conditionalPowers, conditionUpgradeChain, modifiedFieldsFilter, fieldBonusesBreakdown, fieldBonusesTooltip, attributeBreakdown, suppressedUsageEffects, appendedUsageChanges, linkedUsageEffects, usageBuffTemplates, temporaryUsageEffectExpiry, sustainedSpellCost, abilityDialogCost, spellCostZero, armorPenaltyReduction, finesseAgileWeapons, defaultDamageAttribute, spellDcBonus, threateningCritRange, alchemicalDamageBonus, hideLegacyUpgrades, segmentedSceneSetting, restRecovery, menaceXpFraction, saveSkillBonus, sheetInitiativeToken, spellCompendiumData, enchantmentData, raceData, partnerCombatant, skillModifierAttributes, engenhoqueiroArmorPenalty, bestiaryCreatureType, initiativeTiebreak, initialClass, racialAttributeChoice, rdExceptionOnce, d20RollBonusZero];
+export const PATCHES = [statusEffectsCompendium, encumberedStatusSync, petrifiedDamageReduction, ongoingDamageConditions, proneDefense, conditionSkillLists, deathThreshold, legacyConditionStatus, itemEffectsOnActorSheet, usageEffectToggle, conditionalPowers, conditionUpgradeChain, modifiedFieldsFilter, fieldBonusesBreakdown, fieldBonusesTooltip, attributeBreakdown, suppressedUsageEffects, appendedUsageChanges, linkedUsageEffects, usageBuffTemplates, temporaryUsageEffectExpiry, sustainedSpellCost, abilityDialogCost, spellCostZero, armorPenaltyReduction, finesseAgileWeapons, defaultDamageAttribute, spellDcBonus, threateningCritRange, alchemicalDamageBonus, hideLegacyUpgrades, segmentedSceneSetting, restRecovery, menaceXpFraction, saveSkillBonus, sheetInitiativeToken, spellCompendiumData, enchantmentData, raceData, partnerCombatant, skillModifierAttributes, engenhoqueiroArmorPenalty, bestiaryCreatureType, initiativeTiebreak, initialClass, racialAttributeChoice, rdExceptionOnce, d20RollBonusZero];

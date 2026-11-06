@@ -6,6 +6,8 @@
     "#local:applyOnUseEffects": "5b9594ea:8106",
     "#local:d20Roll": "1f5c4755:1185",
     "#local:hooks": "24f88d6c:7007",
+    "#local:migrateEffectsV2": "644edab5:2114",
+    "#local:migration_1_6_0": "70cc48e3:2559",
     "#local:SystemSettings": "a7bd1516:5812",
     "AbilityUseDialog.create": "7a7469c5:2606",
     "AbilityUseDialog#_onInputChange": "c6055307:918",

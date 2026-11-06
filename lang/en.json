@@ -35,6 +35,10 @@
           "clamp": "Clamp at the threshold"
         }
       },
+      "legacy-condition-status": {
+        "Name": "Repair conditions migrated from 1.5",
+        "Hint": "Adds a GM-only tool to the module settings that finds conditions from 1.5 left without condition data (lost by migration 1.6.0) and restores it from the 1.5 flags, with preview, confirmation and undo. Nothing is written without confirmation."
+      },
       "armor-penalty-reduction": {
         "Name": "Upgrades that reduce armor penalty",
         "Hint": "Ajustada, Sob Medida and Mitral reduce the armor penalty (down to 0) instead of increasing it."
@@ -210,6 +214,37 @@
     "ItemEffects": {
       "DeleteTitle": "Delete item effect",
       "DeleteContent": "Delete the effect <strong>{effect}</strong> from the item <strong>{item}</strong>? This changes the item."
+    },
+    "LegacyConditionStatus": {
+      "Name": "Repair 1.5 conditions",
+      "Button": "Open",
+      "Hint": "Lists the conditions from 1.5 that the migration left without data and restores it, with preview and undo. Only the active GM writes.",
+      "Title": "Repair 1.5 conditions",
+      "ToRepair": "To repair",
+      "Repaired": "Repaired by the module",
+      "Columns": {
+        "Document": "Document",
+        "Condition": "Condition",
+        "Category": "Category",
+        "Upgrade": "Upgrades to",
+        "Children": "Child effects",
+        "IgnoreImmunity": "Ignores immunity",
+        "State": "State"
+      },
+      "Yes": "Yes",
+      "No": "No",
+      "Empty": "No 1.5 condition without data was found.",
+      "Acknowledge": "I understand this writes to the world's actors, tokens and items.",
+      "NeedAcknowledge": "Check the confirmation before continuing.",
+      "Repair": "Repair {count} conditions",
+      "Undo": "Undo repairs ({count})",
+      "CanUndo": "Can undo",
+      "ChangedAfterRepair": "Changed after the repair",
+      "OnlyActiveGM": "Only the active GM can repair or undo. The list is read-only.",
+      "Busy": "A repair is already running.",
+      "Done": "{done} written, {skipped} skipped, {failed} failed.",
+      "Failed": "Failed: {list}.",
+      "Stopped": "Run stopped: you are no longer the active GM. Open the window again to see what is left."
     },
     "SegmentedScene": {
       "Title": "Segmented Scene",

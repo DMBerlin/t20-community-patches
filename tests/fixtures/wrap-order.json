@@ -508,6 +508,7 @@
     }
   ],
   "noWraps": [
+    "legacy-condition-status",
     "condition-upgrade-chain",
     "modified-fields-filter",
     "temporary-usage-effect-expiry",
@@ -560,6 +561,13 @@
     },
     {
       "id": "death-threshold",
+      "kind": "patch",
+      "group": "conditions",
+      "mode": "force",
+      "state": "forced"
+    },
+    {
+      "id": "legacy-condition-status",
       "kind": "patch",
       "group": "conditions",
       "mode": "force",

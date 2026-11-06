@@ -10,6 +10,10 @@ Não edite as seções de versão à mão.
 
 ## Unreleased
 
+## v1.2.0 - 2026-11-06
+
+**Compatibilidade:** Foundry VTT (mínimo 14, verificado 14.369) · Tormenta20 (mínimo 1.6.5, verificado 1.6.6)
+
 ### Added
 
 - Ferramenta de auditoria (`make audit`) que verifica os patches contra uma nova versão do Tormenta20 sem abrir o Foundry (#90).

@@ -19,11 +19,14 @@ export function patchBucket(category) {
 }
 
 /**
- * Whether a rule counts as on: its first setting is not "off". Settings without an "off" choice are on.
- * @param {unknown[]} values  Saved values of the rule's settings, in the order of centerSettings (scripts/kernel/settings.mjs).
+ * Whether a rule counts as on. With neutral values (the "fixes only" profile, #96), it is off when every value is the
+ * neutral one; without them, when its first setting is "off" (settings without an "off" choice are on).
+ * @param {unknown[]} values     Values of the rule's settings, in the order of centerSettings (scripts/kernel/settings.mjs).
+ * @param {unknown[]} [neutral]  The neutral value of each setting, in the same order.
  * @returns {"on"|"off"}
  */
-export function ruleBucket(values) {
+export function ruleBucket(values, neutral) {
+  if (neutral) return values.every((value, i) => value === neutral[i]) ? "off" : "on";
   return values[0] === "off" ? "off" : "on";
 }
 

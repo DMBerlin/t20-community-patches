@@ -13,6 +13,20 @@
     </nav>
   </aside>
   <div class="t20cp-main">
+    {{#if profile}}
+    <div class="t20cp-profile form-group">
+      <label for="t20cp-profile-select">{{localize "T20CP.Profiles.Label"}}</label>
+      <div class="form-fields">
+        <select id="t20cp-profile-select" name="profile" aria-describedby="t20cp-profile-hint">
+          {{#each profile.options}}
+          <option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+          {{/each}}
+        </select>
+      </div>
+      <p id="t20cp-profile-hint" class="hint t20cp-profile-hint">{{profile.hint}}</p>
+      <p class="t20cp-profile-live t20cp-sr-only" role="status" aria-live="polite"></p>
+    </div>
+    {{/if}}
     <div class="t20cp-filters" role="group" aria-label="{{localize "T20CP.Manager.FilterLabel"}}">
       {{#each ruleFilters}}
       <button type="button" data-action="filter" data-filter="{{id}}" aria-pressed="false">{{label}} <span class="t20cp-count"></span></button>
@@ -23,7 +37,7 @@
       <div class="t20cp-group">
         <h4 class="t20cp-group-label">{{label}}</h4>
         {{#each rules}}
-        <div class="t20cp-row" data-id="{{id}}" data-group="{{group}}" data-bucket="{{bucket}}" data-search="{{search}}">
+        <div class="t20cp-row" data-id="{{id}}" data-group="{{group}}" data-keys="{{keys}}" data-bucket="{{bucket}}" data-search="{{search}}">
           <div class="t20cp-line">
             <span class="t20cp-name">{{label}}</span>
             {{#if single}}<span class="t20cp-control">{{{input}}}</span>{{/if}}

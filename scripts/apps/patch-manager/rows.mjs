@@ -119,12 +119,14 @@ export function pendingReload(rows, status) {
 /**
  * Row of the "Optional rules" tab, or null when none of its settings is registered on this load.
  * @param {{id: string, group: string, keys: string[]}} center  Entry of centerSettings (scripts/kernel/settings.mjs).
- * @param {{value: unknown, label: string}[]} entries  The registered settings of the entry, in order.
+ * @param {{key: string, value: unknown, label: string}[]} entries  The registered settings of the entry, in order.
  * @param {Text} text
+ * @param {(keys: string[]) => unknown[]|undefined} [neutralOf]  Neutral values of some keys (ruleBucket).
  */
-export function ruleRow({ id, group, keys }, entries, text) {
+export function ruleRow({ id, group, keys }, entries, text, neutralOf = () => undefined) {
   if (!entries.length) return null;
-  const view = { id, group, bucket: ruleBucket(entries.map((e) => e.value)) };
+  const shown = entries.map((e) => e.key);
+  const view = { id, group, keys: shown.join(" "), bucket: ruleBucket(entries.map((e) => e.value), neutralOf(shown)) };
   if (keys.length === 1) return { ...view, single: true, ...entries[0], search: searchText(entries[0].label, id, text.lang) };
   const label = text.localize(`T20CP.Manager.Rules.${id}`);
   return { ...view, single: false, label, entries, search: searchText(label, id, text.lang) };

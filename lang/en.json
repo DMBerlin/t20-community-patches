@@ -1,5 +1,29 @@
 {
   "T20CP": {
+    "Profiles": {
+      "Label": "Profile",
+      "Hint": "Set of values of the optional rules. Changing any rule switches the profile to Custom.",
+      "Recommended": "(recommended)",
+      "SwitchedToCustom": "A rule changed: the profile is now Custom.",
+      "ConfirmTitle": "Apply profile",
+      "ConfirmContent": "Saving the {profile} profile changes these rules:",
+      "fixes-only": {
+        "Name": "Fixes only",
+        "Hint": "No optional rule changes the game: only the module fixes, with the system behavior."
+      },
+      "assisted": {
+        "Name": "Assisted",
+        "Hint": "Core book rules with warnings and automation (nonlethal damage, zero HP states), without blocks and without preparing the sheets first."
+      },
+      "book": {
+        "Name": "Book, prepared",
+        "Hint": "Book rules for tables whose sheets are prepared. First check: weapon and armor proficiencies on characters and creature type on Threats."
+      },
+      "custom": {
+        "Name": "Custom",
+        "Hint": "You choose rule by rule. Choosing this profile changes no rule."
+      }
+    },
     "Patches": {
       "status-effects-compendium": {
         "Name": "Empty condition list",

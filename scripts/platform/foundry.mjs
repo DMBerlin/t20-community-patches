@@ -240,7 +240,11 @@ export function createPlatform() {
       register: (key, spec) => game.settings.register(MODULE_ID, key, spec),
       registerMenu: (key, spec) => game.settings.registerMenu(MODULE_ID, key, spec),
       get: (key) => game.settings.get(MODULE_ID, key),
-      set: (key, value) => game.settings.set(MODULE_ID, key, value)
+      set: (key, value) => game.settings.set(MODULE_ID, key, value),
+      /** Whether the world storage holds any setting of this module. It exists before "init" (ClientSettings). */
+      hasStoredWorldValues: () => !!game.settings.storage.get("world")?.find((s) => s.key?.startsWith(`${MODULE_ID}.`)),
+      /** Whether a world setting of this module is saved, and not just its default. */
+      isStored: (key) => !!game.settings.storage.get("world")?.find((s) => s.key === `${MODULE_ID}.${key}`)
     }),
     i18n: Object.freeze({
       localize: (key) => game.i18n.localize(key),

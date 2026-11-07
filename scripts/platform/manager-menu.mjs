@@ -10,16 +10,17 @@ const MENU = "manager";
  * Called during "init", when the application classes exist.
  * @param {import("./foundry.mjs").Platform} platform
  * @param {{features: object[], patches: object[], groups: string[],
- *   status: () => import("../kernel/lifecycle.mjs").StatusEntry[]}} center  See createPatchManagerClass.
+ *   status: () => import("../kernel/lifecycle.mjs").StatusEntry[], profiles?: import("../kernel/profiles.mjs").RuleProfiles}} center
+ *   See createPatchManagerClass.
  */
-export function registerManagerMenu(platform, { features, patches, groups, status }) {
+export function registerManagerMenu(platform, { features, patches, groups, status, profiles }) {
   // The core keeps this very object as the menu entry (ClientSettings#registerMenu), so its hint can change later.
   const menu = {
     name: "T20CP.Manager.Name",
     label: "T20CP.Manager.Label",
     hint: "T20CP.Manager.Hint",
     icon: "fa-solid fa-screwdriver-wrench",
-    type: createPatchManagerClass({ platform, features, patches, groups, status }),
+    type: createPatchManagerClass({ platform, features, patches, groups, status, profiles }),
     restricted: true
   };
   platform.settings.registerMenu(MENU, menu);

@@ -1,5 +1,29 @@
 {
   "T20CP": {
+    "Profiles": {
+      "Label": "Perfil",
+      "Hint": "Conjunto de valores das regras opcionais. Mudar qualquer regra leva o perfil para Personalizado.",
+      "Recommended": "(recomendado)",
+      "SwitchedToCustom": "Uma regra mudou: o perfil agora é Personalizado.",
+      "ConfirmTitle": "Aplicar perfil",
+      "ConfirmContent": "Salvar o perfil {profile} muda estas regras:",
+      "fixes-only": {
+        "Name": "Só correções",
+        "Hint": "Nenhuma regra opcional muda o jogo: só as correções do módulo, com o comportamento do sistema."
+      },
+      "assisted": {
+        "Name": "Assistido",
+        "Hint": "Regras centrais do livro com avisos e automações (dano não letal, estados de PV zero), sem bloqueios e sem depender de configuração prévia das fichas."
+      },
+      "book": {
+        "Name": "Livro configurado",
+        "Hint": "Regras do livro para mesas com as fichas preparadas. Antes, confira: proficiências de armas e armaduras nos personagens e tipo de criatura nas Ameaças."
+      },
+      "custom": {
+        "Name": "Personalizado",
+        "Hint": "Você escolhe regra por regra. Escolher este perfil não muda nenhuma regra."
+      }
+    },
     "Patches": {
       "status-effects-compendium": {
         "Name": "Lista de condições vazia",

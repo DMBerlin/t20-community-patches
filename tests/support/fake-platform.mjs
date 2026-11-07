@@ -75,6 +75,8 @@ const FAKE_CONST = Object.freeze({
  * @param {object} [overrides.constants]                  Value of platform.constants().
  * @param {object} [overrides.module]                     Replaces any method of platform.module.
  * @param {string} [overrides.lang]                       Value of platform.i18n.lang() (default "pt-BR").
+ * @param {boolean} [overrides.hasStoredWorldValues]      Value of platform.settings.hasStoredWorldValues() (default true).
+ * @param {string[]} [overrides.storedKeys]               Keys platform.settings.isStored() reports (default: any key set).
  */
 export function createFakePlatform(overrides = {}) {
   const store = new Map(Object.entries(overrides.settings ?? {}));
@@ -128,7 +130,9 @@ export function createFakePlatform(overrides = {}) {
       set: async (key, value) => {
         store.set(key, value);
         return value;
-      }
+      },
+      hasStoredWorldValues: () => overrides.hasStoredWorldValues ?? true,
+      isStored: (key) => overrides.storedKeys?.includes(key) ?? store.has(key)
     },
     i18n: {
       localize: (key) => key,

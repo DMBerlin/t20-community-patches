@@ -12,6 +12,9 @@ import { createSettingListeners, registerFeatureSetting } from "./kernel/setting
 import { getPatchMode, registerPatchSettings } from "./kernel/patch-settings.mjs";
 import { runReady } from "./kernel/ready.mjs";
 import { createPublished } from "./kernel/publish.mjs";
+import { RULE_PROFILES } from "./features/profiles.mjs";
+import { profileSettingSpec } from "./kernel/profiles.mjs";
+import { applyInitialProfile, createProfileGuard } from "./kernel/rule-profile.mjs";
 
 const platform = createPlatform();
 
@@ -52,9 +55,22 @@ const contextFor = (feature) => {
   return contexts.get(feature.id);
 };
 
+/** Rule profiles (#96): the guard, and whether the world was new on "init". */
+const profileGuard = createProfileGuard({ settings: platform.settings, user: platform.user, profiles: RULE_PROFILES.values, log: platform.log });
+let freshWorld = false;
+
 platform.hooks.once("init", () => {
+  // Before anything is written: "ready" already saves settings of this module (runReady).
+  freshWorld = !platform.settings.hasStoredWorldValues();
   registerPatchSettings(platform.settings, PATCH_FEATURES);
-  registerManagerMenu(platform, { features: FEATURES, patches: PATCH_FEATURES, groups: GROUPS, status: () => status });
+  registerFeatureSetting(platform.settings.register, profileSettingSpec(RULE_PROFILES.values), { platform, listeners: settingListeners });
+  registerManagerMenu(platform, {
+    features: FEATURES,
+    patches: PATCH_FEATURES,
+    groups: GROUPS,
+    status: () => status,
+    profiles: { ...RULE_PROFILES, exclusive: profileGuard.exclusive }
+  });
   validateFeatures(FEATURES, GROUPS, services.ids());
 
   // Features are installed during "init": the system has already registered its classes in CONFIG, and world
@@ -81,6 +97,32 @@ platform.hooks.once("init", () => {
     // Services and declared dependencies of each feature: game.modules.get(MODULE_ID).api.graph()
     graph: features.graph
   });
+
+  profileGuard.listen(settingListeners);
+  profileGuard.watchAuthority(platform.hooks);
 });
 
-platform.hooks.once("ready", () => runReady({ platform, status, features: PATCH_FEATURES, contextFor }));
+/** Saves the recommended profile in a new world, then checks the saved one once. A failure never stops the rest of "ready". */
+async function readyProfiles() {
+  try {
+    const { reload } = await profileGuard.exclusive(() =>
+      applyInitialProfile({
+        fresh: freshWorld,
+        settings: platform.settings,
+        user: platform.user,
+        catalog: RULE_PROFILES,
+        requiresReload: (key) => FEATURES.some((f) => (f.settings ?? []).some((s) => s.key === key && s.requiresReload)),
+        isStored: platform.settings.isStored
+      })
+    );
+    if (reload) platform.ui.reloadConfirm({ world: true }).catch((err) => platform.log.error("Failed to offer the reload", err));
+  } catch (err) {
+    platform.log.error("Failed to save the initial rule profile", err);
+  }
+  await profileGuard.check();
+}
+
+platform.hooks.once("ready", () => {
+  readyProfiles();
+  return runReady({ platform, status, features: PATCH_FEATURES, contextFor });
+});

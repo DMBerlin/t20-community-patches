@@ -8,34 +8,27 @@ import { getPatchMode } from "../../kernel/patch-settings.mjs";
 import { centerSettings } from "../../kernel/settings.mjs";
 import { needsReload } from "../../kernel/center.mjs";
 import { PATCH_FILTERS, RULE_FILTERS } from "./view.mjs";
-import {
-  SETTING_INPUT,
-  collectChanges,
-  filterButtons,
-  groupRows,
-  patchRow,
-  patchSummary,
-  pendingReload,
-  ruleRow,
-  settingField
-} from "./rows.mjs";
+import { SETTING_INPUT, collectChanges, filterButtons, groupRows, patchRow, patchSummary, pendingReload, ruleRow, settingField } from "./rows.mjs";
 import { applyFilter, markTabs, openDetail, readMode, syncPatchControls, toggleDetail } from "./dom.mjs";
 import { rovingIndex } from "./focus.mjs";
 import { createSubmitFlow } from "./submit.mjs";
+import { createProfileController } from "./profile.mjs";
 
 const SCROLLABLE = [".t20cp-sidebar", ".t20cp-list"];
 
 /**
  * @param {{platform: import("../../platform/foundry.mjs").Platform, features: object[], patches: object[],
- *   groups: string[], status: () => import("../../kernel/lifecycle.mjs").StatusEntry[]}} deps
- *   features: FEATURES (rules tab); patches: PATCH_FEATURES; status: api.status, read on every render.
+ *   groups: string[], status: () => import("../../kernel/lifecycle.mjs").StatusEntry[],
+ *   profiles?: import("../../kernel/profiles.mjs").RuleProfiles}} deps
+ *   features: FEATURES (rules tab); patches: PATCH_FEATURES; status: api.status, read on every render; profiles: #96.
  */
-export function createPatchManagerClass({ platform, features, patches, groups, status }) {
+export function createPatchManagerClass({ platform, features, patches, groups, status, profiles }) {
   const { ApplicationV2, HandlebarsApplicationMixin } = platform.apps;
   const { localize } = platform.i18n;
   const moduleSettings = platform.settingsOf(MODULE_ID);
   const text = () => ({ ...platform.i18n, escapeHTML: platform.utils.escapeHTML, lang: platform.i18n.lang() });
-  const flow = createSubmitFlow(platform);
+  const flow = createSubmitFlow(platform, { catalog: profiles, entry: moduleSettings.entry });
+  const profile = createProfileController({ platform, catalog: profiles, entry: moduleSettings.entry });
 
   class PatchManager extends HandlebarsApplicationMixin(ApplicationV2) {
     static DEFAULT_OPTIONS = {
@@ -110,6 +103,7 @@ export function createPatchManagerClass({ platform, features, patches, groups, s
       context.ruleGroups = groupRows(rules, groups, localize).map((g) => ({ ...g, rules: g.rows }));
       context.ruleNav = context.ruleGroups.map(({ id, label }) => ({ id, label }));
       context.ruleFilters = filterButtons(RULE_FILTERS, localize);
+      context.profile = profile.context();
       context.buttons = [{ type: "submit", icon: "fa-solid fa-floppy-disk", label: "T20CP.Manager.Save" }];
       return context;
     }
@@ -125,7 +119,7 @@ export function createPatchManagerClass({ platform, features, patches, groups, s
     #prepareRules(t) {
       this.#ruleSnapshot = {};
       return centerSettings(features)
-        .map((center) => ruleRow(center, center.keys.map((key) => this.#prepareSetting(key)).filter(Boolean), t))
+        .map((center) => ruleRow(center, center.keys.map((key) => this.#prepareSetting(key)).filter(Boolean), t, profile.neutralOf))
         .filter(Boolean);
     }
 
@@ -217,9 +211,10 @@ export function createPatchManagerClass({ platform, features, patches, groups, s
       this.#refreshFooter();
     }
 
-    /** Keeps the "Apply always" box and the "always" tag in sync with the switch, and the footer label current. */
+    /** Keeps the patch controls, the rule profile (profile.mjs) and the footer label in sync with a change. */
     #onControlChange(event) {
       syncPatchControls(this.element, event.target, (id) => readMode(this.element, id, this.#snapshot[id]));
+      if (profile.onChange(this.element, event.target)) this.#applyFilter("rules");
       this.#refreshFooter();
     }
 
@@ -292,7 +287,7 @@ export function createPatchManagerClass({ platform, features, patches, groups, s
 
     /** @this {PatchManager} */
     static async #onSubmit(event, form, formData) {
-      return flow.submit(this, this.#collectChanges(formData.object));
+      return flow.submit(this, this.#collectChanges(formData.object), profile.enabled ? profile.selected(this.element) : null);
     }
   }
 

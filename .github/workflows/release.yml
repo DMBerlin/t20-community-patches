@@ -1,6 +1,6 @@
-# Publishes the GitHub Release that the Foundry manifest URL points to
-# (releases/latest/download/module.json). Triggered by pushing a vX.Y.Z tag;
-# the release skill pushes it with `git push --follow-tags origin main`.
+# Publica a GitHub Release apontada pelo manifesto do Foundry
+# (releases/latest/download/module.json). O push de uma tag vX.Y.Z dispara o workflow;
+# a skill release usa `git push --atomic origin main vX.Y.Z`.
 name: Release
 
 on:

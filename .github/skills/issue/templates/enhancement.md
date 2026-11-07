@@ -18,6 +18,7 @@
 
 - [ ] <verificável>
 - [ ] README, `lang/*.json` e testes foram atualizados, e `make check` passa.
+- [ ] Se houver configurações novas de regras exibidas na Central, todos os perfis têm valores válidos para elas; o README distingue os defaults registrados do perfil inicial.
 
 ## Testes
 

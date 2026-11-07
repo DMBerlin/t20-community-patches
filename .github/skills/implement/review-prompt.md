@@ -13,7 +13,7 @@ Você é o QA, rodada {k}, de um módulo do Foundry VTT v14 (`t20-community-patc
 **O que revisar:**
 - `git diff origin/main...HEAD` e `git log origin/main..HEAD`;
 - os arquivos completos tocados pelo diff;
-- testes: `node --test "tests/*.test.mjs"`.
+- validação: `make check` (sintaxe, lint e testes).
 
 **Código de referência (somente leitura):**
 - sistema: `{FOUNDRY_DATA}/systems/tormenta20/tormenta20.mjs`; pontos relevantes: {lista T20:<linha> e símbolos da issue};
@@ -30,6 +30,8 @@ Você é o QA, rodada {k}, de um módulo do Foundry VTT v14 (`t20-community-patc
 8. Há paridade de chaves entre `lang/pt-BR.json` e `lang/en.json`, e o README (só pt-BR) está preciso.
 9. O `CHANGELOG.md` **não** foi editado na worktree. A entrada proposta está em `.work/changelog.md`, em uma linha, em português.
 10. Os critérios de aceite da issue foram atendidos ou estão justificados em `.work/decisions.md`.
+11. Configurações novas de regras exibidas na Central (`center !== false`) têm valores válidos em todos os perfis; os defaults registrados e o perfil inicial estão documentados sem ambiguidade. Os modos dos patches não são alterados pelos perfis.
+12. Rótulos novos em `sources` estão no baseline da versão verificada; o snapshot de wrappers reflete inclusões ou mudanças intencionais de ordem. Estado de execução de features e serviços nasce por instalação, não no topo do módulo, inclusive em `WeakMap` e `WeakSet`.
 
 {Somente a partir da rodada 2:}
 **Achados das rodadas anteriores e o que foi feito** (verifique que as correções estão certas e completas; não repita achados rejeitados com evidência, a menos que a evidência esteja errada):

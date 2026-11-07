@@ -120,6 +120,8 @@ Regras do script:
 
 ## 4. Receitas (Tormenta20 1.6.5 · Foundry 14)
 
+Estes exemplos usam a API da 1.6.5; não são prova de compatibilidade com outra versão. Antes de adaptá-los, confirme no bundle instalado os campos e métodos usados e registre no relatório as versões realmente testadas.
+
 Dentro de `page.evaluate` não há acesso ao helper: passe `PLAYTEST_FLAGS`, `u` etc. como argumento.
 
 **Documentos do compêndio.** `game.packs.get("tormenta20.equipamentos")` (Item), `tormenta20.efeitos` (ActiveEffect), `tormenta20.poderes`, `tormenta20.magias`. Para pôr num ator:

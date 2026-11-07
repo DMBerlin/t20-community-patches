@@ -33,7 +33,7 @@ Se a versão instalada for **maior** que a `verified` do `module.json`, rode `ma
 ## 2. Separar
 
 - **Implementáveis:** issues abertas **sem** `upstream-only`.
-- **Upstream-only:** listadas numa seção separada, sem pontuação de prioridade. Mostre só o resumo e se já foram reportadas (`upstream-reported`).
+- **Upstream-only:** listadas numa seção separada, sem pontuação de prioridade. Mostre só o resumo, se já foram reportadas (`upstream-reported`) e a correção ou mitigação vinculada no módulo, se houver. Permanecer aberta para o upstream não significa que o módulo ainda não trata o problema.
 - **Bloqueadas:** `needs-repro` ou com dependência aberta. Elas entram no ranking, mas com o bloqueio marcado no próximo passo.
 
 ## 3. Pontuar (só as implementáveis)

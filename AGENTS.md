@@ -19,6 +19,7 @@ t20-community-patches/
 ├── .git                   "gitdir: ./.bare"
 ├── .envrc                 local (direnv): GH_TOKEN, FOUNDRY_DATA, FOUNDRY_CORE, T20_BOOKS
 ├── LOCAL.md               local (opcional): referências desta máquina (core do Foundry, livros)
+├── .work-archive/         local: artefatos das issues integradas, preservados pelo land
 ├── main/                  worktree da branch main (principal)
 └── <n>-<slug>/            worktree da issue #n, branch issue/<n>-<slug>
 ```
@@ -57,7 +58,7 @@ t20-community-patches/
 | `make audit [BUNDLE=…]` | Auditoria estática dos patches contra o bundle do Tormenta20 instalado, sem abrir o Foundry (ver "Auditoria estática") |
 | `make audit-promote [BUNDLE=…] [WRITE=1]` | Sobe o `affected.maximum` dos patches cujas funções não mudaram para a versão auditada; simulação sem `WRITE=1` (ver "Auditoria estática") |
 | `make package` | Gera `dist/module.zip` e `dist/module.json` |
-| `node tools/changelog.mjs …` | `add`, `next`, `release`, `notes` (ver o cabeçalho do arquivo) |
+| `node tools/changelog.mjs …` | `add`, `next`, `release`, `compat`, `notes` (ver o cabeçalho do arquivo) |
 
 ## Camadas e fronteiras
 
@@ -71,7 +72,7 @@ O `eslint.config.mjs` garante as fronteiras da arquitetura em camadas (épico #8
 - Bibliotecas (`scripts/lib/`): helpers puros e sem estado compartilhados entre features (constantes, cálculos, leitura de dados). Recebem por parâmetro o que precisariam ler de globais (por exemplo `getProperty`, `fromUuidSync`, um leitor de configuração).
 - Serviços (`scripts/services/`, registrados em `SERVICES`, de `scripts/services/index.mjs`): contratos **com estado** compartilhados entre features (`stacking-exclusions`, `use-dialog-guard`, `mana-queue`, `use-targets`, `attack-outcome`, `applied-changes`). Cada serviço exporta `{ id, install(ctx) }`; o `install` devolve a API, guarda o estado no próprio fechamento e é chamado **uma vez**, pelo kernel (`scripts/kernel/services.mjs`), logo antes da primeira feature que declara o serviço em `services`. O `ctx` do serviço tem `id`, `platform`, `log`, `hooks` e `wrap` (o dono dos wrappers é o id do serviço). Uma feature lê a API em `ctx.services[id]`; um id não declarado lança. Se o serviço falha ao instalar, as features que o declaram viram `error`.
 - Dependências entre features (`scripts/kernel/features.mjs`): uma feature que precisa saber o estado ou a configuração de outra declara o id em `interactsWith` e lê por `ctx.features.isActive(id)` (patch aplicado ou regra instalada; leia só em tempo de uso, nunca durante o `install`) ou `ctx.features.setting(id, chave)` (só chaves declaradas em `settings` da outra; lança se a configuração não estiver registrada). Nunca leia `api.status` nem a configuração de outra feature por `game.settings`. `api.graph()` mostra as dependências declaradas.
-- O `main.mjs` só cria a plataforma e liga o `init` (`registerPatchSettings`, menu da Central, `bootFeatures`, `api`) e o `ready` (`runReady`, em `scripts/kernel/ready.mjs`: avisos do carregamento e diagnósticos tardios).
+- O `main.mjs` é a raiz de composição: cria a plataforma, os registros de serviços, features e contextos e liga o `init` (configurações, menu da Central, `bootFeatures`, API) e o `ready` (perfil inicial e `runReady`, em `scripts/kernel/ready.mjs`: avisos do carregamento e diagnósticos tardios). Recebe o catálogo de perfis de `scripts/features/profiles.mjs`; a lógica dos perfis fica no kernel e na Central, não em uma feature específica.
 - Nos testes, use `createFakePlatform(overrides)` e `createFakeContext(feature, platform)`, de `tests/support/fake-platform.mjs`, sem tocar em `globalThis`. A plataforma falsa guarda os avisos em `platform.notes` e o log em `platform.logs`. Para features com `services` ou `interactsWith`, use `createTestKernel({ platform, features, status })`: `install(feature)` instala os serviços declarados e a feature, `service(id)` devolve a API de um serviço, `changeSetting(chave, valor)` grava uma configuração e dispara o `onChange` e os ouvintes, e `published()` devolve o que foi publicado com `ctx.publish`.
 - **Uma feature não importa outra feature** nem `scripts/platform`; ela recebe a plataforma por `ctx`. Código comum puro vai para `scripts/lib`; código comum com estado vira um serviço em `scripts/services`; o estado ou a configuração de outra feature é lido por `ctx.features`, com `interactsWith`.
 - O domínio de uma feature (`domain.mjs` ou `domain/`) e `scripts/lib` não importam `integration`, `ui`, `scripts/platform` nem `scripts/services`; `scripts/lib` também não importa features. Os dois também não importam a raiz de `scripts/` (`main.mjs`, `registry.mjs`): mova o código puro para `scripts/lib`.
@@ -87,11 +88,12 @@ O `eslint.config.mjs` garante as fronteiras da arquitetura em camadas (épico #8
 - `git push` funciona sem nada extra: o `.bare/config` tem um credential helper da conta DMBerlin.
 - Commits: siga **sempre** a skill `commit` (`.github/skills/commit/SKILL.md`). Os commits são atômicos, seguem Conventional Commits e têm **mensagem de uma linha**, sem corpo e **sem trailers** (nada de `--trailer` ou `Co-authored-by`). São assinados por `commit.gpgsign`.
 - Labels:
-  - tipo: `patch` (corrigível no módulo), `upstream-only` (documentado para reporte, não corrigido aqui), `enhancement`, `ui-hide`, `data`;
+  - tipo: `patch` (corrigível no módulo), `upstream-only` (registro para reporte ao sistema; pode permanecer aberto mesmo com mitigação no módulo, vinculada no corpo), `enhancement`, `ui-hide`, `data`;
   - prioridade: `priority: critical|high|medium|low`;
   - estado: `needs-repro`, `upstream-reported`.
 - Título de issue: descrição em português; issues de patch terminam com o id do patch entre parênteses, por exemplo `Efeitos de uso … (suppressed-usage-effects)`.
 - Upstream: https://gitlab.com/vizael/Tormenta20 (issues e branches).
+- Uma decisão revista deve aparecer no resumo e na seção de viabilidade da issue, com o link da solução e seus limites. Preserve os comentários históricos, mas não deixe só neles a decisão vigente. Distingua bug ainda presente no sistema de correção ou mitigação já disponível no módulo.
 
 ## Contrato de uma feature
 
@@ -146,7 +148,18 @@ export default {
 - `after` não reordena nada: é uma restrição verificada por `validateFeatures` (no `init` e em `tests/kernel-feature.test.mjs`). Ao incluir uma regra, escolha a posição em `FEATURES` e declare em `after` as dependências de ordem, com um comentário que explique o motivo.
 - `api.status` lista patches e regras (`kind`); as regras têm estado `installed`, `incompatible` ou `error`. Avisos e a aba de correções da Central só usam os patches.
 
-- Estado de execução (caches, filas, `Map`/`Set` de documentos, flags) nunca fica no topo de um módulo nem em `let` de topo: ele nasce dentro do `install(ctx)`, de modo que cada instalação (e cada teste) tem o seu.
+- Estado de execução das features e dos serviços (caches, filas, `Map`/`Set`, `WeakMap`/`WeakSet` de documentos, flags) nunca fica no topo de um módulo nem em `let` de topo: ele nasce dentro do `install(ctx)`, de modo que cada instalação (e cada teste) tem o seu. O `ctx.state` permite compartilhá-lo com os diagnósticos da mesma feature. Isso não se confunde com os registros e ouvintes que a raiz de composição monta para o ciclo de vida do módulo.
+
+### Perfis de regras opcionais
+
+- `scripts/features/profiles.mjs` declara `PROFILES` e `RULE_PROFILES` (#96): Só correções (`fixes-only`), Assistido (`assisted`) e Livro configurado (`book`). Personalizado (`custom`) não é uma tabela de valores: mantém o que o GM escolheu. Os perfis não mudam os modos dos patches.
+- Toda configuração de regra exibida na Central (`center !== false`) deve ter um valor válido em **todos** os perfis. Ao adicionar uma regra ou configuração, atualize esse catálogo, a documentação e as traduções necessárias. Configurações de patches, como `segmentedSceneMaxSegments`, não entram nos perfis. `tests/rule-profiles.test.mjs` verifica a cobertura e os valores.
+- `scripts/kernel/profiles.mjs` calcula diferenças e resolve o perfil. O protocolo de gravação passa primeiro por Personalizado, grava as regras e só então salva o perfil escolhido se os valores conferirem; uma falha não deixa um perfil pronto indicando valores que não foram gravados.
+- `scripts/kernel/rule-profile.mjs` guarda o perfil inicial e verifica mudanças externas. A inicialização e o guard só gravam pelo GM ativo. A Central e a inicialização usam a fila `exclusive` do guard para não intercalar uma gravação com uma verificação no mesmo cliente.
+- `scripts/apps/patch-manager/profile.mjs` controla a prévia no formulário e a confirmação ao salvar. Escolher um perfil não grava nada; escolher Personalizado não redefine regras. Mudanças que deixam de corresponder ao perfil salvo passam para Personalizado, inclusive por macros ou outros módulos; coincidir depois com outro perfil não o seleciona automaticamente.
+- Só correções é o perfil neutro dos filtros e o recomendado para mundos sem configurações deste módulo gravadas no `init`. O GM ativo o grava no `ready`, com pedido de recarga quando necessário. Ao receber o suporte a perfis, mundos que já usavam o módulo mantêm seus valores e começam em Personalizado; nas cargas seguintes, o perfil salvo é preservado enquanto os valores corresponderem a ele. Os defaults registrados de cada ajuste não são necessariamente os valores do perfil inicial.
+
+### Diagnóstico
 
 Diagnóstico (`Diagnosis`, em `scripts/kernel/diagnosis.mjs`; `scripts/registry.mjs` reexporta os módulos do kernel): `{ bug: "present" | "fixed" | "unknown", confidence: "high" | "low", evidence?: string }`.
 - `confidence: "high"` só quando a evidência cobre **tudo** o que o patch corrige. Em Automático, só `fixed`/high deixa de aplicar a correção; `fixed`/low vira `suspected-fixed` e a correção continua aplicada.
@@ -159,8 +172,8 @@ Diagnóstico (`Diagnosis`, em `scripts/kernel/diagnosis.mjs`; `scripts/registry.
 
 `tools/audit.mjs` (#90) confere os patches contra um bundle do Tormenta20 sem abrir o Foundry: o bundle é só lido e analisado com acorn, nunca importado nem executado.
 - Rótulos (`scripts/lib/method-label.mjs`): `Classe#membro` (método ou getter do protótipo), `Classe.membro` (estático), `#helper:nome` (helper do Handlebars) e `#local:nome` (função de topo do bundle, que só existe na auditoria; no Foundry é `null`).
-- Um `isNeeded` de código-fonte lê o sistema **só** por `ctx.platform.sourceOfMethod(rótulo)`, e todo rótulo lido está em `sources`. A auditoria roda esse `isNeeded` contra o bundle; qualquer outra porta lança `RequiresFoundry` e vira erro. Um teste que executa código ou lê `CONFIG`, dados ou configurações declara `probeKind: "behavior"` e não roda na auditoria. Em todo patch, `sources` inclui também as funções do sistema que o cabeçalho aponta como causa do bug, mesmo que o teste não as leia: são elas que a auditoria vigia (`CHANGED`). Patches só de dados de compêndio podem ficar sem `sources`.
-- As impressões digitais (`sourceFingerprint`) de todos os rótulos ficam em `tests/fixtures/audit-baseline.json`, por versão. A comparação usa a versão `verified` do `module.json` (ou a mais nova registrada). Depois de verificar uma versão nova do sistema, grave a dela com `node tools/audit.mjs --write-baseline`.
+- Um `isNeeded` de código-fonte lê o sistema **só** por `ctx.platform.sourceOfMethod(rótulo)`, e todo rótulo lido está em `sources`. A auditoria roda esse `isNeeded` contra o bundle; qualquer outra porta lança `RequiresFoundry` e vira erro. Um teste que executa código ou lê `CONFIG`, dados ou configurações declara `probeKind: "behavior"` e não roda na auditoria. Em todo patch, `sources` inclui também as funções do sistema que o cabeçalho aponta como causa do bug, mesmo que o teste não as leia: são elas que a auditoria vigia (`CHANGED`). Patches só de dados de compêndio ou de condições, sem uma função do sistema identificada como causa, podem ficar sem `sources`.
+- As impressões digitais (`sourceFingerprint`) de todos os rótulos ficam em `tests/fixtures/audit-baseline.json`, por versão. A comparação usa a versão `verified` do `module.json` (ou a mais nova registrada). Ao declarar um rótulo novo em `sources`, inclua-o no baseline da versão verificada usando o bundle correspondente; depois de verificar uma versão nova do sistema, grave a dela com `node tools/audit.mjs [bundle] --write-baseline`. Não substitua o baseline de uma versão pelo de outra para fazer o teste passar.
 - Promoção da faixa (#93): `make audit-promote` (`node tools/audit.mjs [bundle] --promote [--write]`) compara a versão do baseline escolhido (`from`) com a do bundle (`to`) e classifica cada patch (`planPromotion`, em `tools/audit/promote.mjs`): `current` (`maximum` ≥ `to`), `retired` (`maximum` < `from`), `review` (sem `sources`, impressão digital `CHANGED` ou fora do baseline, erro ou `fixed` no teste, rótulo fora de `sources`, referência `missing`, `maximum` entre `from` e `to` ou `affected` fora da forma canônica `export default { system: { affected: { minimum: "x", maximum: "y" } } }`, lida com acorn) e `promote` (o resto). É uma simulação; com `WRITE=1` (`--write`), troca só o `maximum` dos `promote` no `index.mjs`. Nunca grava o baseline nem o `module.json`. Sai com 1 quando sobra algum `review` e com 0 quando o bundle não é mais novo que o baseline.
 - As referências `T20:<linha>` dos arquivos de patch (todos os `.mjs` de `scripts/features/<id>/`) são conferidas pelo nome de código mais próximo: `ok`, `shifted` (o código andou), `missing`, `pinned` (a linha cita outra versão, como `1.6.5`) e `no-anchor`.
 - Código de saída 1 quando uma impressão digital muda (`CHANGED`), um teste lança, um rótulo lido falta em `sources` ou uma referência some (`missing`).

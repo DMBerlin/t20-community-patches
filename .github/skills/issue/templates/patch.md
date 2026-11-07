@@ -103,8 +103,9 @@ Seção: `Fixed`
 ## Critérios de aceite
 
 - [ ] <comportamento corrigido, verificável>
-- [ ] Com o patch desligado no gerenciador, o comportamento oficial volta.
+- [ ] Com o patch desligado na Central do T20CP, o comportamento oficial volta.
 - [ ] README, `lang/*.json` e testes foram atualizados, e `make check` passa.
+- [ ] Rótulos novos em `sources` estão no baseline da versão verificada, e o snapshot de wrappers inclui mudanças intencionais de registro ou ordem.
 
 ## Testes
 

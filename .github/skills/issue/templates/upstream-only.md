@@ -38,6 +38,8 @@
 
 <Por que não é patch: função local não embrulhável, dados persistidos, risco ao comportamento oficial, custo/benefício. O que mudaria essa avaliação.>
 
+<Se já houver correção ou mitigação no módulo, informe a issue e o patch, os casos cobertos e os limites. Diga por que este registro continua aberto para o upstream. Uma decisão revista deve atualizar também o Resumo, sem apagar os comentários históricos.>
+
 ## Critérios de aceite (upstream)
 
 - [ ] <verificável na versão corrigida do sistema>

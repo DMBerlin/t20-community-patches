@@ -77,7 +77,7 @@ Exemplo:
 **#4 — efeitos de uso de itens não equipados**
 **Problema:** Varinha Arcana na mochila ainda dá −1 PM ao lançar magia → listas de efeitos de uso (`_allApplicableOnUseEffects`, `rollPericia`/`rollAtributo`) ignoram supressão.
 **Solução:** filtrar efeitos de item suprimido nas 3 listas; efeitos do próprio item rolado mantidos → item guardado = sem bônus/custo.
-**Escopo:** novo `suppressed-usage-effects.mjs`, index, lang, README, testes. Fora: toggle Aplicar Sempre (#5), custo (#7).
+**Escopo:** nova pasta `scripts/features/suppressed-usage-effects/`, registro, lang, README, testes. Fora: toggle Aplicar Sempre (#5), custo (#7).
 **Desvios da issue:** nenhum.
 **Próximo:** implementar → testes → review QA.
 ```
@@ -92,6 +92,8 @@ Siga o contrato e as regras de patch do `AGENTS.md`:
 - `lang/pt-BR.json` e `lang/en.json`, com as mesmas chaves;
 - a linha da tabela de correções no `README.md`;
 - `tests/<id>.test.mjs`: casos que **falhariam sem a correção**, mais os casos-limite da issue. Não teste constantes nem frameworks.
+- Para uma regra opcional, registre em `FEATURES`, atualize a tabela de regras do README e inclua suas configurações exibidas na Central (`center !== false`) em todos os perfis de `scripts/features/profiles.mjs`, conforme o contrato do `AGENTS.md`. Não renomeie configurações existentes nem confunda seus defaults com o perfil inicial.
+- Se houver rótulo novo em `sources`, atualize `tests/fixtures/audit-baseline.json` com o bundle da versão verificada (`node tools/audit.mjs [bundle] --write-baseline`). Se houver wrapper novo ou mudança intencional de ordem, regenere `tests/fixtures/wrap-order.json` com `UPDATE_WRAP_ORDER=1 node --test tests/wrap-order.test.mjs`. Confira o diff dos fixtures; não aceite mudanças alheias à implementação.
 - **Não** edite o `CHANGELOG.md`. Escreva a entrada em `.work/changelog.md`:
 
 ```

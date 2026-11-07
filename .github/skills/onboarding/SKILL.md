@@ -70,12 +70,12 @@ Se a sessão foi aberta fora de uma worktree do projeto, avise e use a `main`.
 Leia **apenas** estes trechos. São os pontos que qualquer tarefa toca:
 
 1. `scripts/features/index.mjs`: a lista `FEATURES` (patches de `scripts/features/patches.mjs`, cada um em `scripts/features/<id>/`, depois as regras), na ordem de instalação, com `after`.
-2. `scripts/kernel/lifecycle.mjs` (`bootFeatures`): onde o estado é resolvido e o `install()` é chamado; `scripts/main.mjs` só liga o `init` e o `ready`.
+2. `scripts/kernel/lifecycle.mjs` (`bootFeatures`): onde o estado é resolvido e o `install()` é chamado; `scripts/main.mjs` compõe os registros e liga o `init` e o `ready`, incluindo o perfil inicial e seu guard.
 3. `scripts/kernel/diagnosis.mjs` e `scripts/kernel/notifications.mjs`: só as assinaturas e os comentários de `resolvePatchState` e `pickNotification`, mais os estados possíveis.
 4. A lista de arquivos: `ls scripts scripts/features scripts/apps/patch-manager tests tools .github/skills`.
 
 Guarde, em uma linha cada:
-- o ciclo de vida de um patch: setting → `resolvePatchState` (versão + `isNeeded`) → `install(ctx)` no `init` → aviso no `ready`; regras: `settings` registradas → `install(ctx)`;
+- o ciclo de vida de um patch: setting → `resolvePatchState` (versão + `isNeeded`) → `install(ctx)` no `init` → aviso no `ready`; regras: `settings` registradas → `install(ctx)`; mundo sem configurações do módulo: perfil Só correções gravado pelo GM ativo no `ready`;
 - os patches existentes e os grupos deles.
 
 ## 4. Backlog
@@ -102,7 +102,8 @@ Carregue sob demanda, quando a tarefa pedir:
 | publicar uma versão | a skill `release` |
 | entender um bug do sistema | trechos do bundle `tormenta20.mjs`, localizados por busca (`grep -n`), **nunca** o arquivo inteiro (mais de 20 mil linhas) |
 | confirmar uma API do Foundry | o arquivo do core encontrado por busca em `$FOUNDRY_CORE/client` ou `$FOUNDRY_CORE/common` |
-| mexer na interface do gerenciador | `scripts/apps/patch-manager/` (Central do T20CP), `templates/patch-manager*.hbs`, `styles/` |
+| mexer na interface da Central | `scripts/apps/patch-manager/` (Central do T20CP), `templates/patch-manager*.hbs`, `styles/` |
+| adicionar regras ou mexer nos perfis | `scripts/features/profiles.mjs`, `scripts/kernel/profiles.mjs`, `scripts/kernel/rule-profile.mjs`, `scripts/apps/patch-manager/profile.mjs` e `tests/rule-profiles.test.mjs` |
 | mexer em configurações ou migração | `scripts/kernel/patch-settings.mjs` |
 | histórico de decisões de um patch | a issue dele (comentários) e o `git log --follow` do arquivo |
 

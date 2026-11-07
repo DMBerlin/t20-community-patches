@@ -30,6 +30,7 @@ gh issue list -R DMBerlin/t20-community-patches --state all --search "<termos>" 
 - Procure também no upstream (https://gitlab.com/vizael/Tormenta20): issues abertas e fechadas, e branches recentes que mencionem o problema.
 - Se houver uma duplicata aqui, **não** crie outra issue. Mostre a existente ao usuário e proponha um comentário com o que for novo.
 - Se o bug já foi reportado no upstream, use o label `upstream-reported` e coloque o link nas Referências.
+- Uma issue `upstream-only` pode continuar aberta mesmo com mitigação no módulo. Nesse caso, o resumo e a viabilidade devem vincular a solução e seus limites. Ao revisar uma decisão, atualize essas seções, não só os comentários; preserve o histórico.
 
 ## 3. Investigar a fundo
 
@@ -73,6 +74,7 @@ Regras:
 - Em issues de **patch**, inclua o código completo proposto: o arquivo do patch no contrato do `AGENTS.md`, as funções puras exportadas, i18n (`lang/pt-BR.json` e `lang/en.json`), a linha do README e a entrada de CHANGELOG em **uma linha** em português, que vai para a seção sugerida (`Fixed` em geral).
 - Critérios de aceite em checkbox, verificáveis um a um, incluindo "com o patch desligado, o comportamento oficial volta".
 - O plano de teste manual no Foundry deve ter passos numerados, dados concretos (qual item, de qual compêndio) e o resultado esperado.
+- Para regras opcionais com configurações novas exibidas na Central, inclua os valores de todos os perfis em `scripts/features/profiles.mjs`. Para patches com rótulos novos em `sources` ou wrappers novos, preveja os fixtures de auditoria e de ordem conforme o `AGENTS.md`.
 - Não deixe placeholders `<…>` no texto final.
 
 Salve o corpo em `.work/issue-draft-<slug>.md` na worktree atual.

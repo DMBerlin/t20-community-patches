@@ -10,6 +10,10 @@ Não edite as seções de versão à mão.
 
 ## Unreleased
 
+## v1.3.0 - 2026-11-07
+
+**Compatibilidade:** Foundry VTT (mínimo 14, verificado 14.369) · Tormenta20 (mínimo 1.6.5, verificado 1.6.6)
+
 ### Added
 
 - Perfis de regras opcionais na Central do T20CP: Só correções (recomendado e padrão em mundos novos), Assistido, Livro configurado e Personalizado (#96).

@@ -10,6 +10,10 @@ Não edite as seções de versão à mão.
 
 ## Unreleased
 
+## v1.4.0 - 2026-11-10
+
+**Compatibilidade:** Foundry VTT (mínimo 14, verificado 14.370, máximo 14) · Tormenta20 (mínimo 1.6.5, verificado 1.6.7)
+
 ### Changed
 
 - Compatibilidade com o Tormenta20 1.6.7: as correções foram verificadas na nova versão e voltam a ser aplicadas em Automático, sem avisos de versão não verificada (#97).

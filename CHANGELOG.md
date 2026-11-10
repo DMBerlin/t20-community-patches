@@ -10,6 +10,10 @@ Não edite as seções de versão à mão.
 
 ## Unreleased
 
+### Fixed
+
+- `item-effective-stats` (#98): os efeitos no portador do valor efetivo dos itens mostram a estatística alterada, por exemplo "Intimidação +2 (+2 Intimidação)", em vez de repetir o valor do nome do efeito. Afeta Tormenta20 1.6.7.
+
 ## v1.4.0 - 2026-11-10
 
 **Compatibilidade:** Foundry VTT (mínimo 14, verificado 14.370, máximo 14) · Tormenta20 (mínimo 1.6.5, verificado 1.6.7)

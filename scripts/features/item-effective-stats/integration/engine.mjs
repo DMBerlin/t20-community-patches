@@ -17,7 +17,8 @@ import {
   linkedPdaCount,
   planCritFold,
   prepRollEffects,
-  statChanged
+  statChanged,
+  targetName
 } from "../domain/index.mjs";
 
 /**
@@ -27,6 +28,7 @@ import {
  * @property {import("../domain/describe.mjs").UsageLimits} [usage]
  * @property {() => Function|undefined} [parseUuid]   foundry.utils.parseUuid
  * @property {() => boolean} [equipmentSlots]         Setting tormenta20.equipmentSlots (may throw).
+ * @property {(item: object) => Parameters<typeof targetName>[1]} [targetNames]  Readable names of change targets.
  * @property {{error: Function}} [log]
  */
 
@@ -37,6 +39,7 @@ export function createEngine({
   usage = {},
   parseUuid = () => undefined,
   equipmentSlots = () => false,
+  targetNames = () => ({}),
   log = { error: () => {} }
 } = {}) {
   /** Effective-mode state of each prepared item: what was folded. @type {WeakMap<object, {value?: boolean, penalty?: boolean, crit?: boolean}>} */
@@ -59,12 +62,23 @@ export function createEngine({
     return consumedArmorIds(actor.itemTypes?.equipamento, slots).has(item.id);
   }
 
+  function namesOf(item) {
+    try {
+      return targetNames(item) ?? {};
+    } catch (err) {
+      log.error("failed to read the target names", err);
+      return {};
+    }
+  }
+
   /**
    * Effective stats of an item, with the "applied on the roll" note when the critical chain was not folded in
    * "effective" mode.
    */
   function statsFor(item, currentMode = mode(), state = patches()) {
-    const stats = computeEffectiveStats(baseOf(item), classifyItemEffects(describe(item)), state);
+    const names = namesOf(item);
+    const targetOf = (key) => targetName(key, names);
+    const stats = computeEffectiveStats(baseOf(item), classifyItemEffects(describe(item)), state, targetOf);
     if (currentMode === "effective" && item?.type === "arma" && folded.get(item)?.crit !== true) {
       for (const key of ["criticoM", "criticoX"]) {
         if (statChanged(stats[key])) stats[key].parts.push({ label: "AppliedOnRoll", kind: "note", i18n: true });

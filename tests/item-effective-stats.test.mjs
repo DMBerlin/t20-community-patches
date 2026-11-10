@@ -19,9 +19,11 @@ import {
   parseItemCard,
   planCritFold,
   shouldSkipFoldedChange,
+  targetName,
   tooltipHtml
 } from "../scripts/features/item-effective-stats/domain/index.mjs";
 import { createEngine } from "../scripts/features/item-effective-stats/integration/engine.mjs";
+import { targetNamesOf } from "../scripts/features/item-effective-stats/integration/index.mjs";
 import { createOnUseWrapper } from "../scripts/features/item-effective-stats/integration/wrappers.mjs";
 import itemEffectiveStats from "../scripts/features/item-effective-stats/index.mjs";
 import { createWrapRegistry } from "../scripts/kernel/wrap.mjs";
@@ -352,6 +354,72 @@ test("tooltipHtml escapes document text", () => {
   );
   assert.ok(html.includes("&lt;b&gt;Ajustada&lt;/b&gt; +1"));
   assert.ok(!html.includes("<b>"));
+});
+
+/* -------------------------------------------- */
+/*  Bearer targets (#98)                        */
+/* -------------------------------------------- */
+
+const NAMES = {
+  skills: { inti: "Intimidação" },
+  abilities: { for: "Força" },
+  named: { "attributes.defesa": "Defesa", "attributes.defesa.pda": "Penalidade de armadura" }
+};
+const intimidacao = (name = "+2 Intimidação") => passive(name, [{ key: "system.pericias.inti.outros", type: "add", value: 2 }]);
+const bearerStats = (effects, names = NAMES) =>
+  computeEffectiveStats(weapon({ toHit: "+5" }), classifyItemEffects(effects), {}, (key) => targetName(key, names));
+const plainTip = (entry) => tooltipHtml(entry, (key) => ({ BearerDepends: "depende do portador", NotApplied: "não aplicado" })[key] ?? key, String);
+
+test("targetName resolves skills, abilities and named stats; anything else is unknown", () => {
+  assert.equal(targetName("system.pericias.inti.outros", NAMES), "Intimidação");
+  assert.equal(targetName("system.atributos.for.value", NAMES), "Força");
+  assert.equal(targetName("system.attributes.defesa.bonus", NAMES), "Defesa");
+  assert.equal(targetName("system.attributes.defesa.pda", NAMES), "Penalidade de armadura");
+  assert.equal(targetName("system.pericias.*.outros", NAMES), undefined);
+  assert.equal(targetName("system.pericias.dipl.outros", NAMES), undefined);
+  assert.equal(targetName("system.modificadores.pericias.resistencia", NAMES), undefined);
+  assert.equal(targetName("system.pericias.inti.outros"), undefined);
+});
+
+test("bearer parts carry the change's target; without names they keep the old shape", () => {
+  assert.deepEqual(bearerStats([intimidacao()]).portador.parts, [{ label: "+2 Intimidação", delta: "+2", kind: "note", target: "Intimidação" }]);
+  assert.deepEqual(stats(weapon({ toHit: "+5" }), [intimidacao()]).portador.parts, [{ label: "+2 Intimidação", delta: "+2", kind: "note" }]);
+  const status = bearerStats([passive("Selada", [bonus(1)], { hasStatus: true })]).portador.parts;
+  assert.deepEqual(status, [{ label: "Selada", delta: "+1", kind: "note", suffix: "BearerDepends", target: "Defesa" }]);
+  const armorNote = computeEffectiveStats(armor(-5), classifyItemEffects([passive("X", [{ key: PDA_KEY, type: "custom", value: "@x" }])]), {}, (key) =>
+    targetName(key, NAMES)
+  );
+  assert.equal(armorNote.portador.parts[0].target, "Penalidade de armadura");
+});
+
+test("tooltipHtml shows the bearer's target, then the effect name and the suffix", () => {
+  assert.ok(plainTip(bearerStats([intimidacao()]).portador).includes("<br>Intimidação +2 (+2 Intimidação)"));
+  assert.ok(plainTip(bearerStats([intimidacao("intimidação")]).portador).endsWith("<br>Intimidação +2"));
+  const status = plainTip(bearerStats([passive("Selada", [bonus(1)], { hasStatus: true })]).portador);
+  assert.ok(status.endsWith("<br>Defesa +1 (Selada; depende do portador)"));
+  const notApplied = plainTip(bearerStats([passive("X", [bonus(1)], { transfer: false })]).portador);
+  assert.ok(notApplied.endsWith("<br>Defesa +1 (X): não aplicado"));
+  const old = plainTip({ stat: "bearer", base: "", final: "", parts: [{ label: "Selada", delta: "+1", kind: "note", suffix: "BearerDepends" }] });
+  assert.ok(old.endsWith("<br>Selada +1 (depende do portador)"));
+  const escaped = tooltipHtml(
+    { stat: "bearer", base: "", final: "", parts: [{ label: "<b>x</b>", delta: "+2", kind: "note", target: "<i>y</i>" }] },
+    (key) => key,
+    (text) => text.replace(/</g, "&lt;").replace(/>/g, "&gt;")
+  );
+  assert.ok(escaped.endsWith("&lt;i&gt;y&lt;/i&gt; +2 (&lt;b&gt;x&lt;/b&gt;)"));
+});
+
+test("targetNamesOf: the actor's skill labels win over CONFIG; labels are localized", () => {
+  const platform = {
+    t20Config: () => ({ pericias: { inti: { label: "T20.SkillInti" }, ofic1: { label: "T20.SkillOfic" } }, atributos: { for: "T20.AbilityStr" } }),
+    i18n: { localize: (key) => ({ "T20.SkillInti": "Intimidação", "T20.AbilityStr": "Força", "T20.HP": "PV" })[key] ?? key }
+  };
+  const names = targetNamesOf(platform, { parent: { system: { pericias: { ofic1: { label: "Ofício (Ferreiro)" } } } } });
+  assert.equal(names.skills.inti, "Intimidação");
+  assert.equal(names.skills.ofic1, "Ofício (Ferreiro)");
+  assert.equal(names.abilities.for, "Força");
+  assert.equal(names.named["attributes.pv.max"], "PV");
+  assert.equal(targetNamesOf(platform, {}).skills.ofic1, "T20.SkillOfic");
 });
 
 test("normalizeMode and parseItemCard", () => {
@@ -742,4 +810,14 @@ test("preCreateChatMessage stores the snapshot of the item's effective stats", (
   sys.platform.callHook("preCreateChatMessage", message, { content });
   assert.equal(updates.length, 1);
   assert.equal(updates[0]["flags.t20-community-patches.effectiveStats"]["armadura.value"].final, 11);
+});
+
+test("engine: statsFor names the bearer's targets; a failing reader leaves them unnamed", () => {
+  const item = fakeWeapon({ effects: [{ name: "+2 Intimidação", onuse: false, changes: [{ key: "system.pericias.inti.outros", type: "add", value: 2 }] }] });
+  const named = createEngine({ patches: PATCHES_ON, targetNames: () => NAMES });
+  assert.equal(named.statsFor(item, "display").portador.parts[0].target, "Intimidação");
+  const errors = [];
+  const failing = createEngine({ patches: PATCHES_ON, targetNames: () => { throw new Error("boom"); }, log: { error: (...args) => errors.push(args) } });
+  assert.equal(failing.statsFor(item, "display").portador.parts[0].target, undefined);
+  assert.equal(errors.length, 1);
 });

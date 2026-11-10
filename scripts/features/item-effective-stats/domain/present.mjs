@@ -10,6 +10,20 @@ export function targetLabel(key) {
   return parts.join(".");
 }
 
+/**
+ * Readable name of a change's target, or undefined when unknown (the tooltip then keeps "<effect> <delta>").
+ * @param {string} key  Change key, e.g. "system.pericias.inti.outros".
+ * @param {{skills?: Record<string, string>, abilities?: Record<string, string>, named?: Record<string, string>}} [names]
+ * @returns {string|undefined}
+ */
+export function targetName(key, names = {}) {
+  const short = targetLabel(key);
+  const [group, id] = short.split(".");
+  if (group === "pericias") return names.skills?.[id] || undefined;
+  if (group === "atributos") return names.abilities?.[id] || undefined;
+  return names.named?.[short] || undefined;
+}
+
 /** Critical label as the system builds it (T20:8887-8888): x2 → "18", otherwise "18/3x". */
 export function critLabel(criticoM, criticoX) {
   return Number(criticoX) === 2 ? `${criticoM}` : `${criticoM}/${criticoX}x`;
@@ -54,6 +68,18 @@ const STAT_TITLES = {
   bearer: "Bearer"
 };
 
+const sameText = (a, b) => String(a ?? "").trim().toLocaleLowerCase() === String(b ?? "").trim().toLocaleLowerCase();
+
+/** Escaped text of one part: "<target> <delta> (<effect>; <suffix>)", or "<effect> <delta> (<suffix>)" without target. */
+function partText(part, i18n, e) {
+  const name = part.i18n ? i18n(part.label) : part.label;
+  const head = part.target ? [part.target, part.delta] : [name, part.delta];
+  const notes = [part.target && name && !sameText(name, part.target) ? name : "", part.suffix ? i18n(part.suffix) : ""];
+  const extra = notes.filter(Boolean);
+  const text = head.filter((v) => v !== undefined && v !== "").join(" ");
+  return `${e(text)}${extra.length ? ` (${extra.map(e).join("; ")})` : ""}`;
+}
+
 /**
  * Escaped HTML of one stat's tooltip.
  * @param {import("./classify.mjs").Stat} entry
@@ -68,13 +94,11 @@ export function tooltipHtml(entry, i18n, escape) {
   const numeric = entry.base !== "" && entry.base !== undefined;
   if (numeric) lines.push(`${e(i18n("Base"))} ${e(entry.base)}`);
   for (const part of entry.parts ?? []) {
-    const label = part.i18n ? i18n(part.label) : part.label;
-    const text = [label, part.delta].filter((v) => v !== undefined && v !== "").join(" ");
-    const suffix = part.suffix ? ` (${e(i18n(part.suffix))})` : "";
-    if (part.kind === "optional") lines.push(`${e(text)}${suffix}: ${e(i18n("Optional"))}`);
-    else if (part.kind === "not-applied") lines.push(`${e(text)}${suffix}: ${e(i18n("NotApplied"))}`);
-    else if (part.kind === "note" && part.i18n) lines.push(`<em>${e(text)}</em>`);
-    else lines.push(`${e(text)}${suffix}`);
+    const text = partText(part, i18n, e);
+    if (part.kind === "optional") lines.push(`${text}: ${e(i18n("Optional"))}`);
+    else if (part.kind === "not-applied") lines.push(`${text}: ${e(i18n("NotApplied"))}`);
+    else if (part.kind === "note" && part.i18n) lines.push(`<em>${text}</em>`);
+    else lines.push(text);
   }
   if (numeric) lines.push(`<strong>${e(i18n("Final"))} ${e(entry.final)}</strong>`);
   if (entry.warning) lines.push(`<em>${e(i18n(entry.warning, { value: entry.final }))}</em>`);

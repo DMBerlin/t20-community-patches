@@ -35,6 +35,23 @@ function changeParts(effect, kind, keyFilter, suffix) {
   return parts;
 }
 
+/** Collector of the bearer's parts: each change gets its readable target, when known. */
+function bearerCollector(targetOf) {
+  const parts = [];
+  return {
+    parts,
+    add(effect, kind, keyFilter, suffix) {
+      for (const ch of effect.changes ?? []) {
+        if (!keyFilter(ch?.key)) continue;
+        const [part] = changeParts({ ...effect, changes: [ch] }, kind, () => true, suffix);
+        const target = targetOf(ch.key);
+        if (target) part.target = target;
+        parts.push(part);
+      }
+    }
+  };
+}
+
 /** Armor penalty: `portador` receives the changes that stay on the bearer. */
 function penaltyStat(base, { passive, notApplied }, patches, portador) {
   const basePenalty = Number(base.armadura?.penalidade) || 0;
@@ -47,7 +64,7 @@ function penaltyStat(base, { passive, notApplied }, patches, portador) {
       if (ch?.key !== PDA_KEY) continue;
       const amount = armorAmount(ch);
       if (!Number.isFinite(amount)) {
-        portador.push(...changeParts({ ...effect, changes: [ch] }, "note", () => true));
+        portador.add({ ...effect, changes: [ch] }, "note", () => true);
         continue;
       }
       const magnitude = Math.abs(amount);
@@ -96,7 +113,7 @@ function defenseStat(base, { passive, notApplied }, portador) {
       if (ch?.key !== DEFENSE_KEY) continue;
       const amount = armorAmount(ch);
       if (!Number.isFinite(amount)) {
-        portador.push(...changeParts({ ...effect, changes: [ch] }, "note", () => true));
+        portador.add({ ...effect, changes: [ch] }, "note", () => true);
         continue;
       }
       finalDefense += amount;
@@ -163,10 +180,11 @@ function weaponStats(base, effects, patches, result) {
  *   criticoX?: number, labels?: {toHit?: string, dano?: string}}} base   `_source.system` values and official labels.
  * @param {ReturnType<typeof import("./classify.mjs").classifyItemEffects>} effects
  * @param {{penaltyFix?: boolean, threatFix?: boolean}} patches
+ * @param {(key: string) => string|undefined} [targetOf]  Readable target of a bearer change (see targetName).
  * @returns {Record<string, import("./classify.mjs").Stat>}  Keys: "armadura.penalidade", "armadura.value", "criticoM",
  *   "criticoX", "ataque", "dano", "passo", "portador" (only those that apply to the item).
  */
-export function computeEffectiveStats(base, effects, patches = {}) {
+export function computeEffectiveStats(base, effects, patches = {}, targetOf = () => undefined) {
   const result = {};
   const { passive = [], automatic = [], optional = [], notApplied = [], bearer = [] } = effects ?? {};
   const classified = { passive, automatic, optional, notApplied, bearer };
@@ -175,7 +193,7 @@ export function computeEffectiveStats(base, effects, patches = {}) {
   if (!isArmor && !isWeapon) return result;
 
   const ownKeys = isArmor ? new Set([PDA_KEY, DEFENSE_KEY]) : new Set();
-  const portador = [];
+  const portador = bearerCollector(targetOf);
 
   if (isArmor) {
     result["armadura.penalidade"] = penaltyStat(base, classified, patches, portador);
@@ -184,9 +202,9 @@ export function computeEffectiveStats(base, effects, patches = {}) {
   if (isWeapon) weaponStats(base, classified, patches, result);
 
   // Changes that are not statistics of the item itself.
-  for (const effect of passive) portador.push(...changeParts(effect, "note", (k) => !ownKeys.has(k)));
-  for (const effect of bearer) portador.push(...changeParts(effect, "note", () => true, "BearerDepends"));
-  for (const effect of notApplied) portador.push(...changeParts(effect, "not-applied", (k) => !ownKeys.has(k)));
-  if (portador.length) result.portador = stat("bearer", "", "", portador);
+  for (const effect of passive) portador.add(effect, "note", (k) => !ownKeys.has(k));
+  for (const effect of bearer) portador.add(effect, "note", () => true, "BearerDepends");
+  for (const effect of notApplied) portador.add(effect, "not-applied", (k) => !ownKeys.has(k));
+  if (portador.parts.length) result.portador = stat("bearer", "", "", portador.parts);
   return result;
 }

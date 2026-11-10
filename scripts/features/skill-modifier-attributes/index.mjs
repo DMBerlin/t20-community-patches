@@ -24,7 +24,7 @@ export default {
   id: "skill-modifier-attributes",
   group: "actor",
   issue: 68,
-  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.7" } },
   probeKind: "behavior",
   sources: [
     "CreatureData#prepareAtributos",

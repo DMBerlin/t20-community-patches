@@ -1,7 +1,7 @@
 /**
  * "Padrão" damage attribute.
  *
- * Bug (tormenta20 1.6.6): ItemT20#rollDamage only resolves the "Padrão" damage attribute (`padrao`) for light or
+ * Bug (tormenta20 1.6.6–1.6.7): ItemT20#rollDamage only resolves the "Padrão" damage attribute (`padrao`) for light or
  * agile weapons at index 1 (T20:7963-7982). Anywhere else `padrao` reaches the Roll as a string and
  * Roll#evaluate throws "Unresolved StringTerm padrao requested for evaluation": a new weapon (created with
  * "Padrão") that is not light or agile cannot roll damage. 1.6.5 resolved every `padrao` part.
@@ -17,7 +17,7 @@ export default {
   id: "default-damage-attribute",
   group: "items",
   issue: 77,
-  system: { id: "tormenta20", affected: { minimum: "1.6.6", maximum: "1.6.6" } },
+  system: { id: "tormenta20", affected: { minimum: "1.6.6", maximum: "1.6.7" } },
   sources: [ROLL_DAMAGE],
   isNeeded,
   install

@@ -17,7 +17,7 @@ export default {
   group: "conditions",
   issue: 45,
   guarded: true,
-  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.7" } },
   sources: [MANAGE_DOT, "ActiveEffectT20#isOngoingDamage"],
   isNeeded,
   lateProbe,

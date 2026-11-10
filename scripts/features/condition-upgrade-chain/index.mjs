@@ -1,5 +1,5 @@
 /**
- * Condition upgrade chain (tormenta20 1.6.5–1.6.6).
+ * Condition upgrade chain (tormenta20 1.6.5–1.6.7).
  *
  * Bug: a condition is suppressed while its upgraded version is on the actor (BaseEffect#isSuppressedByUpgrade,
  * T20:16649), but the 38 conditions of the system pack ("efeitos") ship with `system.status.upgrade` empty, and the getter
@@ -19,7 +19,7 @@ export default {
   id: "condition-upgrade-chain",
   group: "conditions",
   issue: 94,
-  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.7" } },
   sources: [...SOURCES, "BaseEffect#isSuppressed", "ActiveEffectT20#isSuppressed", "BaseEffect#isSuppressedByInheritance"],
   isNeeded,
   install

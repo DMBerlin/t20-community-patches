@@ -16,7 +16,7 @@ export default {
   id: "conditional-powers",
   group: "sheet-effects",
   issue: 33,
-  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.7" } },
   sources: [...SOURCES, "BaseEffect#isSuppressedByEquipment", "ItemT20#areEffectsSuppressed", "AttributesFields.prepareDefense", "AttributesFields.prepareMovement"],
   guarded: true,
   isNeeded,

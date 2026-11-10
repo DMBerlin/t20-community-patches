@@ -13,7 +13,7 @@ export const UPGRADE_CHAIN = Object.freeze({
   frustrado: "esmorecido"
 });
 
-/** Getter of tormenta20 1.6.5–1.6.6 (T20:16649), without comments and whitespace. */
+/** Getter of tormenta20 1.6.5–1.6.7 (T20:16649), without comments and whitespace. */
 export const KNOWN_GETTER =
   "getisSuppressedByUpgrade(){constactor=this.parent.actor;consthasUpgrade=!!this.status.upgrade;" +
   "returnhasUpgrade&&actor.statuses.has(this.status.upgrade);}";

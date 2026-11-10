@@ -21,7 +21,7 @@ export default {
   id: "sheet-initiative-token",
   group: "actor",
   issue: 67,
-  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.7" } },
   sources: [ROLL_PERICIA],
   isNeeded,
   install

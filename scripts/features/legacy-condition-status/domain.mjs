@@ -63,7 +63,7 @@ export function candidatesOf(effectSources) {
   }));
 }
 
-/** Recognizes the 1.6.5–1.6.6 migration branch that writes `status` at the root. */
+/** Recognizes the 1.6.5–1.6.7 migration branch that writes `status` at the root. */
 export function diagnose(source) {
   const code = typeof source === "string" ? stripComments(source).replace(/\s+/g, "") : "";
   if (!code) return { bug: "unknown", confidence: "low", evidence: "migrateEffectsV2 source not available" };

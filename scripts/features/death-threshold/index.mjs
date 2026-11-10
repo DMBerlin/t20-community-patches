@@ -20,7 +20,7 @@ export default {
   id: "death-threshold",
   group: "conditions",
   issue: 29,
-  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.7" } },
   sources: [
     NPC_DERIVED,
     "AttributesFields.preparePVPM",

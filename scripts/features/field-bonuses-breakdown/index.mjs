@@ -32,7 +32,7 @@ export default {
   id: "field-bonuses-breakdown",
   group: "sheet-effects",
   issue: 70,
-  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.7" } },
   sources: [
     HELPER,
     "ActorT20#modifiedFields",

@@ -18,7 +18,7 @@ export default {
   id: "rd-exception-once",
   group: "combat",
   issue: 64,
-  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.7" } },
   sources: [APPLY_DAMAGE],
   isNeeded,
   install

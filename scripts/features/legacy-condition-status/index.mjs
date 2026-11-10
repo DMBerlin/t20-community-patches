@@ -1,5 +1,5 @@
 /**
- * Legacy condition status (tormenta20 1.6.5–1.6.6, worlds migrated from 1.5).
+ * Legacy condition status (tormenta20 1.6.5–1.6.7, worlds migrated from 1.5).
  *
  * Bug: migration 1.6.0 (migrateEffectsV2, T20:20824-20832) writes the 1.5 condition data to a root `status` key,
  * which the ActiveEffect drops, so migrated conditions keep `system.status` null; unlinked token actors are never
@@ -16,7 +16,7 @@ export default {
   id: "legacy-condition-status",
   group: "conditions",
   issue: 95,
-  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.7" } },
   sources: [...SOURCES, "BaseEffect#isSuppressed"],
   isNeeded,
   lateProbe,

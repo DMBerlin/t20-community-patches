@@ -17,7 +17,7 @@ export default {
   id: "save-skill-bonus",
   group: "actor",
   issue: 39,
-  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.7" } },
   probeKind: "behavior",
   sources: ["CreatureData#prepareSkill", "ActorT20#getRollData"],
   isNeeded,

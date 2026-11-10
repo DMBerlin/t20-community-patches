@@ -16,7 +16,7 @@ export default {
   id: "ability-dialog-cost",
   group: "usage-effects",
   issue: 7,
-  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.7" } },
   sources: SOURCES,
   isNeeded,
   install

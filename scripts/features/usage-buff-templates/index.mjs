@@ -18,7 +18,7 @@ export default {
   id: "usage-buff-templates",
   group: "usage-effects",
   issue: 66,
-  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.7" } },
   probeKind: "behavior",
   sources: [
     "#local:applyOnUseEffects",

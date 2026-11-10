@@ -25,7 +25,7 @@ export default {
   group: "sheet-effects",
   issue: 72,
   guarded: true,
-  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.7" } },
   probeKind: "behavior",
   sources: ["#helper:fieldBonuses", "CreatureData#prepareAtributos"],
   isNeeded,

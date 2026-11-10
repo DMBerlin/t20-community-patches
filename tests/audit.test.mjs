@@ -127,9 +127,9 @@ test("fingerprints keep string and regex literals byte for byte and skip only re
 });
 
 test("make audit passes a BUNDLE with spaces as one argument", () => {
-  const command = execFileSync("make", ["-n", "audit", "BUNDLE=/tmp/Application Support/t20.mjs"], { encoding: "utf8" });
+  const command = execFileSync("make", ["--no-print-directory", "-n", "audit", "BUNDLE=/tmp/Application Support/t20.mjs"], { encoding: "utf8" });
   assert.match(command, /node tools\/audit\.mjs "\/tmp\/Application Support\/t20\.mjs"/);
-  assert.match(execFileSync("make", ["-n", "audit"], { encoding: "utf8" }), /node tools\/audit\.mjs\s*$/);
+  assert.match(execFileSync("make", ["--no-print-directory", "-n", "audit"], { encoding: "utf8" }), /node tools\/audit\.mjs\s*$/);
 });
 
 test("a class declaration wins over the inner name of a class expression", () => {

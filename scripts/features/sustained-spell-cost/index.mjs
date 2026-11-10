@@ -15,7 +15,7 @@ export default {
   id: "sustained-spell-cost",
   group: "usage-effects",
   issue: 61,
-  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.7" } },
   sources: [ON_SUSTAIN, "BaseEffect#_preCreate", "#local:applyOnUseEffects"],
   guarded: true,
   isNeeded,

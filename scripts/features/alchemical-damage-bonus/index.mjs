@@ -15,7 +15,7 @@ export default {
   id: "alchemical-damage-bonus",
   group: "items",
   issue: 69,
-  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.6" } },
+  system: { id: "tormenta20", affected: { minimum: "1.6.5", maximum: "1.6.7" } },
   probeKind: "behavior",
   sources: ["ItemT20#rollDamage", "ActorT20#getRollData"],
   isNeeded,

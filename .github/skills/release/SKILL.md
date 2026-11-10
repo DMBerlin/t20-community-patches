@@ -40,6 +40,8 @@ node tools/changelog.mjs next                              # versão sugerida
 node tools/changelog.mjs compat                            # compatibilidade declarada
 data="${FOUNDRY_DATA:-$HOME/Library/Application Support/FoundryVTT/Data}"
 node -p "require('$data/systems/tormenta20/system.json').version"   # Tormenta20 instalado
+node -p 'JSON.stringify(require("./module.json").compatibility)'     # core declarado
+curl -s -m 5 "${FOUNDRY_URL:-http://localhost:30000}/api/status"; echo   # core em execução (campo version), se o Foundry estiver no ar
 gh run list -R DMBerlin/t20-community-patches --workflow release.yml --limit 3
 npm ci --silent                                            # node_modules é por worktree; o make check roda o lint
 make check
@@ -62,11 +64,11 @@ A regra do `next`:
 Mostre ao usuário, de forma compacta:
 - as entradas de `Unreleased`, agrupadas por seção (só a contagem e os ids/issues, não o texto inteiro);
 - a versão sugerida e o motivo;
-- a compatibilidade declarada, comparada com o Tormenta20 instalado.
+- a compatibilidade declarada, comparada com o Tormenta20 instalado e com o core do Foundry em execução (o playtest roda nele).
 
 Depois faça **um único** `ask_user` com:
 - **versão**: a sugestão como padrão, mais as alternativas patch, minor e major (texto livre permitido);
-- **compatibilidade**, só se houver divergência (por exemplo, Tormenta20 instalado mais novo que o `verified`): atualizar o `verified` para a versão instalada, se os patches foram testados nela, ou manter;
+- **compatibilidade**, só se houver divergência (por exemplo, Tormenta20 ou core em execução mais novos que o `verified` correspondente): atualizar o `verified` para a versão instalada, se os patches foram testados nela, ou manter. Se o `module.json` não declarar `compatibility.maximum` do core, pergunte também se ele deve ser fixado na geração atual (por exemplo, `"14"`);
 - **publicar agora**: sim (padrão) ou só preparar localmente, sem push.
 
 Não invente pontos abertos: se não houver divergência de compatibilidade, o formulário tem só versão e publicação.
@@ -122,10 +124,28 @@ Leia o log (`gh run view "$run" --log-failed -R DMBerlin/t20-community-patches`)
 - **falha transitória** (rede, runner): `gh run rerun "$run" --failed` e acompanhe de novo;
 - **falha real** antes de publicar (validação, testes, empacotamento): a tag já é pública e não deve ser movida. Explique a causa ao usuário, corrija na `main` com um commit próprio e publique uma nova versão patch (`<x.y.z+1>`) rodando esta skill de novo. Se a GitHub Release chegou a ser criada incompleta, peça confirmação antes de apagá-la (`gh release delete v<x.y.z> --yes`), mantendo a tag.
 
-## 6. Entregar
+## 6. Formulário do Foundry (Add Version)
+
+O pacote é listado em foundryvtt.com. Depois que o pipeline publicar, o operador registra a versão no formulário **Add Version** da página do pacote (área de administração do site). O agente **não** preenche o formulário: entrega os valores prontos, todos lidos do `module.json` publicado (`curl -sL …/releases/download/v<x.y.z>/module.json`), para que o site e o manifesto não divirjam.
+
+| Campo | Valor |
+|---|---|
+| Version Number | `<x.y.z>` |
+| Package Manifest URL | `https://github.com/DMBerlin/t20-community-patches/releases/download/v<x.y.z>/module.json` |
+| Release Notes URL | `https://github.com/DMBerlin/t20-community-patches/releases/tag/v<x.y.z>` |
+| Minimum Core Version | `compatibility.minimum` |
+| Verified Core Version | `compatibility.verified` |
+| Maximum Core Version | `compatibility.maximum`; em branco se o `module.json` não declarar |
+
+- Use a URL **versionada** (`releases/download/v<x.y.z>/…`), nunca a `latest`: o site guarda um manifesto por versão, e a `latest` mudaria o conteúdo de uma versão já registrada.
+- A compatibilidade com o Tormenta20 não tem campo no formulário: ela vai em `relationships.systems` do manifesto e aparece no título da GitHub Release (`v<x.y.z> · Tormenta20 <verified>`), que é a Release Notes URL.
+- O `verified` do core só sobe para a versão em que os patches foram testados (por exemplo, a do último playtest). Não declare um `maximum` que o `module.json` não tem.
+
+## 7. Entregar
 
 Responda de forma concisa:
 - versão, commit e tag;
 - link da release e status do workflow;
 - versão servida pelo manifesto;
-- as notas da versão (`node tools/changelog.mjs notes <x.y.z>`), resumidas se forem longas.
+- as notas da versão (`node tools/changelog.mjs notes <x.y.z>`), resumidas se forem longas;
+- a tabela do formulário Add Version (fase 6), com os valores reais.
